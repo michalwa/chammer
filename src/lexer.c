@@ -15,77 +15,158 @@ static const char *OP_CHARSET = "~!@#$%^&*-+=|:<>./?";
 
 static const keyword KEYWORDS[] = {
     { "let",   T_LET    },
-    { "rec",   T_REC    },
+    { "do",    T_DO     },
+    { "if",    T_IF     },
+    { "then",  T_THEN   },
+    { "else",  T_ELSE   },
     { "match", T_MATCH  },
     { "case",  T_CASE   },
-    { "then",  T_THEN   },
+    { "rec",   T_REC    },
+    { "_",     T_UNDER  },
 };
 
-static const keyword KEYWORD_OPS[] = {
+static const keyword KEYWORD_GLYPHS[] = {
     { "=",     T_EQ     },
+    { "<-",    T_LARROW },
     { "->",    T_RARROW },
     { "...",   T_ELLIPS },
 };
 
 static const keyword KEYWORD_CHARS[] = {
+    { "\\",    T_BSLASH },
     { "(",     T_POPEN  },
     { ")",     T_PCLOSE },
     { "[",     T_SOPEN  },
     { "]",     T_SCLOSE },
+    { "{",     T_COPEN  },
+    { "}",     T_CCLOSE },
     { ",",     T_COMMA  },
     { ";",     T_SEMI   },
 };
 
-static bool token_find_keyword(token *t, const keyword *keywords, size_t num_keywords) {
+static lex_result token_find_keyword(token *t, const keyword *keywords, size_t num_keywords) {
     for (size_t i = 0; i < num_keywords; i++) {
         if (strncmp(keywords[i].str, t->str, t->len) == 0) {
             t->type = keywords[i].type;
-            return true;
+            return LEX_OK;
         }
     }
 
-    return false;
+    return LEX_NOT_FOUND;
 }
 
-static bool token_next_word(token *t) {
-    if (!isalpha(*t->str) && *t->str != '_') return false;
+static lex_result token_next_block_comment(token *t) {
+    if (strncmp(t->str, "{-", 2) != 0) return false;
+
+    t->len = 2;
+    // Points at the last character of where the block would end
+    // to check for the null byte
+    const char *c = t->str + t->len + 1;
+
+    while (*c && strncmp(t->str + t->len, "-}", 2) != 0) {
+        t->len++;
+        c++;
+    }
+
+    if (!*c) return LEX_EOI;
+
+    t->len += 2;
+    t->type = T_BCOMM;
+    return LEX_OK;
+}
+
+static lex_result token_next_line_comment(token *t) {
+    if (strncmp(t->str, "--", 2) != 0) return LEX_NOT_FOUND;
+
+    t->len = 2;
+    while (t->str[t->len] != 0 && !strchr("\n\r", t->str[t->len])) t->len++;
+
+    t->type = T_LCOMM;
+    return LEX_OK;
+}
+
+static lex_result token_next_string(token *t) {
+    if (*t->str != '"') return LEX_NOT_FOUND;
+
+    bool escape = false;
+
+    while (t->str[++t->len]) {
+        switch (t->str[t->len]) {
+        case '\\':
+            escape = true;
+            continue;
+        case '"':
+            if (!escape) goto end;
+        }
+
+        escape = false;
+    }
+
+end:
+    t->len++;
+    t->type = T_STRING;
+    return t->str[t->len] ? LEX_OK : LEX_EOI;
+}
+
+static lex_result token_next_word(token *t) {
+    if (!isalpha(*t->str) && *t->str != '_') return LEX_NOT_FOUND;
 
     t->len = 0;
-    for (const char *c = t->str; isalnum(*c); c++)
-        t->len++;
+    while (isalnum(t->str[t->len])) t->len++;
 
     t->type = T_IDENT;
     token_find_keyword(t, KEYWORDS, sizeof(KEYWORDS) / sizeof(keyword));
 
-    return true;
+    return LEX_OK;
 }
 
-static bool token_next_op(token *t) {
-    if (!strchr(OP_CHARSET, *t->str)) return false;
+static lex_result token_next_glyph(token *t) {
+    if (!strchr(OP_CHARSET, *t->str)) return LEX_NOT_FOUND;
 
     t->len = 0;
-    for (const char *c = t->str; strchr(OP_CHARSET, *c); c++)
-        t->len++;
+    while (strchr(OP_CHARSET, t->str[t->len])) t->len++;
 
     t->type = T_OP;
-    token_find_keyword(t, KEYWORD_OPS, sizeof(KEYWORD_OPS) / sizeof(keyword));
+    token_find_keyword(t, KEYWORD_GLYPHS, sizeof(KEYWORD_GLYPHS) / sizeof(keyword));
 
-    return true;
+    return LEX_OK;
 }
 
-static bool token_next_int(token *t) {
-    if (!isdigit(*t->str)) return false;
+static lex_result token_next_infix(token *t) {
+    if (*t->str != '`') return LEX_NOT_FOUND;
+
+    t->len = 1;
+    while (isalnum(t->str[t->len])) t->len++;
+
+    // NOTE: The original version requires infix idents to terminate with a backtick,
+    // but it's actually pretty pointless, aside from being consistent with Haskell
+    // and maybe friendlier towards reusing syntax highlighting of other languages.
+
+    t->type = T_INFIX;
+    return LEX_OK;
+}
+
+static lex_result token_next_number(token *t) {
+    if (!isdigit(*t->str)) return LEX_NOT_FOUND;
 
     t->len = 0;
-    for (const char *c = t->str; isdigit(*c); c++)
-        t->len++;
+    while (isdigit(t->str[t->len])) t->len++;
 
     t->type = T_INT;
 
-    return true;
+    if (t->str[t->len] == '.') {
+        t->type = T_DEC;
+
+        t->len++;
+        while (isdigit(t->str[t->len])) t->len++;
+
+        if (t->str[t->len - 1] == '.') return LEX_NUM;
+    }
+
+    return LEX_OK;
 }
 
-static bool token_next_char(token *t) {
+static inline lex_result token_next_char(token *t) {
     t->len = 1;
 
     return token_find_keyword(t, KEYWORD_CHARS, sizeof(KEYWORD_CHARS) / sizeof(keyword));
@@ -96,15 +177,19 @@ inline void token_begin(token *t, const char *buffer) {
     t->len = 0;
 }
 
-bool token_next(token *t) {
+lex_result token_next(token *t) {
     t->str += t->len;
 
     while (isspace(*t->str)) t->str++;
 
-    return token_next_word(t)
-        || token_next_op(t)
-        || token_next_int(t)
-        || token_next_char(t);
+    return token_next_block_comment(t)
+        || token_next_line_comment(t)
+        || token_next_string(t)
+        || token_next_word(t)
+        || token_next_glyph(t)
+        || token_next_char(t)
+        || token_next_infix(t)
+        || token_next_number(t);
 }
 
 inline bool token_eq(token a, token b) {
