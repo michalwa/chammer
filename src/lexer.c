@@ -4,7 +4,7 @@
 
 typedef struct {
     const char *str;
-    uint8_t     type;
+    token_type  type;
 } keyword;
 
 #define _(name) [name] = #name,
@@ -79,9 +79,11 @@ static lex_result token_next_line_comment(token *t) {
     if (strncmp(t->str, "--", 2) != 0) return LEX_NOT_FOUND;
 
     t->len = 2;
-    while (t->str[t->len] != 0 && !strchr("\n\r", t->str[t->len])) t->len++;
+    while (t->str[t->len] != 0 && !strchr("\n\r", t->str[t->len]))
+        t->len++;
 
     t->type = T_LCOMM;
+
     return LEX_OK;
 }
 
