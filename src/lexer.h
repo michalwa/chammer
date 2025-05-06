@@ -29,7 +29,8 @@ typedef struct {
 #define T_POPEN  16 // (
 #define T_PCLOSE 17 // )
 
-bool next_token(const char *buffer, token *t);
+void token_begin(token *t, const char *buffer);
+bool token_next(token *t);
 bool token_eq(token a, token b);
 
 #endif // _LEXER_H

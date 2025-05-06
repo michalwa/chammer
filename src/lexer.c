@@ -32,7 +32,7 @@ static const keyword KEYWORD_CHARS[] = {
     { ";",     T_SEMI   },
 };
 
-static bool find_keyword(const keyword *keywords, size_t num_keywords, token *t) {
+static bool token_find_keyword(token *t, const keyword *keywords, size_t num_keywords) {
     for (size_t i = 0; i < num_keywords; i++) {
         if (strncmp(keywords[i].str, t->str, t->len) == 0) {
             t->type = keywords[i].type;
@@ -43,7 +43,7 @@ static bool find_keyword(const keyword *keywords, size_t num_keywords, token *t)
     return false;
 }
 
-static bool next_ident_or_keyword(token *t) {
+static bool token_next_word(token *t) {
     if (!isalpha(*t->str) && *t->str != '_') return false;
 
     t->len = 0;
@@ -51,12 +51,12 @@ static bool next_ident_or_keyword(token *t) {
         t->len++;
 
     t->type = T_IDENT;
-    find_keyword(KEYWORDS, sizeof(KEYWORDS) / sizeof(keyword), t);
+    token_find_keyword(t, KEYWORDS, sizeof(KEYWORDS) / sizeof(keyword));
 
     return true;
 }
 
-static bool next_op(token *t) {
+static bool token_next_op(token *t) {
     if (!strchr(OP_CHARSET, *t->str)) return false;
 
     t->len = 0;
@@ -64,12 +64,12 @@ static bool next_op(token *t) {
         t->len++;
 
     t->type = T_OP;
-    find_keyword(KEYWORD_OPS, sizeof(KEYWORD_OPS) / sizeof(keyword), t);
+    token_find_keyword(t, KEYWORD_OPS, sizeof(KEYWORD_OPS) / sizeof(keyword));
 
     return true;
 }
 
-static bool next_int(token *t) {
+static bool token_next_int(token *t) {
     if (!isdigit(*t->str)) return false;
 
     t->len = 0;
@@ -81,25 +81,26 @@ static bool next_int(token *t) {
     return true;
 }
 
-static bool next_char(token *t) {
+static bool token_next_char(token *t) {
     t->len = 1;
-    return find_keyword(KEYWORD_CHARS, sizeof(KEYWORD_CHARS) / sizeof(keyword), t);
+    return token_find_keyword(t, KEYWORD_CHARS, sizeof(KEYWORD_CHARS) / sizeof(keyword));
 }
 
-bool next_token(const char *buffer, token *t) {
-    if (!t->str) {
-        t->str = buffer;
-        t->len = 0;
-    }
+void token_begin(token *t, const char *buffer) {
+    t->str = buffer;
+    t->len = 0;
+    t->type = 0;
+}
 
+bool token_next(token *t) {
     t->str += t->len;
 
     while (isspace(*t->str)) t->str++;
 
-    return next_ident_or_keyword(t)
-        || next_op(t)
-        || next_int(t)
-        || next_char(t);
+    return token_next_word(t)
+        || token_next_op(t)
+        || token_next_int(t)
+        || token_next_char(t);
 }
 
 bool token_eq(token a, token b) {

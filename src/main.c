@@ -25,12 +25,13 @@ int main(int argc, const char **argv) {
     fclose(f);
     buffer[size] = 0;
 
-    token actual = {0};
+    token actual;
+    token_begin(&actual, buffer);
 
     for (size_t i = 0; i < sizeof(EXAMPLE_TOKENS) / sizeof(token); i++) {
         token expected = EXAMPLE_TOKENS[i];
 
-        if (!next_token(buffer, &actual)) {
+        if (!token_next(&actual)) {
             fprintf(stderr, "Unexpected end of tokens!\n");
             return 1;
         }
