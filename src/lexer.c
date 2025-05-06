@@ -103,9 +103,11 @@ static lex_result token_next_string(token *t) {
     }
 
 end:
+    if (!t->str[t->len]) return LEX_EOI;
+
     t->len++;
     t->type = T_STRING;
-    return t->str[t->len] ? LEX_OK : LEX_EOI;
+    return LEX_OK;
 }
 
 static lex_result token_next_word(token *t) {
@@ -182,14 +184,20 @@ lex_result token_next(token *t) {
 
     while (isspace(*t->str)) t->str++;
 
-    return token_next_block_comment(t)
-        || token_next_line_comment(t)
-        || token_next_string(t)
-        || token_next_word(t)
-        || token_next_glyph(t)
-        || token_next_char(t)
-        || token_next_infix(t)
-        || token_next_number(t);
+    lex_result result;
+
+#define TRY(fn) result = fn(t); if (result != LEX_NOT_FOUND) return result;
+    TRY(token_next_block_comment);
+    TRY(token_next_line_comment);
+    TRY(token_next_string);
+    TRY(token_next_word);
+    TRY(token_next_glyph);
+    TRY(token_next_char);
+    TRY(token_next_infix);
+    TRY(token_next_number);
+#undef TRY
+
+    return LEX_NOT_FOUND;
 }
 
 inline bool token_eq(token a, token b) {

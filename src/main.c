@@ -31,8 +31,19 @@ int main(int argc, const char **argv) {
     for (size_t i = 0; i < sizeof(EXAMPLE_TOKENS) / sizeof(token); i++) {
         token expected = EXAMPLE_TOKENS[i];
 
-        if (!token_next(&actual)) {
-            fprintf(stderr, "Unexpected end of tokens!\n");
+        lex_result result = token_next(&actual);
+
+        switch (result) {
+        case LEX_OK:
+            break;
+        case LEX_NOT_FOUND:
+            fprintf(stderr, "No more tokens\n");
+            return 1;
+        case LEX_EOI:
+            fprintf(stderr, "Unexpected end of input\n");
+            return 1;
+        case LEX_NUM:
+            fprintf(stderr, "Malformed number\n");
             return 1;
         }
 
