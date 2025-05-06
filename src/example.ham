@@ -1,0 +1,5 @@
+let rec map f xs = match xs
+    case [] then []
+    case [x, ...xs] then [f x, ...map f xs];
+
+print $ map (x -> x + 1) [1, 2, 3]
