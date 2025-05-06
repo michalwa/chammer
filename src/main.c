@@ -37,11 +37,13 @@ int main(int argc, const char **argv) {
         }
 
         if (!token_eq(expected, actual)) {
+            loc l = token_loc(actual, buffer);
             fprintf(
                 stderr,
-                "Expected %2d `%.*s', got %2d `%.*s'\n",
+                "Expected %2d `%.*s', got %2d `%.*s' at %u:%u\n",
                 expected.type, (int)expected.len, expected.str,
-                actual.type, (int)actual.len, actual.str
+                actual.type, (int)actual.len, actual.str,
+                l.line + 1, l.col + 1
             );
             return 1;
         }

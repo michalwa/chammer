@@ -108,3 +108,18 @@ bool token_eq(token a, token b) {
         && a.len == b.len
         && strncmp(a.str, b.str, a.len) == 0;
 }
+
+loc token_loc(token t, const char *buffer) {
+    loc l = {0};
+
+    for (; buffer < t.str; buffer++) {
+        l.col++;
+
+        if (*buffer == '\n') {
+            l.line++;
+            l.col = 0;
+        }
+    }
+
+    return l;
+}

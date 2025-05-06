@@ -11,6 +11,10 @@ typedef struct {
     size_t      len;
 } token;
 
+typedef struct {
+    uint16_t line, col;
+} loc;
+
 #define T_IDENT   1
 #define T_OP      2
 #define T_INT     3
@@ -32,5 +36,6 @@ typedef struct {
 void token_begin(token *t, const char *buffer);
 bool token_next(token *t);
 bool token_eq(token a, token b);
+loc token_loc(token t, const char *buffer);
 
 #endif // _LEXER_H
