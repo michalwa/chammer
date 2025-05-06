@@ -1,3 +1,5 @@
+#include "lexer.h"
+
 static const token EXAMPLE_TOKENS[] = {
     { T_LET,    "let",   3 },
     { T_REC,    "rec",   3 },

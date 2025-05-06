@@ -39,8 +39,8 @@ int main(int argc, const char **argv) {
             fprintf(
                 stderr,
                 "Expected %2d `%.*s', got %2d `%.*s'\n",
-                expected.type, expected.len, expected.str,
-                actual.type, actual.len, actual.str
+                expected.type, (int)expected.len, expected.str,
+                actual.type, (int)actual.len, actual.str
             );
             return 1;
         }
