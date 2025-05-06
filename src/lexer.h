@@ -5,8 +5,31 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#define TOKEN_TYPES         \
+    _(T_IDENT)              \
+    _(T_OP)                 \
+    _(T_INT)                \
+    _(T_LET)    /* let   */ \
+    _(T_REC)    /* rec   */ \
+    _(T_MATCH)  /* match */ \
+    _(T_CASE)   /* case  */ \
+    _(T_THEN)   /* then  */ \
+    _(T_EQ)     /* =     */ \
+    _(T_RARROW) /* ->    */ \
+    _(T_SOPEN)  /* [     */ \
+    _(T_SCLOSE) /* ]     */ \
+    _(T_ELLIPS) /* ...   */ \
+    _(T_COMMA)  /* ,     */ \
+    _(T_SEMI)   /* ;     */ \
+    _(T_POPEN)  /* (     */ \
+    _(T_PCLOSE) /* )     */ \
+
+#define _(name) name,
+typedef enum { TOKEN_TYPES } token_type;
+#undef _
+
 typedef struct {
-    uint8_t     type;
+    token_type  type;
     const char *str;
     size_t      len;
 } token;
@@ -15,27 +38,10 @@ typedef struct {
     uint16_t line, col;
 } loc;
 
-#define T_IDENT   1
-#define T_OP      2
-#define T_INT     3
-#define T_LET     4 // let
-#define T_REC     5 // rec
-#define T_MATCH   6 // match
-#define T_CASE    7 // case
-#define T_THEN    8 // then
-#define T_EQ      9 // =
-#define T_RARROW 10 // ->
-#define T_SOPEN  11 // [
-#define T_SCLOSE 12 // ]
-#define T_ELLIPS 13 // ...
-#define T_COMMA  14 // ,
-#define T_SEMI   15 // ;
-#define T_POPEN  16 // (
-#define T_PCLOSE 17 // )
-
 void token_begin(token *t, const char *buffer);
 bool token_next(token *t);
 bool token_eq(token a, token b);
 loc token_loc(token t, const char *buffer);
+const char *token_name(token t);
 
 #endif // _LEXER_H

@@ -40,15 +40,16 @@ int main(int argc, const char **argv) {
             loc l = token_loc(actual, buffer);
             fprintf(
                 stderr,
-                "Expected %2d `%.*s', got %2d `%.*s' at %u:%u\n",
-                expected.type, (int)expected.len, expected.str,
-                actual.type, (int)actual.len, actual.str,
+                "Expected %s `%.*s', got %s `%.*s' at %u:%u\n",
+                token_name(expected), (int)expected.len, expected.str,
+                token_name(actual), (int)actual.len, actual.str,
                 l.line + 1, l.col + 1
             );
             return 1;
         }
+
+        printf("%-8s `%.*s'\n", token_name(actual), (int)actual.len, actual.str);
     }
 
     free(buffer);
-    printf("OK\n");
 }

@@ -7,6 +7,10 @@ typedef struct {
     uint8_t     type;
 } keyword;
 
+#define _(name) [name] = #name,
+static const char *TOKEN_NAMES[] = { TOKEN_TYPES };
+#undef _
+
 static const char *OP_CHARSET = "~!@#$%^&*-+=|:<>./?";
 
 static const keyword KEYWORDS[] = {
@@ -83,13 +87,13 @@ static bool token_next_int(token *t) {
 
 static bool token_next_char(token *t) {
     t->len = 1;
+
     return token_find_keyword(t, KEYWORD_CHARS, sizeof(KEYWORD_CHARS) / sizeof(keyword));
 }
 
-void token_begin(token *t, const char *buffer) {
+inline void token_begin(token *t, const char *buffer) {
     t->str = buffer;
     t->len = 0;
-    t->type = 0;
 }
 
 bool token_next(token *t) {
@@ -103,7 +107,7 @@ bool token_next(token *t) {
         || token_next_char(t);
 }
 
-bool token_eq(token a, token b) {
+inline bool token_eq(token a, token b) {
     return a.type == b.type
         && a.len == b.len
         && strncmp(a.str, b.str, a.len) == 0;
@@ -122,4 +126,8 @@ loc token_loc(token t, const char *buffer) {
     }
 
     return l;
+}
+
+const char *token_name(token t) {
+    return TOKEN_NAMES[t.type];
 }
