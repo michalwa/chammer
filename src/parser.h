@@ -36,9 +36,9 @@
 typedef enum { NODE_TYPES } node_type;
 #undef _
 
-#define NODE_FLAGS                                  \
-    _(NF_PAPPLY_REC, 1)  /* recursive `N_PAPPLY' */ \
-    _(NF_PLTAIL_NAME, 2) /* named `N_PLTAIL'     */
+#define NODE_FLAGS                            \
+    _(NF_REC, 1)   /* recursive `N_PAPPLY' */ \
+    _(NF_NAMED, 2) /* named `N_PLTAIL'     */
 
 #define _(name, value) name = value,
 typedef enum { NODE_FLAGS } node_flags;
@@ -55,7 +55,7 @@ typedef struct {
      *   this is the full token that was parsed into the node
      * For `N_UNARY' and `N_BINARY' it is the `T_OP' token
      * For `N_PAPPLY' and `N_PALIAS' it is the `T_IDENT' token
-     * For `N_PLTAIL' with the `NF_PLTAIL_NAME' flag it is the `T_IDENT' token
+     * For `N_PLTAIL' with the `NF_NAMED' flag it is the `T_IDENT' token
      */
     token token;
     /*
