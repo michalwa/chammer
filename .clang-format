@@ -1,0 +1,17 @@
+AlignAfterOpenBracket: BlockIndent
+AlignArrayOfStructures: Left
+AlignConsecutiveDeclarations: Consecutive
+AlignEscapedNewlines: LeftWithLastLine
+AlignOperands: DontAlign
+AllowShortBlocksOnASingleLine: Always
+AllowShortFunctionsOnASingleLine: Empty
+BasedOnStyle: Google
+BreakAdjacentStringLiterals: false
+BreakBeforeBinaryOperators: NonAssignment
+ColumnLimit: 100
+Cpp11BracedListStyle: false
+IndentCaseLabels: false
+IndentWidth: 4
+MacroBlockBegin: "^_BEGIN$"
+MacroBlockEnd: "^_END$"
+SpacesBeforeTrailingComments: 1

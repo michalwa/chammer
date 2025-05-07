@@ -1,8 +1,8 @@
 #ifndef _STRINGS_H
 #define _STRINGS_H
 
-#include <stdlib.h>
 #include <inttypes.h>
+#include <stdlib.h>
 
 typedef struct {
     char  *buffer;
@@ -18,8 +18,8 @@ typedef struct {
 #define F_STR "%.*s"
 #define FA_STR(str) (int)(str).len, (str).data
 
-void strings_init(Strings *s);
+void   strings_init(Strings *s);
 string strings_alloc(Strings *s, size_t len);
-void strings_free(Strings *s);
+void   strings_free(Strings *s);
 
 #endif // _STRINGS_H

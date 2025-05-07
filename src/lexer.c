@@ -1,4 +1,5 @@
 #include "lexer.h"
+
 #include <ctype.h>
 #include <string.h>
 
@@ -14,34 +15,34 @@ static const char *TOKEN_NAMES[] = { TOKEN_TYPES };
 static const char *OP_CHARSET = "~!@#$%^&*-+=|:<>./?";
 
 static const keyword KEYWORDS[] = {
-    { "let",   T_LET    },
-    { "do",    T_DO     },
-    { "if",    T_IF     },
-    { "then",  T_THEN   },
-    { "else",  T_ELSE   },
-    { "match", T_MATCH  },
-    { "case",  T_CASE   },
-    { "rec",   T_REC    },
-    { "_",     T_UNDER  },
+    { "let",   T_LET   },
+    { "do",    T_DO    },
+    { "if",    T_IF    },
+    { "then",  T_THEN  },
+    { "else",  T_ELSE  },
+    { "match", T_MATCH },
+    { "case",  T_CASE  },
+    { "rec",   T_REC   },
+    { "_",     T_UNDER },
 };
 
 static const keyword KEYWORD_GLYPHS[] = {
-    { "=",     T_EQ     },
-    { "<-",    T_LARROW },
-    { "->",    T_RARROW },
-    { "...",   T_ELLIPS },
+    { "=",   T_EQ     },
+    { "<-",  T_LARROW },
+    { "->",  T_RARROW },
+    { "...", T_ELLIPS },
 };
 
 static const keyword KEYWORD_CHARS[] = {
-    { "\\",    T_BSLASH },
-    { "(",     T_POPEN  },
-    { ")",     T_PCLOSE },
-    { "[",     T_SOPEN  },
-    { "]",     T_SCLOSE },
-    { "{",     T_COPEN  },
-    { "}",     T_CCLOSE },
-    { ",",     T_COMMA  },
-    { ";",     T_SEMI   },
+    { "\\", T_BSLASH },
+    { "(",  T_POPEN  },
+    { ")",  T_PCLOSE },
+    { "[",  T_SOPEN  },
+    { "]",  T_SCLOSE },
+    { "{",  T_COPEN  },
+    { "}",  T_CCLOSE },
+    { ",",  T_COMMA  },
+    { ";",  T_SEMI   },
 };
 
 static lex_result token_find_keyword(token *t, const keyword *keywords, size_t num_keywords) {
@@ -79,8 +80,7 @@ static lex_result token_next_line_comment(token *t) {
     if (strncmp(t->str, "--", 2) != 0) return LEX_NOT_FOUND;
 
     t->len = 2;
-    while (t->str[t->len] != 0 && !strchr("\n\r", t->str[t->len]))
-        t->len++;
+    while (t->str[t->len] != 0 && !strchr("\n\r", t->str[t->len])) t->len++;
 
     t->type = T_LCOMM;
 
@@ -188,7 +188,10 @@ lex_result token_next(token *t) {
 
     lex_result result;
 
-#define TRY(fn) result = fn(t); if (result != LEX_NOT_FOUND) return result;
+#define TRY(fn)                                 \
+    result = fn(t);                             \
+    if (result != LEX_NOT_FOUND) return result;
+
     TRY(token_next_block_comment);
     TRY(token_next_line_comment);
     TRY(token_next_string);
@@ -203,13 +206,11 @@ lex_result token_next(token *t) {
 }
 
 inline bool token_eq(token a, token b) {
-    return a.type == b.type
-        && a.len == b.len
-        && strncmp(a.str, b.str, a.len) == 0;
+    return a.type == b.type && a.len == b.len && strncmp(a.str, b.str, a.len) == 0;
 }
 
 loc token_loc(token t, const char *buffer) {
-    loc l = {0};
+    loc l = { 0 };
 
     for (; buffer < t.str; buffer++) {
         l.col++;

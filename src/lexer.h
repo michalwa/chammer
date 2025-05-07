@@ -35,7 +35,7 @@
     _(T_COPEN)  /* `{'             */ \
     _(T_CCLOSE) /* `}'             */ \
     _(T_COMMA)  /* `,'             */ \
-    _(T_SEMI)   /* `;'             */ \
+    _(T_SEMI)   /* `;'             */
 
 #define _(name) name,
 typedef enum { TOKEN_TYPES } token_type;
@@ -61,10 +61,10 @@ typedef struct {
     uint16_t line, col;
 } loc;
 
-void token_begin(token *t, const char *buffer);
-lex_result token_next(token *t);
-bool token_eq(token a, token b);
-loc token_loc(token t, const char *buffer);
+void        token_begin(token *t, const char *buffer);
+lex_result  token_next(token *t);
+bool        token_eq(token a, token b);
+loc         token_loc(token t, const char *buffer);
 const char *token_name(token t);
 
 #endif // _LEXER_H

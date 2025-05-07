@@ -1,4 +1,5 @@
 #include "strings.h"
+
 #include <stdlib.h>
 
 #define STRINGS_INITIAL_CAPACITY 1024

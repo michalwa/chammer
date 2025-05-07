@@ -36,8 +36,8 @@
 typedef enum { NODE_TYPES } node_type;
 #undef _
 
-#define NODE_FLAGS \
-    _(NF_PAPPLY_REC,  1) /* recursive `N_PAPPLY' */ \
+#define NODE_FLAGS                                  \
+    _(NF_PAPPLY_REC, 1)  /* recursive `N_PAPPLY' */ \
     _(NF_PLTAIL_NAME, 2) /* named `N_PLTAIL'     */
 
 #define _(name, value) name = value,
@@ -48,7 +48,7 @@ typedef enum { NODE_FLAGS } node_flags;
 #define FA_NODE(node) node_name(node)
 
 typedef struct {
-    node_type type;
+    node_type  type;
     node_flags flags;
     /*
      * For `N_IDENT', `N_STR', `N_INT', `N_DEC', `N_PIDENT'
