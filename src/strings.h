@@ -1,6 +1,7 @@
 #ifndef _STRINGS_H
 #define _STRINGS_H
 
+#include <stdlib.h>
 #include <inttypes.h>
 
 typedef struct {
@@ -12,13 +13,13 @@ typedef struct {
 typedef struct {
     char  *data;
     size_t len;
-} str;
+} string;
 
 #define F_STR "%.*s"
 #define FA_STR(str) (int)(str).len, (str).data
 
 void strings_init(Strings *s);
-str strings_alloc(Strings *s, size_t len);
+string strings_alloc(Strings *s, size_t len);
 void strings_free(Strings *s);
 
 #endif // _STRINGS_H

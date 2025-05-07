@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "lexer.h"
 #include "example.tokens.h"
+#include "example.tree.h"
 
 int main(int argc, const char **argv) {
     if (argc < 2) {
@@ -25,6 +26,7 @@ int main(int argc, const char **argv) {
     fclose(f);
     buffer[size] = 0;
 
+#if 0
     token actual;
     token_begin(&actual, buffer);
 
@@ -63,6 +65,14 @@ int main(int argc, const char **argv) {
 
         printf(F_TOKEN"\n", FA_TOKEN(actual));
     }
+#endif
+
+    int indent = 0;
+#define _BEGIN(type, ...) { printf("%*s"F_NODE"\n", indent, "", FA_NODE(((node){ type, 0, {0}, {0} }))); indent += 2; }
+#define _END              { indent -= 2; }
+    EXAMPLE_TREE
+#undef _BEGIN
+#undef _END
 
     free(buffer);
 }

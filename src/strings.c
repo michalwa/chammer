@@ -9,13 +9,13 @@ void strings_init(Strings *s) {
     s->cursor = 0;
 }
 
-str strings_alloc(Strings *s, size_t len) {
+string strings_alloc(Strings *s, size_t len) {
     if (s->cursor + len > s->capacity) {
-        s->capacity << 1;
+        s->capacity <<= 1;
         s->buffer = realloc(s->buffer, s->capacity);
     }
 
-    str item = {
+    string item = {
         .data = s->buffer + s->cursor,
         .len = len,
     };
