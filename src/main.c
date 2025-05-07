@@ -28,8 +28,12 @@ int main(int argc, const char **argv) {
     token actual;
     token_begin(&actual, buffer);
 
-    for (size_t i = 0; i < sizeof(EXAMPLE_TOKENS) / sizeof(token); i++) {
-        token expected = EXAMPLE_TOKENS[i];
+#define _(type, str) { type, str, sizeof(str) - 1 },
+    static const token example_tokens[] = { EXAMPLE_TOKENS };
+#undef _
+
+    for (size_t i = 0; i < sizeof(example_tokens) / sizeof(token); i++) {
+        token expected = example_tokens[i];
 
         lex_result result = token_next(&actual);
 

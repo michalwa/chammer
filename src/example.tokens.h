@@ -1,59 +1,58 @@
 #include "lexer.h"
 
-static const token EXAMPLE_TOKENS[] = {
-    { T_LET,    "let",              3 },
-    { T_REC,    "rec",              3 },
-    { T_IDENT,  "map",              3 },
-    { T_IDENT,  "f",                1 },
-    { T_BCOMM,  "{- comment -}",   13 },
-    { T_IDENT,  "xs",               2 },
-    { T_EQ,     "=",                1 },
-    { T_MATCH,  "match",            5 },
-    { T_IDENT,  "xs",               2 },
-    { T_LCOMM,  "-- comment",      10 },
-    { T_CASE,   "case",             4 },
-    { T_SOPEN,  "[",                1 },
-    { T_SCLOSE, "]",                1 },
-    { T_THEN,   "then",             4 },
-    { T_SOPEN,  "[",                1 },
-    { T_SCLOSE, "]",                1 },
-    { T_CASE,   "case",             4 },
-    { T_SOPEN,  "[",                1 },
-    { T_IDENT,  "x",                1 },
-    { T_COMMA,  ",",                1 },
-    { T_ELLIPS, "...",              3 },
-    { T_IDENT,  "xs",               2 },
-    { T_SCLOSE, "]",                1 },
-    { T_THEN,   "then",             4 },
-    { T_SOPEN,  "[",                1 },
-    { T_IDENT,  "f",                1 },
-    { T_IDENT,  "x",                1 },
-    { T_COMMA,  ",",                1 },
-    { T_ELLIPS, "...",              3 },
-    { T_IDENT,  "map",              3 },
-    { T_IDENT,  "f",                1 },
-    { T_IDENT,  "xs",               2 },
-    { T_SCLOSE, "]",                1 },
-    { T_SEMI,   ";",                1 },
-    { T_IDENT,  "print",            5 },
-    { T_OP,     "$",                1 },
-    { T_IDENT,  "map",              3 },
-    { T_POPEN,  "(",                1 },
-    { T_IDENT,  "x",                1 },
-    { T_RARROW, "->",               2 },
-    { T_IDENT,  "x",                1 },
-    { T_OP,     "+",                1 },
-    { T_INT,    "1",                1 },
-    { T_PCLOSE, ")",                1 },
-    { T_SOPEN,  "[",                1 },
-    { T_INT,    "1",                1 },
-    { T_COMMA,  ",",                1 },
-    { T_INT,    "2",                1 },
-    { T_INFIX,  "`mod",             4 },
-    { T_INT,    "3",                1 },
-    { T_COMMA,  ",",                1 },
-    { T_DEC,    "3.14",             4 },
-    { T_COMMA,  ",",                1 },
-    { T_STRING, "\"string \\\"\"", 11 },
-    { T_SCLOSE, "]",                1 },
-};
+#define EXAMPLE_TOKENS             \
+    _(T_LET,    "let")             \
+    _(T_REC,    "rec")             \
+    _(T_IDENT,  "map")             \
+    _(T_IDENT,  "f")               \
+    _(T_BCOMM,  "{- comment -}")   \
+    _(T_IDENT,  "xs")              \
+    _(T_EQ,     "=")               \
+    _(T_MATCH,  "match")           \
+    _(T_IDENT,  "xs")              \
+    _(T_LCOMM,  "-- comment")      \
+    _(T_CASE,   "case")            \
+    _(T_SOPEN,  "[")               \
+    _(T_SCLOSE, "]")               \
+    _(T_THEN,   "then")            \
+    _(T_SOPEN,  "[")               \
+    _(T_SCLOSE, "]")               \
+    _(T_CASE,   "case")            \
+    _(T_SOPEN,  "[")               \
+    _(T_IDENT,  "x")               \
+    _(T_COMMA,  ",")               \
+    _(T_ELLIPS, "...")             \
+    _(T_IDENT,  "xs")              \
+    _(T_SCLOSE, "]")               \
+    _(T_THEN,   "then")            \
+    _(T_SOPEN,  "[")               \
+    _(T_IDENT,  "f")               \
+    _(T_IDENT,  "x")               \
+    _(T_COMMA,  ",")               \
+    _(T_ELLIPS, "...")             \
+    _(T_IDENT,  "map")             \
+    _(T_IDENT,  "f")               \
+    _(T_IDENT,  "xs")              \
+    _(T_SCLOSE, "]")               \
+    _(T_SEMI,   ";")               \
+    _(T_IDENT,  "print")           \
+    _(T_OP,     "$")               \
+    _(T_IDENT,  "map")             \
+    _(T_POPEN,  "(")               \
+    _(T_IDENT,  "x")               \
+    _(T_RARROW, "->")              \
+    _(T_IDENT,  "x")               \
+    _(T_OP,     "+")               \
+    _(T_INT,    "1")               \
+    _(T_PCLOSE, ")")               \
+    _(T_SOPEN,  "[")               \
+    _(T_INT,    "1")               \
+    _(T_COMMA,  ",")               \
+    _(T_INT,    "2")               \
+    _(T_INFIX,  "`mod")            \
+    _(T_INT,    "3")               \
+    _(T_COMMA,  ",")               \
+    _(T_DEC,    "3.14")            \
+    _(T_COMMA,  ",")               \
+    _(T_STRING, "\"string \\\"\"") \
+    _(T_SCLOSE, "]")
