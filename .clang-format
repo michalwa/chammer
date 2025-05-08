@@ -1,7 +1,7 @@
 AlignAfterOpenBracket: BlockIndent
 AlignArrayOfStructures: Left
-AlignConsecutiveDeclarations: AcrossComments
-AlignConsecutiveMacros: AcrossComments
+AlignConsecutiveDeclarations: Consecutive
+AlignConsecutiveMacros: Consecutive
 AlignEscapedNewlines: LeftWithLastLine
 AlignOperands: DontAlign
 AllowShortBlocksOnASingleLine: Always

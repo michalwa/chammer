@@ -57,11 +57,11 @@ typedef struct {
      * For `N_PAPPLY' and `N_PALIAS' it is the `T_IDENT' token
      * For `N_PLTAIL' with the `NF_NAMED' flag it is the `T_IDENT' token
      */
-    token      token;
+    token token;
     /*
      * For `N_STR' this is the parsed/unescaped string
      */
-    string     str_parsed;
+    string str_parsed;
 } node;
 
 const char *node_name(node);
