@@ -1,4 +1,4 @@
-#include "parser.h"
+#include "../lib/parser.h"
 
 /*
  * An X-macro describing the syntax tree of the example source file

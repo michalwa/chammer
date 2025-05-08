@@ -2,7 +2,7 @@
 #define _PARSER_H
 
 #include "lexer.h"
-#include "strings.h"
+#include "string.h"
 
 #define NODE_TYPES                          \
     _(N_ASSIGN) /* assignment            */ \
@@ -44,7 +44,7 @@ typedef enum { NODE_TYPES } node_type;
 typedef enum { NODE_FLAGS } node_flags;
 #undef _
 
-#define F_NODE "%-8s"
+#define F_NODE        "%-8s"
 #define FA_NODE(node) node_name(node)
 
 typedef struct {
@@ -57,13 +57,13 @@ typedef struct {
      * For `N_PAPPLY' and `N_PALIAS' it is the `T_IDENT' token
      * For `N_PLTAIL' with the `NF_NAMED' flag it is the `T_IDENT' token
      */
-    token token;
+    token      token;
     /*
      * For `N_STR' this is the parsed/unescaped string
      */
-    string str_parsed;
+    string     str_parsed;
 } node;
 
-const char *node_name(node n);
+const char *node_name(node);
 
 #endif // _PARSER_H

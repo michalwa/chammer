@@ -41,7 +41,7 @@
 typedef enum { TOKEN_TYPES } token_type;
 #undef _
 
-#define F_TOKEN "%-8s %.*s"
+#define F_TOKEN         "%s `%.*s'"
 #define FA_TOKEN(token) token_name(token), (int)(token).len, (token).str
 
 typedef struct {
@@ -61,10 +61,10 @@ typedef struct {
     uint16_t line, col;
 } loc;
 
-void        token_begin(token *t, const char *buffer);
-lex_result  token_next(token *t);
-bool        token_eq(token a, token b);
-loc         token_loc(token t, const char *buffer);
-const char *token_name(token t);
+void        token_begin(token *, const char *);
+lex_result  token_next(token *);
+bool        token_eq(token, token);
+loc         token_loc(token, const char *);
+const char *token_name(token);
 
 #endif // _LEXER_H

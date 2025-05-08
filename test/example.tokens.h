@@ -1,4 +1,4 @@
-#include "lexer.h"
+#include "../lib/lexer.h"
 
 #define EXAMPLE_TOKENS             \
     _(T_LET, "let")                \

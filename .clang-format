@@ -1,6 +1,7 @@
 AlignAfterOpenBracket: BlockIndent
 AlignArrayOfStructures: Left
-AlignConsecutiveDeclarations: Consecutive
+AlignConsecutiveDeclarations: AcrossComments
+AlignConsecutiveMacros: AcrossComments
 AlignEscapedNewlines: LeftWithLastLine
 AlignOperands: DontAlign
 AllowShortBlocksOnASingleLine: Always
@@ -14,4 +15,5 @@ IndentCaseLabels: false
 IndentWidth: 4
 MacroBlockBegin: "^_BEGIN$"
 MacroBlockEnd: "^_END$"
+RemoveBracesLLVM: true
 SpacesBeforeTrailingComments: 1
