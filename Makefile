@@ -1,7 +1,7 @@
 CC = clang
 CFLAGS = -O3 -std=c99 -Wall -Wextra -Wpedantic -Wno-char-subscripts
 
-bin/hammer: lib/*.c lib/*.h src/*.c
+bin/hammer: lib/*.c lib/*.h src/*.c src/*.h
 	mkdir -p bin
 	$(CC) lib/*.c src/*.c -o $@ $(CFLAGS)
 

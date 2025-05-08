@@ -1,6 +1,8 @@
 #ifndef _PARSER_H
 #define _PARSER_H
 
+#include <stdio.h>
+
 #include "lexer.h"
 #include "string.h"
 
@@ -44,9 +46,6 @@ typedef enum { NODE_TYPES } node_type;
 typedef enum { NODE_FLAGS } node_flags;
 #undef _
 
-#define F_NODE        "%-8s"
-#define FA_NODE(node) node_name(node)
-
 typedef struct {
     node_type  type;
     node_flags flags;
@@ -65,5 +64,6 @@ typedef struct {
 } node;
 
 const char *node_name(node);
+void        node_print(node, FILE *);
 
 #endif // _PARSER_H

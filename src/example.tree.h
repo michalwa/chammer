@@ -23,7 +23,7 @@
                 _BEGIN(N_CASE)                                                       \
                     _BEGIN(N_PLIST)                                                  \
                         _ATOM(N_PIDENT, T_IDENT, "x")                                \
-                        _ATOM(N_PLTAIL, T_IDENT, "xs", NF_NAMED)                     \
+                        _ATOM(N_PLTAIL, T_IDENT, "xs", NF_NAMED | NF_REC)            \
                     _END                                                             \
                     _BEGIN(N_LIST)                                                   \
                         _BEGIN(N_APPLY)                                              \

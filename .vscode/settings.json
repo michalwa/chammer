@@ -1,0 +1,29 @@
+{
+    "files.associations": {
+        "*.h": "c",
+        ".bash*": "shellscript",
+        "config": "toml",
+        ".firebaserc": "json",
+        "*.fontsettings": "yaml",
+        "*.tpl": "smarty",
+        "*.gltf": "json",
+        "*.js.erb": "javascript",
+        ".env": "dotenv",
+        "*.arb": "json",
+        "*.mcmeta": "json",
+        "chrono": "c",
+        "text_encoding": "c",
+        "typeinfo": "c",
+        "*.inc": "c",
+        "charconv": "c",
+        "optional": "c",
+        "format": "c",
+        "ratio": "c",
+        "system_error": "c",
+        "array": "c",
+        "functional": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c"
+    }
+}

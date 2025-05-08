@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../test/example.tree.h"
+#include "example.tree.h"
 #include "parser.h"
 
 #define ARGC(...)                                         ARGC_(__VA_ARGS__, ARGC_SEQ_)
@@ -25,7 +25,9 @@ void node_begin(int indent, int argc, node_type type, ...) {
         node.str_parsed = (string){ str_parsed, strlen(str_parsed) };
     }
 
-    printf("%*s" F_NODE "\n", indent, "", FA_NODE(node));
+    printf("%*s", indent, "");
+    node_print(node, stdout);
+    printf("\n");
 
     va_end(args);
 }
