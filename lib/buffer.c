@@ -4,10 +4,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define BUFFER_INITIAL_CAPACITY 0x400
+#define BUFFER_DEFAULT_CAPACITY 0x400
 
 void buffer_init(Buffer *b) {
-    b->capacity = BUFFER_INITIAL_CAPACITY;
+    buffer_init_capacity(b, BUFFER_DEFAULT_CAPACITY);
+}
+
+void buffer_init_capacity(Buffer *b, size_t capacity) {
+    b->capacity = capacity;
     b->len = 0;
     b->data = malloc(b->capacity);
 }
@@ -28,20 +32,6 @@ void buffer_printf(Buffer *b, const char *format, ...) {
     }
 
     b->len += written;
-}
-
-string buffer_alloc(Buffer *b, size_t len) {
-    if (b->len + len > b->capacity) {
-        b->capacity <<= 1;
-        b->data = realloc(b->data, b->capacity);
-    }
-
-    string item = {
-        .data = b->data + b->len,
-        .len = len,
-    };
-    b->len += len;
-    return item;
 }
 
 void buffer_free(Buffer *b) {

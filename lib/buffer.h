@@ -14,9 +14,9 @@ typedef struct {
 #define F_BUFFER          "%.*s"
 #define FA_BUFFER(buffer) (int)(buffer).len, (buffer).data
 
-void   buffer_init(Buffer *);
-void   buffer_printf(Buffer *, const char *format, ...);
-string buffer_alloc(Buffer *, size_t len);
-void   buffer_free(Buffer *);
+void buffer_init(Buffer *);
+void buffer_init_capacity(Buffer *, size_t);
+void buffer_printf(Buffer *, const char *format, ...);
+void buffer_free(Buffer *);
 
 #endif // _BUFFER_H

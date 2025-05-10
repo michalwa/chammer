@@ -39,7 +39,7 @@ int main(void) {
     buffer_init(&output);
 
 #define _RUN_TEST_ARGS &stats, &output
-    TEST(test_lexer_example);
+#include "tests.gen.h"
 #undef _RUN_TEST_ARGS
 
     printf("\n%d passed, %d failed\n", stats.passed, stats.failed);
