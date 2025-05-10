@@ -1,5 +1,5 @@
-#ifndef _TEST_H
-#define _TEST_H
+#ifndef TEST_H_
+#define TEST_H_
 
 #define TEST_OK   0
 #define TEST_FAIL 1
@@ -18,4 +18,4 @@
         return TEST_FAIL;                                                        \
     }
 
-#endif // _TEST_H
+#endif // TEST_H_

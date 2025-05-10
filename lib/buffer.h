@@ -1,5 +1,5 @@
-#ifndef _BUFFER_H
-#define _BUFFER_H
+#ifndef BUFFER_H_
+#define BUFFER_H_
 
 #include <inttypes.h>
 
@@ -19,4 +19,4 @@ void buffer_init_capacity(Buffer *, size_t);
 void buffer_printf(Buffer *, const char *format, ...);
 void buffer_free(Buffer *);
 
-#endif // _BUFFER_H
+#endif // BUFFER_H_

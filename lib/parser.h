@@ -1,5 +1,5 @@
-#ifndef _PARSER_H
-#define _PARSER_H
+#ifndef PARSER_H_
+#define PARSER_H_
 
 #include <stdio.h>
 
@@ -66,4 +66,4 @@ typedef struct {
 const char *node_name(node);
 void        node_print(node, FILE *);
 
-#endif // _PARSER_H
+#endif // PARSER_H_

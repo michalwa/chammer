@@ -1,5 +1,5 @@
-#ifndef _LEXER_H
-#define _LEXER_H
+#ifndef LEXER_H_
+#define LEXER_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -67,4 +67,4 @@ bool        token_eq(token, token);
 loc         token_loc(token, const char *);
 const char *token_name(token);
 
-#endif // _LEXER_H
+#endif // LEXER_H_

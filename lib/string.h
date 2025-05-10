@@ -1,5 +1,5 @@
-#ifndef _STRING_H
-#define _STRING_H
+#ifndef STRING_H_
+#define STRING_H_
 
 #include <inttypes.h>
 
@@ -11,4 +11,4 @@ typedef struct {
 #define F_STRING          "%.*s"
 #define FA_STRING(string) (int)(string).len, (string).data
 
-#endif // _STRING_H
+#endif // STRING_H_
