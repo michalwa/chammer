@@ -21,7 +21,3 @@ test: bin/test
 .PHONY: format
 format:
 	clang-format -i **/*.{c,h}
-
-.PHONY: install
-install:
-	cp .hooks/* .git/hooks
