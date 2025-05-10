@@ -4,51 +4,54 @@
 #include <stdio.h>
 
 #include "lexer.h"
+#include "stack.h"
 #include "string.h"
 
-#define NODE_TYPES                          \
-    _(N_ASSIGN) /* assignment            */ \
-    _(N_IDENT)  /* identifier expression */ \
-    _(N_STRING) /* string literal        */ \
-    _(N_INT)    /* integer literal       */ \
-    _(N_DEC)    /* decimal literal       */ \
-    _(N_TUPLE)  /* tuple literal         */ \
-    _(N_LIST)   /* list literal          */ \
-    _(N_SPREAD) /* list spread           */ \
-    _(N_UNARY)  /* unary operation       */ \
-    _(N_BINARY) /* binary operation      */ \
-    _(N_APPLY)  /* function application  */ \
-    _(N_IF)     /* if expression         */ \
-    _(N_MATCH)  /* match expression      */ \
-    _(N_CASE)   /* match case            */ \
-    _(N_LAMBDA) /* lambda expression     */ \
-    _(N_BLOCK)  /* block expression      */ \
-    _(N_DOBLK)  /* do-block expression   */ \
-    _(N_DOBIND) /* monadic binding       */ \
-    _(N_PIDENT) /* identifier pattern    */ \
-    _(N_PWILD)  /* wildcard pattern      */ \
-    _(N_PAPPLY) /* function pattern      */ \
-    _(N_PTUPLE) /* tuple pattern         */ \
-    _(N_PLIST)  /* list pattern          */ \
-    _(N_PLTAIL) /* list pattern tail     */ \
-    _(N_PALIAS) /* alias pattern         */ \
-    _(N_PCONST) /* const/expr pattern    */
+#define NODE_TYPES                        \
+    _(ASSIGN) /* assignment            */ \
+    _(IDENT)  /* identifier expression */ \
+    _(STRING) /* string literal        */ \
+    _(INT)    /* integer literal       */ \
+    _(DEC)    /* decimal literal       */ \
+    _(TUPLE)  /* tuple literal         */ \
+    _(LIST)   /* list literal          */ \
+    _(SPREAD) /* list spread           */ \
+    _(UNARY)  /* unary operation       */ \
+    _(BINARY) /* binary operation      */ \
+    _(APPLY)  /* function application  */ \
+    _(IF)     /* if expression         */ \
+    _(MATCH)  /* match expression      */ \
+    _(CASE)   /* match case            */ \
+    _(LAMBDA) /* lambda expression     */ \
+    _(BLOCK)  /* block expression      */ \
+    _(DOBLK)  /* do-block expression   */ \
+    _(DOBIND) /* monadic binding       */ \
+    _(PIDENT) /* identifier pattern    */ \
+    _(PWILD)  /* wildcard pattern      */ \
+    _(PAPPLY) /* function pattern      */ \
+    _(PTUPLE) /* tuple pattern         */ \
+    _(PLIST)  /* list pattern          */ \
+    _(PLTAIL) /* list pattern tail     */ \
+    _(PALIAS) /* alias pattern         */ \
+    _(PCONST) /* const/expr pattern    */
 
-#define _(name) name,
+#define _(name) N_##name,
 typedef enum { NODE_TYPES } node_type;
 #undef _
 
 #define NODE_FLAGS                            \
-    _(NF_REC, 1)   /* recursive `N_PAPPLY' */ \
+    _(NF_REC, 1)   /* recursive `N_ASSIGN' */ \
     _(NF_NAMED, 2) /* named `N_PLTAIL'     */
 
 #define _(name, value) name = value,
 typedef enum { NODE_FLAGS } node_flags;
 #undef _
 
-typedef struct {
-    node_type  type;
-    node_flags flags;
+typedef struct node {
+    node_type    type;
+    node_flags   flags;
+    struct node *first_child;
+    struct node *next_sibling;
     /*
      * For `N_IDENT', `N_STR', `N_INT', `N_DEC', `N_PIDENT'
      *   this is the full token that was parsed into the node
@@ -57,13 +60,34 @@ typedef struct {
      * For `N_PLTAIL' with the `NF_NAMED' flag it is the `T_IDENT' token
      */
     token token;
-    /*
-     * For `N_STR' this is the parsed/unescaped string
-     */
-    string str_parsed;
 } node;
+
+typedef enum {
+    PARSE_OK = 0,
+    PARSE_ELEX = 1,
+    PARSE_ETOK = 2,
+} parse_result;
+
+typedef struct {
+    Stack stack;
+    /*
+     * Holds the root node in case of a successful `PARSE_OK' result
+     */
+    node *node;
+    /*
+     * Holds the lexer result in case of a `PARSE_ELEX' result
+     */
+    lex_result lex_result;
+    /*
+     * Holds the expected token type in case of a `PARSE_ETOK' result
+     */
+    token_type expected_token;
+} Parser;
 
 const char *node_name(node);
 void        node_print(node, FILE *);
+
+void         parser_init(Parser *);
+parse_result parse(Parser *, token *);
 
 #endif // PARSER_H_

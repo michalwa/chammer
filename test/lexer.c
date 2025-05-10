@@ -3,13 +3,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../lib/buffer.h"
 #include "example.tokens.h"
 #include "test.h"
 
 #define EXAMPLE_FILE_PATH "test/example.ham"
 
-int test_lexer_example(Buffer *output) {
+TEST(lexer_example) {
     FILE *f = fopen(EXAMPLE_FILE_PATH, "r");
     if (!f) {
         fprintf(stderr, "Could not open `" EXAMPLE_FILE_PATH "': ");
@@ -41,13 +40,13 @@ int test_lexer_example(Buffer *output) {
         switch (result) {
         case LEX_OK:
             break;
-        case LEX_NOT_FOUND:
+        case LEX_NONE:
             TEST_PRINTF("No more tokens\n");
             return TEST_FAIL;
-        case LEX_EOI:
+        case LEX_EEOI:
             TEST_PRINTF("Unexpected end of input\n");
             return TEST_FAIL;
-        case LEX_NUM:
+        case LEX_ENUM:
             TEST_PRINTF("Malformed number\n");
             return TEST_FAIL;
         }

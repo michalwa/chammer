@@ -20,10 +20,6 @@ void node_begin(int indent, int argc, node_type type, ...) {
     if (argc-- > 0) node.token.type = va_arg(args, token_type);
     if (argc-- > 0) node.token.str = va_arg(args, char *);
     if (argc-- > 0) node.flags = va_arg(args, node_flags);
-    if (argc-- > 0) {
-        char *str_parsed = va_arg(args, char *);
-        node.str_parsed = (string){ str_parsed, strlen(str_parsed) };
-    }
 
     printf("%*s", indent, "");
     node_print(node, stdout);

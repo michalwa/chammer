@@ -2,13 +2,10 @@
 #include <unistd.h>
 
 #include "../lib/buffer.h"
+#include "tests.gen.h"
 
 #define RED(str)   "\033[0;31m" str "\033[0m"
 #define GREEN(str) "\033[0;32m" str "\033[0m"
-
-#define TEST(name)                          \
-    int name(Buffer *);                     \
-    run_test(&name, #name, _RUN_TEST_ARGS);
 
 typedef struct {
     int passed;
@@ -24,7 +21,7 @@ void run_test(int (*test)(Buffer *), const char *label, stats *stats, Buffer *ou
     if (test(&buffer)) {
         stats->failed++;
         printf(RED("failed") "\n");
-        buffer_printf(output, "\n-------- %s --------\n" F_BUFFER "\n", label, FA_BUFFER(buffer));
+        buffer_printf(output, "-------- %s --------\n" F_BUFFER "\n", label, FA_BUFFER(buffer));
     } else {
         stats->passed++;
         printf(GREEN("ok") "\n");
@@ -38,13 +35,15 @@ int main(void) {
     Buffer output;
     buffer_init(&output);
 
-#define _RUN_TEST_ARGS &stats, &output
-#include "tests.gen.h"
-#undef _RUN_TEST_ARGS
+#define _(name)                                     \
+    int test_##name(Buffer *);                      \
+    run_test(&test_##name, #name, &stats, &output);
+    TESTS
+#undef _
 
     printf("\n%d passed, %d failed\n", stats.passed, stats.failed);
 
-    if (stats.failed) printf(F_BUFFER, FA_BUFFER(output));
+    if (stats.failed) printf("\n" F_BUFFER, FA_BUFFER(output));
 
     buffer_free(&output);
 

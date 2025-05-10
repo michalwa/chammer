@@ -1,2 +1,4 @@
-TEST(test_buffer);
-TEST(test_lexer_example);
+#define TESTS        \
+    _(buffer)        \
+    _(lexer_example) \
+    _(stack)

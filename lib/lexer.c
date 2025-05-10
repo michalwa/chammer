@@ -8,7 +8,7 @@ typedef struct {
     token_type  type;
 } keyword;
 
-#define _(name) [name] = #name,
+#define _(name) [T_##name] = "T_" #name,
 static const char *TOKEN_NAMES[] = { TOKEN_TYPES };
 #undef _
 
@@ -53,11 +53,11 @@ static lex_result token_find_keyword(token *t, const keyword *keywords, size_t n
         }
     }
 
-    return LEX_NOT_FOUND;
+    return LEX_NONE;
 }
 
 static lex_result token_next_block_comment(token *t) {
-    if (strncmp(t->str, "{-", 2) != 0) return false;
+    if (strncmp(t->str, "{-", 2) != 0) return LEX_NONE;
 
     t->len = 2;
     // Points at the last character of where the block would end
@@ -69,7 +69,7 @@ static lex_result token_next_block_comment(token *t) {
         c++;
     }
 
-    if (!*c) return LEX_EOI;
+    if (!*c) return LEX_EEOI;
 
     t->len += 2;
     t->type = T_BCOMM;
@@ -77,7 +77,7 @@ static lex_result token_next_block_comment(token *t) {
 }
 
 static lex_result token_next_line_comment(token *t) {
-    if (strncmp(t->str, "--", 2) != 0) return LEX_NOT_FOUND;
+    if (strncmp(t->str, "--", 2) != 0) return LEX_NONE;
 
     t->len = 2;
     while (t->str[t->len] != 0 && !strchr("\n\r", t->str[t->len])) t->len++;
@@ -88,7 +88,7 @@ static lex_result token_next_line_comment(token *t) {
 }
 
 static lex_result token_next_string(token *t) {
-    if (*t->str != '"') return LEX_NOT_FOUND;
+    if (*t->str != '"') return LEX_NONE;
 
     bool escape = false;
 
@@ -105,7 +105,7 @@ static lex_result token_next_string(token *t) {
     }
 
 end:
-    if (!t->str[t->len]) return LEX_EOI;
+    if (!t->str[t->len]) return LEX_EEOI;
 
     t->len++;
     t->type = T_STRING;
@@ -113,7 +113,7 @@ end:
 }
 
 static lex_result token_next_word(token *t) {
-    if (!isalpha(*t->str) && *t->str != '_') return LEX_NOT_FOUND;
+    if (!isalpha(*t->str) && *t->str != '_') return LEX_NONE;
 
     t->len = 0;
     while (isalnum(t->str[t->len])) t->len++;
@@ -125,7 +125,7 @@ static lex_result token_next_word(token *t) {
 }
 
 static lex_result token_next_glyph(token *t) {
-    if (!strchr(OP_CHARSET, *t->str)) return LEX_NOT_FOUND;
+    if (!strchr(OP_CHARSET, *t->str)) return LEX_NONE;
 
     t->len = 0;
     while (strchr(OP_CHARSET, t->str[t->len])) t->len++;
@@ -137,7 +137,7 @@ static lex_result token_next_glyph(token *t) {
 }
 
 static lex_result token_next_infix(token *t) {
-    if (*t->str != '`') return LEX_NOT_FOUND;
+    if (*t->str != '`') return LEX_NONE;
 
     t->len = 1;
     while (isalnum(t->str[t->len])) t->len++;
@@ -151,7 +151,7 @@ static lex_result token_next_infix(token *t) {
 }
 
 static lex_result token_next_number(token *t) {
-    if (!isdigit(*t->str)) return LEX_NOT_FOUND;
+    if (!isdigit(*t->str)) return LEX_NONE;
 
     t->len = 0;
     while (isdigit(t->str[t->len])) t->len++;
@@ -164,7 +164,7 @@ static lex_result token_next_number(token *t) {
         t->len++;
         while (isdigit(t->str[t->len])) t->len++;
 
-        if (t->str[t->len - 1] == '.') return LEX_NUM;
+        if (t->str[t->len - 1] == '.') return LEX_ENUM;
     }
 
     return LEX_OK;
@@ -188,9 +188,9 @@ lex_result token_next(token *t) {
 
     lex_result result;
 
-#define TRY(fn)                                 \
-    result = fn(t);                             \
-    if (result != LEX_NOT_FOUND) return result;
+#define TRY(fn)                            \
+    result = fn(t);                        \
+    if (result != LEX_NONE) return result;
 
     TRY(token_next_block_comment);
     TRY(token_next_line_comment);
@@ -202,7 +202,7 @@ lex_result token_next(token *t) {
     TRY(token_next_number);
 #undef TRY
 
-    return LEX_NOT_FOUND;
+    return LEX_NONE;
 }
 
 inline bool token_eq(token a, token b) {

@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define TEST_NAME_PREFIX "int test_"
-#define TEST_NAME_OFFSET (sizeof("int ") - 1)
+#define TEST_NAME_PREFIX "TEST("
+#define TEST_NAME_OFFSET (sizeof("TEST(") - 1)
 
 int main(int argc, const char **argv) {
     if (argc < 2) {
@@ -13,6 +13,7 @@ int main(int argc, const char **argv) {
     }
 
     FILE *output_file = fopen(argv[1], "w");
+    fprintf(output_file, "#define TESTS");
 
     for (int i = 2; i < argc; i++) {
         FILE *input_file = fopen(argv[i], "r");
@@ -26,17 +27,19 @@ int main(int argc, const char **argv) {
         buffer[size] = 0;
 
         const char *c = buffer;
+
         while (c = strstr(c, TEST_NAME_PREFIX)) {
             c += TEST_NAME_OFFSET;
 
             int len = 0;
             while (isalnum(c[len]) || c[len] == '_') len++;
 
-            fprintf(output_file, "TEST(%.*s);\n", len, c);
+            fprintf(output_file, " \\\n    _(%.*s)", len, c);
         }
 
         free(buffer);
     }
 
+    putc('\n', output_file);
     fclose(output_file);
 }
