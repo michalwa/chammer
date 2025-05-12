@@ -2,6 +2,7 @@
 #define STRING_H_
 
 #include <inttypes.h>
+#include <stdlib.h>
 
 typedef struct {
     char  *data;

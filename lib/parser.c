@@ -40,10 +40,21 @@ const char *node_name(node n) {
     return NODE_NAMES[n.type];
 }
 
-void node_print(node n, FILE *f) {
-    fprintf(f, "%s ", NODE_NAMES[n.type]);
+void node_print_(node n, FILE *f, int indent) {
+    fprintf(f, "%*s%s ", indent, "", NODE_NAMES[n.type]);
     node_print_flags(n.flags, f);
     if (node_has_token(n)) fprintf(f, " (" F_TOKEN ")", FA_TOKEN(n.token));
+
+    node *child = n.first_child;
+    while (child) {
+        putc('\n', f);
+        node_print_(*child, f, indent + 2);
+        child = child->next_sibling;
+    }
+}
+
+inline void node_print(node n, FILE *f) {
+    node_print_(n, f, 0);
 }
 
 void parser_init(Parser *p) {
@@ -52,77 +63,80 @@ void parser_init(Parser *p) {
 
 /* * * Helpers * * */
 
-#define PARSER(name) parse_result parse_##name(Parser *p, token *tokens)
+#define PARSER_BEGIN(parser, tokens)       \
+    Parser   *p_ = parser;                 \
+    token    *ts_ = tokens;                \
+    stack_ptr st_ = stack_top(&p_->stack); \
+    token     current_token = *(tokens);
 
-#define PARSER_BEGIN                      \
-    stack_ptr st_ = stack_top(&p->stack); \
-    token     current_token = *tokens;
-
-#define PARSER_FAIL(result)       \
-    stack_rewind(&p->stack, st_); \
+#define PARSER_FAIL(result)        \
+    stack_rewind(&p_->stack, st_); \
     return result;
 
-#define PARSER_END           \
-    *tokens = current_token; \
+#define PARSER_END        \
+    *ts_ = current_token; \
     return PARSE_OK;
 
-#define NEXT_TOKEN                                            \
-    p->lex_result = token_next(&current_token);               \
-    if (p->lex_result != LEX_OK) { PARSER_FAIL(PARSE_ELEX); }
+#define NEXT(token)                                            \
+    p_->lex_result = token_next(&(token));                     \
+    if (p_->lex_result != LEX_OK) { PARSER_FAIL(PARSE_ELEX); }
 
 #define THEN_TOKEN(token_type, var) \
     THEN_TOKEN_(token_type);        \
     token var = current_token;
 
-#define THEN_TOKEN_(token_type)                                               \
-    NEXT_TOKEN;                                                               \
-    p->expected_token = (token_type);                                         \
-    if (current_token.type != p->expected_token) { PARSER_FAIL(PARSE_ETOK); }
+#define THEN_TOKEN_(token_type)                                                \
+    NEXT(current_token);                                                       \
+    p_->expected_token = (token_type);                                         \
+    if (current_token.type != p_->expected_token) { PARSER_FAIL(PARSE_ETOK); }
 
 #define THEN(parser, var) \
     THEN_(parser);        \
-    node *var = p->node;
+    node *var = p_->node;
 
-#define THEN_(parser)                                            \
-    {                                                            \
-        parse_result result = parse_##parser(p, &current_token); \
-        if (result != PARSE_OK) { PARSER_FAIL(result); }         \
+#define THEN_(parser)                                    \
+    {                                                    \
+        parse_result result = PARSE(parser);             \
+        if (result != PARSE_OK) { PARSER_FAIL(result); } \
     }
 
-#define PARSER_ATOM(name, token_type)                 \
-    PARSER(name) {                                    \
-        PARSER_BEGIN;                                 \
+#define THEN_V(parser, var, ...)  \
+    THEN_V_(parser, __VA_ARGS__); \
+    node *var = p_->node;
+
+#define THEN_V_(parser, ...)                                \
+    {                                                       \
+        parse_result result = PARSE_V(parser, __VA_ARGS__); \
+        if (result != PARSE_OK) { PARSER_FAIL(result); }    \
+    }
+
+#define PARSE(parser)        parse_##parser(p, &current_token)
+#define PARSE_V(parser, ...) parse_##parser(p, &current_token, __VA_ARGS__)
+
+#define PARSER_ATOM(name, token_type, node_type)      \
+    parse_result parse_##name(Parser *p, token *t) {  \
+        PARSER_BEGIN(p, t);                           \
         THEN_TOKEN_(token_type);                      \
-        node *n = stack_push_zeroed(&p->stack, node); \
-        n->type = N_##name;                           \
-        n->token = current_token;                     \
+        p->node = stack_push_zeroed(&p->stack, node); \
+        p->node->type = node_type;                    \
+        p->node->token = current_token;               \
         PARSER_END;                                   \
     }
 
 /* * * Parsers * * */
 
-#define PARSERS   \
-    NODE_TYPES    \
-    _(pattern)    \
-    _(expr)       \
-    _(expr_unary)
+PARSER_ATOM(ident, T_IDENT, N_IDENT)
+PARSER_ATOM(string, T_STRING, N_STRING)
+PARSER_ATOM(int, T_INT, N_INT)
+PARSER_ATOM(dec, T_DEC, N_DEC)
 
-#define _(name) PARSER(name);
-PARSERS
-#undef _
-
-PARSER_ATOM(IDENT, T_IDENT)
-PARSER_ATOM(STRING, T_STRING)
-PARSER_ATOM(INT, T_INT)
-PARSER_ATOM(DEC, T_DEC)
-
-PARSER(ASSIGN) {
-    PARSER_BEGIN;
+parse_result parse_assign(Parser *p, token *ts) {
+    PARSER_BEGIN(p, ts);
 
     THEN_TOKEN_(T_LET);
     THEN(pattern, lhs);
     THEN_TOKEN_(T_EQ);
-    THEN(expr, rhs);
+    THEN_V(expr, rhs, 0);
     THEN_TOKEN_(T_SEMI);
 
     p->node = stack_push_zeroed(&p->stack, node);
@@ -133,44 +147,82 @@ PARSER(ASSIGN) {
     PARSER_END;
 }
 
-PARSER(TUPLE) {
-    PARSER_BEGIN;
+parse_result parse_tuple_or_parens(Parser *p, token *ts) {
+    PARSER_BEGIN(p, ts);
+
+    token peek;
+    node *first_item = NULL, *last_item = NULL;
 
     THEN_TOKEN_(T_POPEN);
-    THEN(expr, first_item);
-    node *last_item = first_item;
 
     while (true) {
-        NEXT_TOKEN;
+        peek = current_token;
+        NEXT(peek);
 
-        if (current_token.type == T_COMMA) {
-            token      peek = current_token;
-            lex_result peek_result = token_next(&peek);
-            if (peek_result == LEX_OK && peek.type == T_PCLOSE) break;
+        switch (peek.type) {
+        case T_PCLOSE:
+            printf("close\n");
+            current_token = peek;
 
-            THEN(expr, item);
+            if (first_item && first_item == last_item) {
+                p->node = last_item;
+                PARSER_END;
+            }
+
+            p->node = stack_push_zeroed(&p->stack, node);
+            p->node->type = N_TUPLE;
+
+            if (first_item) p->node->first_child = first_item;
+
+            PARSER_END;
+        case T_COMMA:
+            printf("comma\n");
+            current_token = peek;
+
+            if (!first_item) {
+                p->expected_token = T_PCLOSE; // arbitrary
+                PARSER_FAIL(PARSE_ETOK);
+            }
+
+            NEXT(peek);
+
+            if (peek.type == T_PCLOSE) {
+                current_token = peek;
+
+                p->node = stack_push_zeroed(&p->stack, node);
+                p->node->type = N_TUPLE;
+                p->node->first_child = first_item;
+
+                PARSER_END;
+            }
+        default:
+            printf(F_TOKEN, FA_TOKEN(peek));
+
+            if (last_item) {
+                p->expected_token = T_COMMA;
+                PARSER_FAIL(PARSE_ETOK);
+            }
+        }
+
+        THEN_V(expr, item, EXPR_ALL);
+        printf("expr\n");
+
+        if (first_item) {
             last_item->next_sibling = item;
             last_item = item;
-        } else if (current_token.type == T_PCLOSE && last_item != first_item) {
-            break;
         } else {
-            p->expected_token = T_COMMA;
-            PARSER_FAIL(PARSE_ETOK);
+            first_item = last_item = item;
         }
     }
-
-    p->node = stack_push_zeroed(&p->stack, node);
-    p->node->type = N_TUPLE;
-    p->node->first_child = first_item;
 
     PARSER_END;
 }
 
-PARSER(SPREAD) {
-    PARSER_BEGIN;
+parse_result parse_spread(Parser *p, token *ts) {
+    PARSER_BEGIN(p, ts);
 
     THEN_TOKEN_(T_ELLIPS);
-    THEN(expr, expr);
+    THEN_V(expr, expr, EXPR_ALL);
 
     p->node = stack_push_zeroed(&p->stack, node);
     p->node->type = N_SPREAD;
@@ -179,11 +231,11 @@ PARSER(SPREAD) {
     PARSER_END;
 }
 
-PARSER(UNARY) {
-    PARSER_BEGIN;
+parse_result parse_unary(Parser *p, token *ts) {
+    PARSER_BEGIN(p, ts);
 
     THEN_TOKEN(T_OP, op);
-    THEN(expr_unary, expr);
+    THEN_V(expr, expr, ~EXPR_BINARY);
 
     p->node = stack_push_zeroed(&p->stack, node);
     p->node->type = N_UNARY;
@@ -193,17 +245,12 @@ PARSER(UNARY) {
     PARSER_END;
 }
 
-PARSER(pattern) {
-    PARSER_BEGIN;
-    PARSER_END;
+parse_result parse_expr(Parser *p, token *ts, parse_expr_flags flags) {
+    // TODO: Placeholder
+    return parse_ident(p, ts);
 }
 
-PARSER(expr) {
-    PARSER_BEGIN;
-    PARSER_END;
-}
-
-PARSER(expr_unary) {
-    PARSER_BEGIN;
-    PARSER_END;
+parse_result parse_pattern(Parser *p, token *ts) {
+    // TODO: Placeholder
+    return PARSE_ETOK;
 }

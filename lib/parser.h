@@ -84,10 +84,25 @@ typedef struct {
     token_type expected_token;
 } Parser;
 
+typedef enum {
+    EXPR_ALL = -1,
+    EXPR_BINARY = 1,
+} parse_expr_flags;
+
 const char *node_name(node);
 void        node_print(node, FILE *);
 
 void         parser_init(Parser *);
 parse_result parse(Parser *, token *);
+parse_result parse_expr(Parser *, token *, parse_expr_flags);
+parse_result parse_pattern(Parser *, token *);
+parse_result parse_ident(Parser *, token *);
+parse_result parse_string(Parser *, token *);
+parse_result parse_int(Parser *, token *);
+parse_result parse_dec(Parser *, token *);
+parse_result parse_assign(Parser *, token *);
+parse_result parse_tuple_or_parens(Parser *, token *);
+parse_result parse_spread(Parser *, token *);
+parse_result parse_unary(Parser *, token *);
 
 #endif // PARSER_H_

@@ -79,8 +79,8 @@ stack_ptr stack_top(Stack *s) {
 }
 
 void stack_rewind(Stack *s, stack_ptr cursor) {
-    if ((size_t)cursor >= s->cursor) {
-        fprintf(stderr, "WARN: `stack_rewind' called with `stack_ptr >= top'\n");
+    if ((size_t)cursor > s->cursor) {
+        fprintf(stderr, "WARN: `stack_rewind' called with `stack_ptr > top'\n");
         return;
     }
 
