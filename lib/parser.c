@@ -1,6 +1,6 @@
 #include "parser.h"
 
-#define _(name) [N_##name] = "N_" #name,
+#define _(name) [name] = #name,
 static const char *NODE_NAMES[] = { NODE_TYPES };
 #undef _
 
@@ -114,7 +114,7 @@ void parser_init(Parser *p) {
 #define PARSE_V(parser, ...) parse_##parser(p, &current_token, __VA_ARGS__)
 
 #define PARSER_ATOM(name, token_type, node_type)      \
-    parse_result parse_##name(Parser *p, token *t) {  \
+    parse_result name(Parser *p, token *t) {          \
         PARSER_BEGIN(p, t);                           \
         THEN_TOKEN_(token_type);                      \
         p->node = stack_push_zeroed(&p->stack, node); \
@@ -125,10 +125,10 @@ void parser_init(Parser *p) {
 
 /* * * Parsers * * */
 
-PARSER_ATOM(ident, T_IDENT, N_IDENT)
-PARSER_ATOM(string, T_STRING, N_STRING)
-PARSER_ATOM(int, T_INT, N_INT)
-PARSER_ATOM(dec, T_DEC, N_DEC)
+PARSER_ATOM(parse_ident, T_IDENT, N_IDENT)
+PARSER_ATOM(parse_string, T_STRING, N_STRING)
+PARSER_ATOM(parse_int, T_INT, N_INT)
+PARSER_ATOM(parse_dec, T_DEC, N_DEC)
 
 parse_result parse_assign(Parser *p, token *ts) {
     PARSER_BEGIN(p, ts);

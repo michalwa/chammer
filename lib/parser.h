@@ -8,34 +8,34 @@
 #include "string.h"
 
 #define NODE_TYPES                        \
-    _(ASSIGN) /* assignment            */ \
-    _(IDENT)  /* identifier expression */ \
-    _(STRING) /* string literal        */ \
-    _(INT)    /* integer literal       */ \
-    _(DEC)    /* decimal literal       */ \
-    _(TUPLE)  /* tuple literal         */ \
-    _(LIST)   /* list literal          */ \
-    _(SPREAD) /* list spread           */ \
-    _(UNARY)  /* unary operation       */ \
-    _(BINARY) /* binary operation      */ \
-    _(APPLY)  /* function application  */ \
-    _(IF)     /* if expression         */ \
-    _(MATCH)  /* match expression      */ \
-    _(CASE)   /* match case            */ \
-    _(LAMBDA) /* lambda expression     */ \
-    _(BLOCK)  /* block expression      */ \
-    _(DOBLK)  /* do-block expression   */ \
-    _(DOBIND) /* monadic binding       */ \
-    _(PIDENT) /* identifier pattern    */ \
-    _(PWILD)  /* wildcard pattern      */ \
-    _(PAPPLY) /* function pattern      */ \
-    _(PTUPLE) /* tuple pattern         */ \
-    _(PLIST)  /* list pattern          */ \
-    _(PLTAIL) /* list pattern tail     */ \
-    _(PALIAS) /* alias pattern         */ \
-    _(PCONST) /* const/expr pattern    */
+    _(N_ASSIGN) /* assignment            */ \
+    _(N_IDENT)  /* identifier expression */ \
+    _(N_STRING) /* string literal        */ \
+    _(N_INT)    /* integer literal       */ \
+    _(N_DEC)    /* decimal literal       */ \
+    _(N_TUPLE)  /* tuple literal         */ \
+    _(N_LIST)   /* list literal          */ \
+    _(N_SPREAD) /* list spread           */ \
+    _(N_UNARY)  /* unary operation       */ \
+    _(N_BINARY) /* binary operation      */ \
+    _(N_APPLY)  /* function application  */ \
+    _(N_IF)     /* if expression         */ \
+    _(N_MATCH)  /* match expression      */ \
+    _(N_CASE)   /* match case            */ \
+    _(N_LAMBDA) /* lambda expression     */ \
+    _(N_BLOCK)  /* block expression      */ \
+    _(N_DOBLK)  /* do-block expression   */ \
+    _(N_DOBIND) /* monadic binding       */ \
+    _(N_PIDENT) /* identifier pattern    */ \
+    _(N_PWILD)  /* wildcard pattern      */ \
+    _(N_PAPPLY) /* function pattern      */ \
+    _(N_PTUPLE) /* tuple pattern         */ \
+    _(N_PLIST)  /* list pattern          */ \
+    _(N_PLTAIL) /* list pattern tail     */ \
+    _(N_PALIAS) /* alias pattern         */ \
+    _(N_PCONST) /* const/expr pattern    */
 
-#define _(name) N_##name,
+#define _(name) name,
 typedef enum { NODE_TYPES } node_type;
 #undef _
 
