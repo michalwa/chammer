@@ -6,6 +6,11 @@
 
 #define BUFFER_DEFAULT_CAPACITY 0x400
 
+static inline void buffer_grow(Buffer *b) {
+    b->capacity <<= 1;
+    b->data = realloc(b->data, b->capacity);
+}
+
 void buffer_init(Buffer *b) {
     buffer_init_capacity(b, BUFFER_DEFAULT_CAPACITY);
 }
@@ -24,8 +29,7 @@ void buffer_printf(Buffer *b, const char *format, ...) {
     size_t written = vsnprintf(b->data + b->len, free, format, args);
 
     if (written > free) {
-        b->capacity <<= 1;
-        b->data = realloc(b->data, b->capacity);
+        buffer_grow(b);
 
         free = b->capacity - b->len;
         written = vsnprintf(b->data + b->len, free, format, args);
@@ -34,6 +38,24 @@ void buffer_printf(Buffer *b, const char *format, ...) {
     b->len += written;
 }
 
+char *buffer_alloc(Buffer *b, size_t len) {
+    if (b->len + len > b->capacity) buffer_grow(b);
+
+    char *c = b->data + b->len;
+    b->len += len;
+    return c;
+}
+
 void buffer_free(Buffer *b) {
     free(b->data);
+}
+
+void fread_to_buffer(FILE *f, Buffer *b) {
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    char  *data = buffer_alloc(b, size);
+
+    rewind(f);
+    fread(data, size, 1, f);
+    fclose(f);
 }

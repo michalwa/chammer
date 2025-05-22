@@ -1,6 +1,9 @@
 #include "../lib/parser.h"
 
+#include <stdio.h>
+
 #include "../lib/lexer.h"
+#include "snapshot.h"
 #include "test.h"
 
 TEST(parse_tuple_or_parens) {
@@ -11,22 +14,7 @@ TEST(parse_tuple_or_parens) {
     parser_init(&p);
 
     ASSERT_INT_EQ(parse_tuple_or_parens(&p, &t), PARSE_OK);
+    SNAPSHOT("tuple_with_2_idents", f, node_print(*p.node, f));
 
-    const node *n = p.node;
-    ASSERT_INT_EQ(n->type, N_TUPLE);
-
-    n = n->first_child;
-    ASSERT_EQ("%p", n->parent, p.node);
-    ASSERT_INT_EQ(n->type, N_IDENT);
-    ASSERT_INT_EQ(n->token.type, T_IDENT);
-    ASSERT_STRN_EQ(n->token.str, n->token.len, "foo", 3);
-
-    n = n->next_sibling;
-    ASSERT_EQ("%p", n->parent, p.node);
-    ASSERT_INT_EQ(n->type, N_IDENT);
-    ASSERT_INT_EQ(n->token.type, T_IDENT);
-    ASSERT_STRN_EQ(n->token.str, n->token.len, "bar", 3);
-
-    parser_free(&p);
     return TEST_OK;
 }
