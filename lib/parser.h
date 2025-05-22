@@ -86,6 +86,9 @@ typedef struct {
 
 typedef enum {
     EXPR_ALL = -1,
+    /**
+     * Expressions which can occur as operands of a binary infix operation
+     */
     EXPR_BINARY = 1,
 } parse_expr_flags;
 

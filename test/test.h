@@ -1,6 +1,8 @@
 #ifndef TEST_H_
 #define TEST_H_
 
+#include <string.h>
+
 #include "../lib/buffer.h"
 
 #define TEST(name) int test_##name(Buffer *output)
@@ -16,12 +18,19 @@
         return TEST_FAIL;                               \
     }
 
-#define ASSERT_INT_EQ(a, b)                                                                    \
-    if ((a) != (b)) {                                                                          \
-        TEST_PRINTF(                                                                           \
-            "Assertion failed: " #a " == " #b "\n   left = %d\n  right = %d\n", (int)a, (int)b \
-        );                                                                                     \
-        return TEST_FAIL;                                                                      \
+#define ASSERT_EQ(a, b, format)                                                                 \
+    if ((a) != (b)) {                                                                           \
+        TEST_PRINTF(                                                                            \
+            "Assertion failed: " #a " == " #b "\n   left = " format "\n  right = " format "\n", \
+            (a), (b)                                                                            \
+        );                                                                                      \
+        return TEST_FAIL;                                                                       \
     }
+
+#define ASSERT_INT_EQ(a, b) ASSERT_EQ((int)(a), (int)(b), "%d")
+
+#define ASSERT_STRN_EQ(a, a_len, b, b_len) \
+    ASSERT_INT_EQ(a_len, b_len);           \
+    ASSERT(strncmp(a, b, a_len) == 0);
 
 #endif // TEST_H_
