@@ -7,35 +7,38 @@
 
 #include "test.h"
 
-static void next_line(const char *c, size_t *start, size_t *len) {
-    *start += *len;
-    while (c[*start] == '\n') (*start)++;
-    *len = strcspn(c + *start, "\n");
+static void next_line(string *line) {
+    line->data += line->len;
+    while (*line->data == '\n') line->data++;
+    line->len = strcspn(line->data, "\n");
 }
 
 static void snapshot_diff(Buffer *output, const Buffer *a, const Buffer *b) {
-    size_t a_start = 0, b_start = 0, a_len = 0, b_len = 0;
+    const char *a_end = a->data + a->len;
+    const char *b_end = b->data + b->len;
+    string      a_line = { a->data, 0 };
+    string      b_line = { b->data, 0 };
 
-    next_line(a->data, &a_start, &a_len);
-    next_line(b->data, &b_start, &b_len);
+    next_line(&a_line);
+    next_line(&b_line);
 
-    while (a_start < a->len || b_start < b->len) {
-        if (a_start < a->len && b_start < b->len) {
-            if (a_len == b_len && strncmp(a->data + a_start, b->data + b_start, a_len) == 0) {
-                buffer_printf(output, "  %.*s\n", (int)a_len, a->data + a_start);
+    while (a_line.data < a_end || b_line.data < b_end) {
+        if (a_line.data < a_end && b_line.data < b_end) {
+            if (string_eq(a_line, b_line)) {
+                buffer_printf(output, "  " F_STRING "\n", FA_STRING(a_line));
             } else {
-                buffer_printf(output, RED("- %.*s\n"), (int)a_len, a->data + a_start);
-                buffer_printf(output, GREEN("+ %.*s\n"), (int)b_len, b->data + b_start);
+                buffer_printf(output, RED("- " F_STRING "\n"), FA_STRING(a_line));
+                buffer_printf(output, GREEN("+ " F_STRING "\n"), FA_STRING(b_line));
             }
 
-            next_line(a->data, &a_start, &a_len);
-            next_line(b->data, &b_start, &b_len);
-        } else if (a_start < a->len) {
-            buffer_printf(output, RED("- %.*s\n"), (int)a_len, a->data + a_start);
-            next_line(a->data, &a_start, &a_len);
-        } else if (b_start < b->len) {
-            buffer_printf(output, GREEN("+ %.*s\n"), (int)b_len, b->data + b_start);
-            next_line(a->data, &a_start, &a_len);
+            next_line(&a_line);
+            next_line(&b_line);
+        } else if (a_line.data < a_end) {
+            buffer_printf(output, RED("- " F_STRING "\n"), FA_STRING(a_line));
+            next_line(&a_line);
+        } else if (b_line.data < b_end) {
+            buffer_printf(output, GREEN("+ " F_STRING "\n"), FA_STRING(b_line));
+            next_line(&b_line);
         }
     }
 }
@@ -60,7 +63,7 @@ int snapshot(Buffer *output, const char *filename, FILE *new) {
         buffer_init(&old_buf);
         fread_to_buffer(old, &old_buf);
 
-        if (new_buf.len != old_buf.len || strncmp(new_buf.data, old_buf.data, new_buf.len) != 0) {
+        if (!string_eq(buffer_to_string(old_buf), buffer_to_string(new_buf))) {
             if (getenv("HAMMER_SNAPSHOT_REVIEW")) {
                 Buffer tmp;
                 buffer_init(&tmp);
@@ -73,12 +76,10 @@ int snapshot(Buffer *output, const char *filename, FILE *new) {
 
                 buffer_free(&tmp);
 
-                if (getchar() == 'y') {
+                if (getchar() == 'y')
                     snapshot_save(filename, &new_buf);
-                    printf("Saved\n");
-                } else {
+                else
                     status = TEST_FAIL;
-                }
             } else {
                 buffer_printf(output, "Snapshot changed: %s\n\n", filename);
                 snapshot_diff(output, &new_buf, &old_buf);

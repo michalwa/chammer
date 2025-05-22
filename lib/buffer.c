@@ -50,6 +50,10 @@ void buffer_free(Buffer *b) {
     free(b->data);
 }
 
+inline string buffer_to_string(Buffer b) {
+    return (string){ .data = b.data, .len = b.len };
+}
+
 void fread_to_buffer(FILE *f, Buffer *b) {
     fseek(f, 0, SEEK_END);
     size_t size = ftell(f);

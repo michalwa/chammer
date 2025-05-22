@@ -183,8 +183,9 @@ inline void token_begin(token *t, const char *buffer) {
 
 lex_result token_next(token *t) {
     t->str += t->len;
-
     while (isspace(*t->str)) t->str++;
+
+    if (!*t->str) return LEX_NONE;
 
     lex_result result;
 

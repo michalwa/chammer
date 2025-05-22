@@ -1,9 +1,8 @@
-#include "../lib/buffer.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "../lib/buffer.h"
 #include "test.h"
 
 TEST(buffer) {
