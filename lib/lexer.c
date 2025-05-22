@@ -8,7 +8,7 @@ typedef struct {
     token_type  type;
 } keyword;
 
-#define _(name) [T_##name] = "T_" #name,
+#define _(name) [name] = #name,
 static const char *TOKEN_NAMES[] = { TOKEN_TYPES };
 #undef _
 

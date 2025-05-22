@@ -5,39 +5,39 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define TOKEN_TYPES                 \
-    _(BCOMM)  /* block comment   */ \
-    _(LCOMM)  /* line comment    */ \
-    _(LET)    /* `let'           */ \
-    _(DO)     /* `do'            */ \
-    _(IF)     /* `if'            */ \
-    _(THEN)   /* `then'          */ \
-    _(ELSE)   /* `else'          */ \
-    _(MATCH)  /* `match'         */ \
-    _(CASE)   /* `case'          */ \
-    _(REC)    /* `rec'           */ \
-    _(IDENT)  /* identifier      */ \
-    _(UNDER)  /* `_'             */ \
-    _(INFIX)  /* infix ident     */ \
-    _(STRING) /* string literal  */ \
-    _(INT)    /* integer literal */ \
-    _(DEC)    /* decimal literal */ \
-    _(OP)     /* operator        */ \
-    _(EQ)     /* `='             */ \
-    _(LARROW) /* `<-'            */ \
-    _(RARROW) /* `->'            */ \
-    _(ELLIPS) /* `...'           */ \
-    _(BSLASH) /* `\`             */ \
-    _(POPEN)  /* `('             */ \
-    _(PCLOSE) /* `)'             */ \
-    _(SOPEN)  /* `['             */ \
-    _(SCLOSE) /* `]'             */ \
-    _(COPEN)  /* `{'             */ \
-    _(CCLOSE) /* `}'             */ \
-    _(COMMA)  /* `,'             */ \
-    _(SEMI)   /* `;'             */
+#define TOKEN_TYPES                   \
+    _(T_BCOMM)  /* block comment   */ \
+    _(T_LCOMM)  /* line comment    */ \
+    _(T_LET)    /* `let'           */ \
+    _(T_DO)     /* `do'            */ \
+    _(T_IF)     /* `if'            */ \
+    _(T_THEN)   /* `then'          */ \
+    _(T_ELSE)   /* `else'          */ \
+    _(T_MATCH)  /* `match'         */ \
+    _(T_CASE)   /* `case'          */ \
+    _(T_REC)    /* `rec'           */ \
+    _(T_IDENT)  /* identifier      */ \
+    _(T_UNDER)  /* `_'             */ \
+    _(T_INFIX)  /* infix ident     */ \
+    _(T_STRING) /* string literal  */ \
+    _(T_INT)    /* integer literal */ \
+    _(T_DEC)    /* decimal literal */ \
+    _(T_OP)     /* operator        */ \
+    _(T_EQ)     /* `='             */ \
+    _(T_LARROW) /* `<-'            */ \
+    _(T_RARROW) /* `->'            */ \
+    _(T_ELLIPS) /* `...'           */ \
+    _(T_BSLASH) /* `\`             */ \
+    _(T_POPEN)  /* `('             */ \
+    _(T_PCLOSE) /* `)'             */ \
+    _(T_SOPEN)  /* `['             */ \
+    _(T_SCLOSE) /* `]'             */ \
+    _(T_COPEN)  /* `{'             */ \
+    _(T_CCLOSE) /* `}'             */ \
+    _(T_COMMA)  /* `,'             */ \
+    _(T_SEMI)   /* `;'             */
 
-#define _(name) T_##name,
+#define _(name) name,
 typedef enum { TOKEN_TYPES } token_type;
 #undef _
 
