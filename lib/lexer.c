@@ -1,4 +1,5 @@
 #include "lexer.h"
+
 #include <ctype.h>
 #include <string.h>
 
@@ -14,34 +15,34 @@ static const char *TOKEN_NAMES[] = { TOKEN_TYPES };
 static const char *OP_CHARSET = "~!@#$%^&*-+=|:<>./?";
 
 static const keyword KEYWORDS[] = {
-    { "let",   T_LET    },
-    { "do",    T_DO     },
-    { "if",    T_IF     },
-    { "then",  T_THEN   },
-    { "else",  T_ELSE   },
-    { "match", T_MATCH  },
-    { "case",  T_CASE   },
-    { "rec",   T_REC    },
-    { "_",     T_UNDER  },
+    { "let",   T_LET   },
+    { "do",    T_DO    },
+    { "if",    T_IF    },
+    { "then",  T_THEN  },
+    { "else",  T_ELSE  },
+    { "match", T_MATCH },
+    { "case",  T_CASE  },
+    { "rec",   T_REC   },
+    { "_",     T_UNDER },
 };
 
 static const keyword KEYWORD_GLYPHS[] = {
-    { "=",     T_EQ     },
-    { "<-",    T_LARROW },
-    { "->",    T_RARROW },
-    { "...",   T_ELLIPS },
+    { "=",   T_EQ     },
+    { "<-",  T_LARROW },
+    { "->",  T_RARROW },
+    { "...", T_ELLIPS },
 };
 
 static const keyword KEYWORD_CHARS[] = {
-    { "\\",    T_BSLASH },
-    { "(",     T_POPEN  },
-    { ")",     T_PCLOSE },
-    { "[",     T_SOPEN  },
-    { "]",     T_SCLOSE },
-    { "{",     T_COPEN  },
-    { "}",     T_CCLOSE },
-    { ",",     T_COMMA  },
-    { ";",     T_SEMI   },
+    { "\\", T_BSLASH },
+    { "(",  T_POPEN  },
+    { ")",  T_PCLOSE },
+    { "[",  T_SOPEN  },
+    { "]",  T_SCLOSE },
+    { "{",  T_COPEN  },
+    { "}",  T_CCLOSE },
+    { ",",  T_COMMA  },
+    { ";",  T_SEMI   },
 };
 
 static lex_result token_find_keyword(token *t, const keyword *keywords, size_t num_keywords) {
@@ -52,11 +53,11 @@ static lex_result token_find_keyword(token *t, const keyword *keywords, size_t n
         }
     }
 
-    return LEX_NOT_FOUND;
+    return LEX_NONE;
 }
 
 static lex_result token_next_block_comment(token *t) {
-    if (strncmp(t->str, "{-", 2) != 0) return false;
+    if (strncmp(t->str, "{-", 2) != 0) return LEX_NONE;
 
     t->len = 2;
     // Points at the last character of where the block would end
@@ -68,7 +69,7 @@ static lex_result token_next_block_comment(token *t) {
         c++;
     }
 
-    if (!*c) return LEX_EOI;
+    if (!*c) return LEX_EEOI;
 
     t->len += 2;
     t->type = T_BCOMM;
@@ -76,11 +77,10 @@ static lex_result token_next_block_comment(token *t) {
 }
 
 static lex_result token_next_line_comment(token *t) {
-    if (strncmp(t->str, "--", 2) != 0) return LEX_NOT_FOUND;
+    if (strncmp(t->str, "--", 2) != 0) return LEX_NONE;
 
     t->len = 2;
-    while (t->str[t->len] != 0 && !strchr("\n\r", t->str[t->len]))
-        t->len++;
+    while (t->str[t->len] != 0 && !strchr("\n\r", t->str[t->len])) t->len++;
 
     t->type = T_LCOMM;
 
@@ -88,12 +88,12 @@ static lex_result token_next_line_comment(token *t) {
 }
 
 static lex_result token_next_string(token *t) {
-    if (*t->str != '"') return LEX_NOT_FOUND;
+    if (*t->str != '"') return LEX_NONE;
 
     bool escape = false;
 
-    while (t->str[++t->len]) {
-        switch (t->str[t->len]) {
+    while (1) {
+        switch (t->str[++t->len]) {
         case '\\':
             escape = true;
             continue;
@@ -104,16 +104,16 @@ static lex_result token_next_string(token *t) {
         escape = false;
     }
 
-end:
-    if (!t->str[t->len]) return LEX_EOI;
+    return LEX_EEOI;
 
+end:
     t->len++;
     t->type = T_STRING;
     return LEX_OK;
 }
 
 static lex_result token_next_word(token *t) {
-    if (!isalpha(*t->str) && *t->str != '_') return LEX_NOT_FOUND;
+    if (!isalpha(*t->str) && *t->str != '_') return LEX_NONE;
 
     t->len = 0;
     while (isalnum(t->str[t->len])) t->len++;
@@ -125,7 +125,7 @@ static lex_result token_next_word(token *t) {
 }
 
 static lex_result token_next_glyph(token *t) {
-    if (!strchr(OP_CHARSET, *t->str)) return LEX_NOT_FOUND;
+    if (!strchr(OP_CHARSET, *t->str)) return LEX_NONE;
 
     t->len = 0;
     while (strchr(OP_CHARSET, t->str[t->len])) t->len++;
@@ -137,7 +137,7 @@ static lex_result token_next_glyph(token *t) {
 }
 
 static lex_result token_next_infix(token *t) {
-    if (*t->str != '`') return LEX_NOT_FOUND;
+    if (*t->str != '`') return LEX_NONE;
 
     t->len = 1;
     while (isalnum(t->str[t->len])) t->len++;
@@ -151,7 +151,7 @@ static lex_result token_next_infix(token *t) {
 }
 
 static lex_result token_next_number(token *t) {
-    if (!isdigit(*t->str)) return LEX_NOT_FOUND;
+    if (!isdigit(*t->str)) return LEX_NONE;
 
     t->len = 0;
     while (isdigit(t->str[t->len])) t->len++;
@@ -164,7 +164,7 @@ static lex_result token_next_number(token *t) {
         t->len++;
         while (isdigit(t->str[t->len])) t->len++;
 
-        if (t->str[t->len - 1] == '.') return LEX_NUM;
+        if (t->str[t->len - 1] == '.') return LEX_ENUM;
     }
 
     return LEX_OK;
@@ -183,12 +183,16 @@ inline void token_begin(token *t, const char *buffer) {
 
 lex_result token_next(token *t) {
     t->str += t->len;
-
     while (isspace(*t->str)) t->str++;
+
+    if (!*t->str) return LEX_NONE;
 
     lex_result result;
 
-#define TRY(fn) result = fn(t); if (result != LEX_NOT_FOUND) return result;
+#define TRY(fn)                            \
+    result = fn(t);                        \
+    if (result != LEX_NONE) return result;
+
     TRY(token_next_block_comment);
     TRY(token_next_line_comment);
     TRY(token_next_string);
@@ -199,17 +203,15 @@ lex_result token_next(token *t) {
     TRY(token_next_number);
 #undef TRY
 
-    return LEX_NOT_FOUND;
+    return LEX_NONE;
 }
 
 inline bool token_eq(token a, token b) {
-    return a.type == b.type
-        && a.len == b.len
-        && strncmp(a.str, b.str, a.len) == 0;
+    return a.type == b.type && a.len == b.len && strncmp(a.str, b.str, a.len) == 0;
 }
 
 loc token_loc(token t, const char *buffer) {
-    loc l = {0};
+    loc l = { 0 };
 
     for (; buffer < t.str; buffer++) {
         l.col++;

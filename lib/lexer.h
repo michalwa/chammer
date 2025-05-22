@@ -1,5 +1,5 @@
-#ifndef _LEXER_H
-#define _LEXER_H
+#ifndef LEXER_H_
+#define LEXER_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -35,13 +35,13 @@
     _(T_COPEN)  /* `{'             */ \
     _(T_CCLOSE) /* `}'             */ \
     _(T_COMMA)  /* `,'             */ \
-    _(T_SEMI)   /* `;'             */ \
+    _(T_SEMI)   /* `;'             */
 
 #define _(name) name,
 typedef enum { TOKEN_TYPES } token_type;
 #undef _
 
-#define F_TOKEN "%-8s %.*s"
+#define F_TOKEN         "%s `%.*s'"
 #define FA_TOKEN(token) token_name(token), (int)(token).len, (token).str
 
 typedef struct {
@@ -51,20 +51,20 @@ typedef struct {
 } token;
 
 typedef enum {
-    LEX_NOT_FOUND = 0,
+    LEX_NONE = 0,
     LEX_OK,
-    LEX_EOI, // Unexpected end of input
-    LEX_NUM, // Malformed number
+    LEX_EEOI, // Unexpected end of input
+    LEX_ENUM, // Malformed number
 } lex_result;
 
 typedef struct {
     uint16_t line, col;
 } loc;
 
-void token_begin(token *t, const char *buffer);
-lex_result token_next(token *t);
-bool token_eq(token a, token b);
-loc token_loc(token t, const char *buffer);
-const char *token_name(token t);
+void        token_begin(token *, const char *);
+lex_result  token_next(token *);
+bool        token_eq(token, token);
+loc         token_loc(token, const char *);
+const char *token_name(token);
 
-#endif // _LEXER_H
+#endif // LEXER_H_

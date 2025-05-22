@@ -1,64 +1,43 @@
+#include <stdarg.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include "lexer.h"
-#include "example.tokens.h"
+#include <string.h>
 
-int main(int argc, const char **argv) {
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s <file>\n", argv[0]);
-        return 1;
+#include "../lib/parser.h"
+#include "example.tree.h"
+
+node *node_begin(Stack *s, node *parent, int argc, ...) {
+    va_list args;
+    va_start(args, argc);
+
+    node *n = stack_push_zeroed(s, node);
+
+    if (argc-- > 0) n->type = va_arg(args, node_type);
+    if (argc-- > 0) n->token.type = va_arg(args, token_type);
+    if (argc-- > 0) {
+        n->token.str = va_arg(args, char *);
+        n->token.len = strlen(n->token.str);
     }
+    if (argc-- > 0) n->flags = va_arg(args, node_flags);
 
-    FILE *f = fopen(argv[1], "r");
-    if (!f) {
-        fprintf(stderr, "Could not open `%s': ", argv[1]);
-        perror(0);
-        return 1;
-    }
+    if (parent) node_add_children(parent, n);
 
-    fseek(f, 0, SEEK_END);
-    size_t size = ftell(f);
-    rewind(f);
+    va_end(args);
+    return n;
+}
 
-    char *buffer = malloc(size + 1);
-    fread(buffer, size, 1, f);
-    fclose(f);
-    buffer[size] = 0;
+int main(void) {
+    Stack stack;
+    stack_init(&stack);
 
-    token actual;
-    token_begin(&actual, buffer);
+    node *n = 0;
 
-    for (size_t i = 0; i < sizeof(EXAMPLE_TOKENS) / sizeof(token); i++) {
-        token expected = EXAMPLE_TOKENS[i];
+#define _BEGIN(...) n = node_begin(&stack, n, ARGC(__VA_ARGS__), __VA_ARGS__);
+#define _END                      \
+    if (n->parent) n = n->parent;
+    EXAMPLE_TREE
+#undef _BEGIN
+#undef _END
 
-        lex_result result = token_next(&actual);
-
-        switch (result) {
-        case LEX_OK:
-            break;
-        case LEX_NOT_FOUND:
-            fprintf(stderr, "No more tokens\n");
-            return 1;
-        case LEX_EOI:
-            fprintf(stderr, "Unexpected end of input\n");
-            return 1;
-        case LEX_NUM:
-            fprintf(stderr, "Malformed number\n");
-            return 1;
-        }
-
-        if (!token_eq(expected, actual)) {
-            loc l = token_loc(actual, buffer);
-            fprintf(
-                stderr,
-                "Expected "F_TOKEN", got "F_TOKEN" at %u:%u\n",
-                FA_TOKEN(expected), FA_TOKEN(actual), l.line + 1, l.col + 1
-            );
-            return 1;
-        }
-
-        printf(F_TOKEN"\n", FA_TOKEN(actual));
-    }
-
-    free(buffer);
+    node_print(*n, stdout);
+    stack_free(&stack);
 }

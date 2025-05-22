@@ -1,0 +1,10 @@
+# NOTE: Keep in sync with Makefile
+CompileFlags:
+  Add:
+    - -std=c99
+    - -Wall
+    - -Wextra
+    - -Wpedantic
+    - -Wno-char-subscripts
+    - -Wno-parentheses
+    - -Wimplicit-fallthrough
