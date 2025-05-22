@@ -1,4 +1,4 @@
-# hammer
+# 🔨 hammer
 
 A Haskell- and Rust-inspired functional programming language developed as a hobby project.
 
