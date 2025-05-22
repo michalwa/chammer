@@ -92,8 +92,8 @@ static lex_result token_next_string(token *t) {
 
     bool escape = false;
 
-    while (t->str[++t->len]) {
-        switch (t->str[t->len]) {
+    while (1) {
+        switch (t->str[++t->len]) {
         case '\\':
             escape = true;
             continue;
@@ -104,9 +104,9 @@ static lex_result token_next_string(token *t) {
         escape = false;
     }
 
-end:
-    if (!t->str[t->len]) return LEX_EEOI;
+    return LEX_EEOI;
 
+end:
     t->len++;
     t->type = T_STRING;
     return LEX_OK;
