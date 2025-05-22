@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../lib/lexer.h"
 #include "test.h"
 
 TEST(buffer) {
