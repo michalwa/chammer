@@ -61,6 +61,10 @@ void parser_init(Parser *p) {
     stack_init(&p->stack);
 }
 
+void parser_free(Parser *p) {
+    stack_free(&p->stack);
+}
+
 /* * * Helpers * * */
 
 #define PARSER_BEGIN(parser, tokens)       \

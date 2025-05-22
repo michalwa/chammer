@@ -7,7 +7,7 @@
 #include "stack.h"
 #include "string.h"
 
-#define NODE_TYPES                        \
+#define NODE_TYPES                          \
     _(N_ASSIGN) /* assignment            */ \
     _(N_IDENT)  /* identifier expression */ \
     _(N_STRING) /* string literal        */ \
@@ -96,6 +96,7 @@ const char *node_name(node);
 void        node_print(node, FILE *);
 
 void         parser_init(Parser *);
+void         parser_free(Parser *);
 parse_result parse(Parser *, token *);
 parse_result parse_expr(Parser *, token *, parse_expr_flags);
 parse_result parse_pattern(Parser *, token *);

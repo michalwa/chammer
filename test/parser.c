@@ -25,5 +25,6 @@ TEST(parse_tuple_or_parens) {
     ASSERT_INT_EQ(n->token.type, T_IDENT);
     ASSERT_STRN_EQ(n->token.str, n->token.len, "bar", 3);
 
+    parser_free(&p);
     return TEST_OK;
 }
