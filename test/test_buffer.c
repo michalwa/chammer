@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "../lib/buffer.h"
-#include "test.h"
+#include "lib/test.h"
 
 TEST(buffer) {
     Buffer b;

@@ -3,6 +3,10 @@ CFLAGS         ?= -std=c99 -Wall -Wextra -Wpedantic -Wno-char-subscripts -Wno-pa
 CFLAGS_RELEASE ?= -O3
 CFLAGS_DEBUG   ?= -g -O0
 
+SRC_LIB = lib/*.c lib/*.h
+SRC_BIN  = src/*.c src/*.h
+SRC_TEST = test/*.c test/**/*.c test/**/*.h
+
 .PHONY: .release
 release: bin/hammer
 
@@ -13,22 +17,26 @@ debug: bin/hammer-debug
 test: bin/test
 	bin/test
 
-bin/hammer: lib/*.c lib/*.h src/*.c src/*.h
+bin/hammer: $(SRC_BIN) $(SRC_LIB)
 	mkdir -p bin
-	$(CC) lib/*.c src/*.c -o $@ $(CFLAGS) $(CFLAGS_RELEASE)
+	$(CC) $(filter %.c, $^) -o $@ $(CFLAGS) $(CFLAGS_RELEASE)
 
-bin/hammer-debug: lib/*.c lib/*.h src/*.c src/*.h
+bin/hammer-debug: $(SRC_BIN) $(SRC_LIB)
 	mkdir -p bin
-	$(CC) lib/*.c src/*.c -o $@ $(CFLAGS) $(CFLAGS_DEBUG)
+	$(CC) $(filter %.c, $^) -o $@ $(CFLAGS) $(CFLAGS_DEBUG)
+
+bin/test: bin/build_test $(SRC_TEST) $(SRC_LIB)
+	bin/build_test test/runner/tests.gen.h test/*.c
+	$(CC) $(filter %.c, $^) -o $@ $(CFLAGS) $(CFLAGS_DEBUG)
 
 bin/build_test: build_test.c test/*.c
 	mkdir -p bin
 	$(CC) $< -o $@ $(CFLAGS)
 
-bin/test: bin/build_test lib/*.c lib/*.h test/*.c test/*.h
-	bin/build_test test/tests.gen.h test/*.c
-	$(CC) lib/*.c test/*.c -o $@ $(CFLAGS) $(CFLAGS_DEBUG)
-
 .PHONY: format
 format:
-	clang-format -i **/*.{c,h}
+	clang-format -i $(SRC_BIN) $(SRC_LIB) $(SRC_TEST)
+
+.PHONY: clean
+clean:
+	rm -rf bin

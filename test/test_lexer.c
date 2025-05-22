@@ -3,8 +3,8 @@
 
 #include "../lib/buffer.h"
 #include "../lib/lexer.h"
-#include "snapshot.h"
-#include "test.h"
+#include "lib/snapshot.h"
+#include "lib/test.h"
 
 #define EXAMPLE_FILE_PATH "test/example.ham"
 

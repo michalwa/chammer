@@ -1,7 +1,7 @@
 #include <stdlib.h>
 
 #include "../lib/stack.h"
-#include "test.h"
+#include "lib/test.h"
 
 TEST(stack) {
     Stack stack;

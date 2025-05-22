@@ -2,8 +2,8 @@
 
 #include "../lib/lexer.h"
 #include "../lib/parser.h"
-#include "snapshot.h"
-#include "test.h"
+#include "lib/snapshot.h"
+#include "lib/test.h"
 
 TEST(parse_tuple_or_parens) {
     token t;

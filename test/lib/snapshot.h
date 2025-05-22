@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#include "../lib/buffer.h"
+#include "../../lib/buffer.h"
 
 #define SNAPSHOT(name, file, body)                                 \
     {                                                              \

@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "../lib/buffer.h"
-#include "test.h"
+#include "../../lib/buffer.h"
+#include "../lib/test.h"
 #include "tests.gen.h"
 
 typedef struct {
