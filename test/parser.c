@@ -16,11 +16,13 @@ TEST(parse_tuple_or_parens) {
     ASSERT_INT_EQ(n->type, N_TUPLE);
 
     n = n->first_child;
+    ASSERT_EQ("%p", n->parent, p.node);
     ASSERT_INT_EQ(n->type, N_IDENT);
     ASSERT_INT_EQ(n->token.type, T_IDENT);
     ASSERT_STRN_EQ(n->token.str, n->token.len, "foo", 3);
 
     n = n->next_sibling;
+    ASSERT_EQ("%p", n->parent, p.node);
     ASSERT_INT_EQ(n->type, N_IDENT);
     ASSERT_INT_EQ(n->token.type, T_IDENT);
     ASSERT_STRN_EQ(n->token.str, n->token.len, "bar", 3);

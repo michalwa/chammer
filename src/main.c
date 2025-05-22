@@ -5,40 +5,39 @@
 #include "../lib/parser.h"
 #include "example.tree.h"
 
-#define ARGC(...)                                         ARGC_(__VA_ARGS__, ARGC_SEQ_)
-#define ARGC_(...)                                        ARGC_NTH_(__VA_ARGS__)
-#define ARGC_NTH_(_1, _2, _3, _4, _5, _6, _7, _8, N, ...) N
-#define ARGC_SEQ_                                         8, 7, 6, 5, 4, 3, 2, 1, 0
-
-void node_begin(int indent, int argc, ...) {
+node *node_begin(Stack *s, node *parent, int argc, ...) {
     va_list args;
     va_start(args, argc);
 
-    node node = { 0 };
+    node *n = stack_push_zeroed(s, node);
 
-    if (argc-- > 0) node.type = va_arg(args, node_type);
-    if (argc-- > 0) node.token.type = va_arg(args, token_type);
+    if (argc-- > 0) n->type = va_arg(args, node_type);
+    if (argc-- > 0) n->token.type = va_arg(args, token_type);
     if (argc-- > 0) {
-        node.token.str = va_arg(args, char *);
-        node.token.len = strlen(node.token.str);
+        n->token.str = va_arg(args, char *);
+        n->token.len = strlen(n->token.str);
     }
-    if (argc-- > 0) node.flags = va_arg(args, node_flags);
+    if (argc-- > 0) n->flags = va_arg(args, node_flags);
 
-    printf("%*s", indent, "");
-    node_print(node, stdout);
-    printf("\n");
+    if (parent) node_add_children(parent, n);
 
     va_end(args);
+    return n;
 }
 
 int main(void) {
-    int indent = 0;
+    Stack stack;
+    stack_init(&stack);
 
-#define _BEGIN(...)                                     \
-    node_begin(indent, ARGC(__VA_ARGS__), __VA_ARGS__); \
-    indent += 2;
-#define _END indent -= 2;
+    node *n = 0;
+
+#define _BEGIN(...) n = node_begin(&stack, n, ARGC(__VA_ARGS__), __VA_ARGS__);
+#define _END                      \
+    if (n->parent) n = n->parent;
     EXAMPLE_TREE
 #undef _BEGIN
 #undef _END
+
+    node_print(*n, stdout);
+    stack_free(&stack);
 }

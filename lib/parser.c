@@ -1,5 +1,7 @@
 #include "parser.h"
 
+#include <stdarg.h>
+
 #define _(name) [name] = #name,
 static const char *NODE_NAMES[] = { NODE_TYPES };
 #undef _
@@ -55,6 +57,29 @@ void node_print_(node n, FILE *f, int indent) {
 
 inline void node_print(node n, FILE *f) {
     node_print_(n, f, 0);
+}
+
+void node_add_children_(node *parent, int n, ...) {
+    va_list args;
+    va_start(args, n);
+
+    node **last_child = &parent->first_child;
+    while (*last_child) last_child = &(*last_child)->next_sibling;
+
+    while (n-- > 0) {
+        node *child = va_arg(args, node *);
+
+        *last_child = child;
+        child->parent = parent;
+
+        last_child = &(*last_child)->next_sibling;
+    }
+
+    va_end(args);
+}
+
+static inline void node_assign_parent(node *parent) {
+    for (node *n = parent->first_child; n; n = n->next_sibling) n->parent = parent;
 }
 
 void parser_init(Parser *p) {
@@ -143,8 +168,7 @@ parse_result parse_assign(Parser *p, token *ts) {
 
     p->node = stack_push_zeroed(&p->stack, node);
     p->node->type = N_ASSIGN;
-    p->node->first_child = lhs;
-    lhs->next_sibling = rhs;
+    node_add_children(p->node, lhs, rhs);
 
     PARSER_END;
 }
@@ -173,7 +197,10 @@ parse_result parse_tuple_or_parens(Parser *p, token *ts) {
             p->node = stack_push_zeroed(&p->stack, node);
             p->node->type = N_TUPLE;
 
-            if (first_item) p->node->first_child = first_item;
+            if (first_item) {
+                p->node->first_child = first_item;
+                node_assign_parent(p->node);
+            }
 
             PARSER_END;
         case T_COMMA:
@@ -192,6 +219,7 @@ parse_result parse_tuple_or_parens(Parser *p, token *ts) {
                 p->node = stack_push_zeroed(&p->stack, node);
                 p->node->type = N_TUPLE;
                 p->node->first_child = first_item;
+                node_assign_parent(p->node);
 
                 PARSER_END;
             }
@@ -224,7 +252,7 @@ parse_result parse_spread(Parser *p, token *ts) {
 
     p->node = stack_push_zeroed(&p->stack, node);
     p->node->type = N_SPREAD;
-    p->node->first_child = expr;
+    node_add_children(p->node, expr);
 
     PARSER_END;
 }
@@ -238,7 +266,7 @@ parse_result parse_unary(Parser *p, token *ts) {
     p->node = stack_push_zeroed(&p->stack, node);
     p->node->type = N_UNARY;
     p->node->token = op;
-    p->node->first_child = expr;
+    node_add_children(p->node, expr);
 
     PARSER_END;
 }

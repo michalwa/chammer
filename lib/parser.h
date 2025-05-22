@@ -6,6 +6,7 @@
 #include "lexer.h"
 #include "stack.h"
 #include "string.h"
+#include "utils.h"
 
 #define NODE_TYPES                          \
     _(N_ASSIGN) /* assignment            */ \
@@ -52,6 +53,7 @@ typedef struct node {
     node_flags   flags;
     struct node *first_child;
     struct node *next_sibling;
+    struct node *parent;
     /*
      * For `N_IDENT', `N_STR', `N_INT', `N_DEC', `N_PIDENT'
      *   this is the full token that was parsed into the node
@@ -92,8 +94,11 @@ typedef enum {
     EXPR_BINARY = 1,
 } parse_expr_flags;
 
+#define node_add_children(parent, ...) node_add_children_(parent, ARGC(__VA_ARGS__), __VA_ARGS__)
+
 const char *node_name(node);
 void        node_print(node, FILE *);
+void        node_add_children_(node *parent, int n, ...);
 
 void         parser_init(Parser *);
 void         parser_free(Parser *);

@@ -18,7 +18,7 @@
         return TEST_FAIL;                               \
     }
 
-#define ASSERT_EQ(a, b, format)                                                                 \
+#define ASSERT_EQ(format, a, b)                                                                 \
     if ((a) != (b)) {                                                                           \
         TEST_PRINTF(                                                                            \
             "Assertion failed: " #a " == " #b "\n   left = " format "\n  right = " format "\n", \
@@ -27,7 +27,7 @@
         return TEST_FAIL;                                                                       \
     }
 
-#define ASSERT_INT_EQ(a, b) ASSERT_EQ((int)(a), (int)(b), "%d")
+#define ASSERT_INT_EQ(a, b) ASSERT_EQ("%d", (int)(a), (int)(b))
 
 #define ASSERT_STRN_EQ(a, a_len, b, b_len) \
     ASSERT_INT_EQ(a_len, b_len);           \
