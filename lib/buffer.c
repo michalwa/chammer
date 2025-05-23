@@ -66,5 +66,4 @@ void fread_to_buffer(FILE *f, Buffer *b) {
 
     rewind(f);
     fread(data, size, 1, f);
-    fclose(f);
 }
