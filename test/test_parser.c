@@ -15,5 +15,7 @@ TEST(parse_tuple_or_parens) {
     ASSERT_INT_EQ(parse_tuple_or_parens(&p, &t), PARSE_OK);
     SNAPSHOT("tuple_with_2_idents", f, node_print(*p.node, f));
 
+    parser_free(&p);
+
     return TEST_OK;
 }
