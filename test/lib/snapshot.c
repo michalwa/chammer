@@ -50,19 +50,16 @@ static void snapshot_save(const char *filename, const char *data) {
 int snapshot(Buffer *output, const char *name, const char *data) {
     int status = TEST_OK;
 
-    Buffer filename_buf;
-    buffer_init(&filename_buf);
-    buffer_printf(&filename_buf, "test/snapshots/%s.txt", name);
-    buffer_putc(&filename_buf, '\0');
-    const char *filename = filename_buf.data;
+    Buffer filename;
+    buffer_init(&filename);
+    buffer_printf(&filename, "test/snapshots/%s.txt", name);
 
-    FILE *old = fopen(filename, "r");
+    FILE *old = fopen(filename.data, "r");
 
     if (old) {
         Buffer old_buf;
         buffer_init(&old_buf);
         fread_to_buffer(old, &old_buf);
-        buffer_putc(&old_buf, '\0');
 
         if (strcmp(old_buf.data, data) != 0) {
             if (getenv("HAMMER_SNAPSHOT_REVIEW")) {
@@ -72,17 +69,17 @@ int snapshot(Buffer *output, const char *name, const char *data) {
                 snapshot_diff(&tmp, data, old_buf.data);
                 printf(
                     "\n\nSnapshot changed: %s\n\n" F_BUFFER "\nAccept new version? (y/N) ",
-                    filename, FA_BUFFER(tmp)
+                    filename.data, FA_BUFFER(tmp)
                 );
 
                 buffer_free(&tmp);
 
                 if (getchar() == 'y')
-                    snapshot_save(filename, data);
+                    snapshot_save(filename.data, data);
                 else
                     status = TEST_FAIL;
             } else {
-                buffer_printf(output, "Snapshot changed: %s\n\n", filename);
+                buffer_printf(output, "Snapshot changed: %s\n\n", filename.data);
                 snapshot_diff(output, data, old_buf.data);
                 status = TEST_FAIL;
             }
@@ -91,7 +88,7 @@ int snapshot(Buffer *output, const char *name, const char *data) {
         buffer_free(&old_buf);
         fclose(old);
     } else {
-        snapshot_save(filename, data);
+        snapshot_save(filename.data, data);
     }
 
     return status;

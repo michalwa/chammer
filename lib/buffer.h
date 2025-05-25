@@ -7,7 +7,13 @@
 #include "string.h"
 
 typedef struct Buffer {
-    char  *data;
+    /*
+     * Ensured to point to a valid null-terminated string
+     */
+    char *data;
+    /*
+     * Does not include the null terminator
+     */
     size_t len;
     size_t capacity;
 } Buffer;

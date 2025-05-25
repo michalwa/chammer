@@ -7,6 +7,9 @@
 
 #define BUFFER_DEFAULT_CAPACITY 0x400
 
+/*
+ * `min_len' must include the null terminator if needed
+ */
 static inline bool buffer_grow(Buffer *b, size_t min_len) {
     size_t old_capacity = b->capacity;
 
@@ -26,11 +29,13 @@ void buffer_init_capacity(Buffer *b, size_t capacity) {
     b->capacity = capacity;
     b->len = 0;
     b->data = malloc(b->capacity);
+    b->data[b->len] = '\0';
 }
 
 void buffer_putc(Buffer *b, char c) {
-    buffer_grow(b, b->len + 1);
+    buffer_grow(b, b->len + 2);
     b->data[b->len++] = c;
+    b->data[b->len] = '\0';
 }
 
 void buffer_printf(Buffer *b, const char *format, ...) {
@@ -41,9 +46,10 @@ void buffer_printf(Buffer *b, const char *format, ...) {
         va_start(args, format);
         len = vsnprintf(b->data + b->len, b->capacity - b->len, format, args);
         va_end(args);
-    } while (buffer_grow(b, b->len + len));
+    } while (buffer_grow(b, b->len + len + 1));
 
     b->len += len;
+    b->data[b->len] = '\0';
 }
 
 char *buffer_alloc(Buffer *b, size_t len) {
@@ -51,6 +57,7 @@ char *buffer_alloc(Buffer *b, size_t len) {
 
     char *c = b->data + b->len;
     b->len += len;
+    b->data[b->len] = '\0';
     return c;
 }
 
