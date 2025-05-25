@@ -18,7 +18,7 @@ TEST(lexer_example) {
     Buffer buffer;
     buffer_init(&buffer);
     fread_to_buffer(f, &buffer);
-    *buffer_alloc(&buffer, 1) = '\0';
+    buffer_putc(&buffer, '\0');
 
     token token;
     token_begin(&token, buffer.data);

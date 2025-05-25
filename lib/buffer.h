@@ -17,6 +17,7 @@ typedef struct {
 
 void   buffer_init(Buffer *);
 void   buffer_init_capacity(Buffer *, size_t);
+void   buffer_putc(Buffer *, char);
 void   buffer_printf(Buffer *, const char *format, ...);
 char  *buffer_alloc(Buffer *, size_t len);
 void   buffer_free(Buffer *);
