@@ -34,3 +34,39 @@ TEST(lexer_example) {
 
     return TEST_OK;
 }
+
+TEST(lexer_empty) {
+    token token;
+    token_begin(&token, "");
+
+    ASSERT_INT_EQ(token_next(&token), LEX_NONE);
+
+    return TEST_OK;
+}
+
+TEST(lexer_unclosed_string) {
+    token token;
+    token_begin(&token, "\"foo");
+
+    ASSERT_INT_EQ(token_next(&token), LEX_EEOI);
+
+    return TEST_OK;
+}
+
+TEST(lexer_unclosed_block_comment) {
+    token token;
+    token_begin(&token, "{- foo");
+
+    ASSERT_INT_EQ(token_next(&token), LEX_EEOI);
+
+    return TEST_OK;
+}
+
+TEST(lexer_unclosed_decimal) {
+    token token;
+    token_begin(&token, "1.");
+
+    ASSERT_INT_EQ(token_next(&token), LEX_ENUM);
+
+    return TEST_OK;
+}

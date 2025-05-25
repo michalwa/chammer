@@ -99,12 +99,13 @@ static lex_result token_next_string(token *t) {
             continue;
         case '"':
             if (!escape) goto end;
+            break;
+        case '\0':
+            return LEX_EEOI;
         }
 
         escape = false;
     }
-
-    return LEX_EEOI;
 
 end:
     t->len++;
