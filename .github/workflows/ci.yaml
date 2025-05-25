@@ -1,18 +1,27 @@
 name: CI
+
 on: push
+
+env:
+  CLANG_VERSION: "19.1.7"
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - run: clang --version
-    - run: make test
-      env:
-        CFLAGS: -Werror
+      - uses: actions/checkout@v4
+      - uses: KyleMayes/install-llvm-action@v2
+        with:
+          version: ${{ env.CLANG_VERSION }}
+      - run: make test
+        env:
+          CFLAGS: -Werror
 
   format-check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - run: clang-format --version
-    - run: make format-check
+      - uses: actions/checkout@v4
+      - uses: KyleMayes/install-llvm-action@v2
+        with:
+          version: ${{ env.CLANG_VERSION }}
+      - run: make format-check
