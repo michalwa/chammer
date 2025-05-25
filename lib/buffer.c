@@ -6,11 +6,15 @@
 
 #define BUFFER_DEFAULT_CAPACITY 0x400
 
-static inline void buffer_grow(Buffer *b, size_t new) {
-    while (b->len + new > b->capacity) {
+static inline bool buffer_grow(Buffer *b, size_t min_len) {
+    size_t old_capacity = b->capacity;
+
+    while (min_len > b->capacity) {
         b->capacity <<= 1;
         b->data = realloc(b->data, b->capacity);
     }
+
+    return b->capacity > old_capacity;
 }
 
 void buffer_init(Buffer *b) {
@@ -24,7 +28,7 @@ void buffer_init_capacity(Buffer *b, size_t capacity) {
 }
 
 void buffer_putc(Buffer *b, char c) {
-    buffer_grow(b, 1);
+    buffer_grow(b, b->len + 1);
     b->data[b->len++] = c;
 }
 
@@ -32,16 +36,15 @@ void buffer_printf(Buffer *b, const char *format, ...) {
     va_list args;
     va_start(args, format);
 
-    size_t len = vsnprintf(b->data + b->len, b->capacity - b->len, format, args);
+    size_t len;
+    do len = vsnprintf(b->data + b->len, b->capacity - b->len, format, args);
+    while (buffer_grow(b, b->len + len));
 
-    buffer_grow(b, len);
-
-    vsnprintf(b->data + b->len, b->capacity - b->len, format, args);
     b->len += len;
 }
 
 char *buffer_alloc(Buffer *b, size_t len) {
-    buffer_grow(b, len);
+    buffer_grow(b, b->len + len);
 
     char *c = b->data + b->len;
     b->len += len;

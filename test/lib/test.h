@@ -15,22 +15,25 @@
 
 #define TEST_PRINTF(...) buffer_printf(output_, __VA_ARGS__)
 
-#define ASSERT(expr)                                    \
-    if (!(expr)) {                                      \
-        TEST_PRINTF("Assertion failed: `" #expr "'\n"); \
-        return TEST_FAIL;                               \
+#define ASSERT_(expr, expr_str)                            \
+    if (!(expr)) {                                         \
+        TEST_PRINTF("Assertion failed: `" expr_str "'\n"); \
+        return TEST_FAIL;                                  \
     }
 
-#define ASSERT_EQ(format, a, b)                                                                 \
-    if ((a) != (b)) {                                                                           \
-        TEST_PRINTF(                                                                            \
-            "Assertion failed: " #a " == " #b "\n   left = " format "\n  right = " format "\n", \
-            (a), (b)                                                                            \
-        );                                                                                      \
-        return TEST_FAIL;                                                                       \
+#define ASSERT(expr) ASSERT_(expr, #expr)
+
+#define ASSERT_EQ_(format, a, b, expr_str)                                                       \
+    if ((a) != (b)) {                                                                            \
+        TEST_PRINTF(                                                                             \
+            "Assertion failed: " expr_str "\n   left = " format "\n  right = " format "\n", (a), \
+            (b)                                                                                  \
+        );                                                                                       \
+        return TEST_FAIL;                                                                        \
     }
 
-#define ASSERT_INT_EQ(a, b) ASSERT_EQ("%d", (int)(a), (int)(b))
+#define ASSERT_EQ(format, a, b) ASSERT_EQ_(format, a, b, #a " == " #b)
+#define ASSERT_INT_EQ(a, b)     ASSERT_EQ_("%d", (int)(a), (int)(b), #a " == " #b)
 
 #define ASSERT_STRN_EQ(a, a_len, b, b_len)                                    \
     if ((a_len) != (b_len) || strncmp(a, b, a_len) != 0) {                    \

@@ -16,6 +16,11 @@ TEST(buffer_printf) {
     ASSERT_INT_EQ(b.capacity, 16);
     ASSERT_STRN_EQ(b.data, b.len, "Hello, world!\n", 14);
 
+    buffer_printf(&b, "...");
+
+    ASSERT_INT_EQ(b.len, 17);
+    ASSERT_INT_EQ(b.capacity, 32);
+
     buffer_free(&b);
     return TEST_OK;
 }
@@ -45,6 +50,10 @@ TEST(buffer_alloc) {
     buffer_alloc(&b, 10);
     ASSERT_INT_EQ(b.len, 10);
     ASSERT_INT_EQ(b.capacity, 16);
+
+    buffer_alloc(&b, 7);
+    ASSERT_INT_EQ(b.len, 17);
+    ASSERT_INT_EQ(b.capacity, 32);
 
     buffer_free(&b);
     return TEST_OK;
