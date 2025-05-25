@@ -1,0 +1,31 @@
+name: CI
+
+on: push
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CLANG_VERSION: "19.1.7"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: KyleMayes/install-llvm-action@v2
+        with:
+          version: ${{ env.CLANG_VERSION }}
+      - run: make test
+        env:
+          CFLAGS: -Werror
+
+  format-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: KyleMayes/install-llvm-action@v2
+        with:
+          version: ${{ env.CLANG_VERSION }}
+      - run: make format-check

@@ -29,7 +29,6 @@ void stack_init(Stack *s) {
 
 void stack_init_block_size(Stack *s, size_t block_size) {
     s->block_size = block_size;
-    s->head = malloc(sizeof(StackBlock));
     s->cursor = 0;
     s->head = stack_block_new(s->block_size);
 }

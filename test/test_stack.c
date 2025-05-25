@@ -21,5 +21,7 @@ TEST(stack) {
     stack_push_(&stack, 8);
     ASSERT_INT_EQ(stack.cursor, 8);
 
+    stack_free(&stack);
+
     return TEST_OK;
 }
