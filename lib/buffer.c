@@ -41,6 +41,8 @@ void buffer_printf(Buffer *b, const char *format, ...) {
     while (buffer_grow(b, b->len + len));
 
     b->len += len;
+
+    va_end(args);
 }
 
 char *buffer_alloc(Buffer *b, size_t len) {
