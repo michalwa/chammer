@@ -15,22 +15,30 @@ TEST(lexer_example) {
         return TEST_FAIL;
     }
 
-    Buffer buffer;
-    buffer_init(&buffer);
-    fread_to_buffer(f, &buffer);
-    buffer_putc(&buffer, '\0');
+    Buffer input_buf;
+    buffer_init(&input_buf);
+    fread_to_buffer(f, &input_buf);
+    buffer_putc(&input_buf, '\0');
+
+    Buffer output_buf;
+    buffer_init(&output_buf);
 
     token token;
-    token_begin(&token, buffer.data);
+    token_begin(&token, input_buf.data);
 
-    SNAPSHOT("tokens_example", f, {
-        while (token_next(&token) == LEX_OK) {
-            loc loc = token_loc(token, buffer.data);
-            fprintf(f, F_TOKEN " at %d:%d\n", FA_TOKEN(token), loc.line + 1, loc.col + 1);
-        }
-    });
+    while (token_next(&token) == LEX_OK) {
+        loc loc = token_loc(token, input_buf.data);
+        buffer_printf(
+            &output_buf, F_TOKEN " at %d:%d\n", FA_TOKEN(token), loc.line + 1, loc.col + 1
+        );
+    }
 
-    buffer_free(&buffer);
+    buffer_putc(&output_buf, '\0');
+
+    SNAPSHOT("tokens_example", output_buf.data);
+
+    buffer_free(&input_buf);
+    buffer_free(&output_buf);
 
     return TEST_OK;
 }

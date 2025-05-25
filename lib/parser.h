@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 
+#include "buffer.h"
 #include "lexer.h"
 #include "stack.h"
 #include "string.h"
@@ -64,13 +65,13 @@ typedef struct node {
     token token;
 } node;
 
-typedef enum {
+typedef enum parse_result {
     PARSE_OK = 0,
     PARSE_ELEX = 1,
     PARSE_ETOK = 2,
 } parse_result;
 
-typedef struct {
+typedef struct Parser {
     Stack stack;
     /*
      * Holds the root node in case of a successful `PARSE_OK' result
@@ -86,7 +87,7 @@ typedef struct {
     token_type expected_token;
 } Parser;
 
-typedef enum {
+typedef enum parse_expr_flags {
     EXPR_ALL = -1,
     /**
      * Expressions which can occur as operands of a binary infix operation
@@ -97,7 +98,7 @@ typedef enum {
 #define node_add_children(parent, ...) node_add_children_(parent, ARGC(__VA_ARGS__), __VA_ARGS__)
 
 const char *node_name(node);
-void        node_print(node, FILE *);
+void        node_print(node, Buffer *);
 void        node_add_children_(node *parent, int n, ...);
 
 void         parser_init(Parser *);

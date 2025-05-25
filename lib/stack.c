@@ -66,13 +66,6 @@ void *stack_push_zeroed_(Stack *s, size_t size) {
     return ptr;
 }
 
-string stack_push_str(Stack *s, size_t len) {
-    string str;
-    str.data = stack_push_(s, len);
-    str.len = len;
-    return str;
-}
-
 stack_ptr stack_top(Stack *s) {
     return (stack_ptr)s->cursor;
 }

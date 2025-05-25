@@ -1,6 +1,7 @@
 #include "buffer.h"
 
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -39,6 +40,7 @@ void buffer_printf(Buffer *b, const char *format, ...) {
     do {
         va_start(args, format);
         len = vsnprintf(b->data + b->len, b->capacity - b->len, format, args);
+        va_end(args);
     } while (buffer_grow(b, b->len + len));
 
     b->len += len;
@@ -54,10 +56,6 @@ char *buffer_alloc(Buffer *b, size_t len) {
 
 void buffer_free(Buffer *b) {
     free(b->data);
-}
-
-inline string buffer_to_string(Buffer b) {
-    return (string){ .data = b.data, .len = b.len };
 }
 
 void fread_to_buffer(FILE *f, Buffer *b) {
