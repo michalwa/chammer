@@ -1,4 +1,7 @@
-CC             ?= clang
+ifeq ($(origin CC), default)
+CC = clang
+endif
+
 CFLAGS         ?= -std=c99 -Wall -Wextra -Wpedantic -Wno-char-subscripts -Wno-parentheses -Wimplicit-fallthrough
 CFLAGS_RELEASE ?= -O3
 CFLAGS_DEBUG   ?= -g -O0
