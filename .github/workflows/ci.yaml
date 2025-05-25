@@ -14,9 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: KyleMayes/install-llvm-action@v2
-        with:
-          version: ${{ env.CLANG_VERSION }}
+      - run: sudo apt-get install -y clang=$CLANG_VERSION
       - run: make test
         env:
           CFLAGS: -Werror
@@ -25,7 +23,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: KyleMayes/install-llvm-action@v2
-        with:
-          version: ${{ env.CLANG_VERSION }}
+      - run: sudo apt-get install -y clang=$CLANG_VERSION
       - run: make format-check
