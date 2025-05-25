@@ -9,6 +9,7 @@ CFLAGS_DEBUG   += -g -O0 -fsanitize=address -fsanitize=undefined
 SRC_LIB  = lib/*.c lib/*.h
 SRC_BIN  = src/*.c src/*.h
 SRC_TEST = test/*.c test/**/*.c test/**/*.h
+SRC      = $(SRC_LIB) $(SRC_BIN) $(SRC_TEST)
 
 .PHONY: .release
 release: bin/hammer
@@ -38,7 +39,11 @@ bin/build_test: build_test.c test/*.c
 
 .PHONY: format
 format:
-	clang-format -i $(SRC_BIN) $(SRC_LIB) $(SRC_TEST)
+	clang-format -i $(SRC)
+
+.PHONY: format-check
+format-check:
+	clang-format --dry-run -Werror $(SRC)
 
 .PHONY: clean
 clean:
