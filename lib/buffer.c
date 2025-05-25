@@ -34,15 +34,14 @@ void buffer_putc(Buffer *b, char c) {
 
 void buffer_printf(Buffer *b, const char *format, ...) {
     va_list args;
-    va_start(args, format);
 
     size_t len;
-    do len = vsnprintf(b->data + b->len, b->capacity - b->len, format, args);
-    while (buffer_grow(b, b->len + len));
+    do {
+        va_start(args, format);
+        len = vsnprintf(b->data + b->len, b->capacity - b->len, format, args);
+    } while (buffer_grow(b, b->len + len));
 
     b->len += len;
-
-    va_end(args);
 }
 
 char *buffer_alloc(Buffer *b, size_t len) {
