@@ -13,6 +13,7 @@ jobs:
       - uses: KyleMayes/install-llvm-action@v2
         with:
           version: ${{ env.CLANG_VERSION }}
+          cached: true
       - run: make test
         env:
           CFLAGS: -Werror
@@ -24,4 +25,5 @@ jobs:
       - uses: KyleMayes/install-llvm-action@v2
         with:
           version: ${{ env.CLANG_VERSION }}
+          cached: true
       - run: make format-check
