@@ -35,14 +35,14 @@
 #define ASSERT_EQ(format, a, b) ASSERT_EQ_(format, a, b, #a " == " #b)
 #define ASSERT_INT_EQ(a, b)     ASSERT_EQ_("%d", (int)(a), (int)(b), #a " == " #b)
 
-#define ASSERT_STRN_EQ(a, a_len, b, b_len)                                    \
-    if ((a_len) != (b_len) || strncmp(a, b, a_len) != 0) {                    \
-        TEST_PRINTF(                                                          \
-            "Assertion failed: strncmp(" #a ", " #b ", " #a_len               \
-            ") == 0\n  ----- left ------\n%.*s\n  ----- right -----\n%.*s\n", \
-            (int)(a_len), (a), (int)(b_len), (b)                              \
-        );                                                                    \
-        return TEST_FAIL;                                                     \
+#define ASSERT_STR_EQ(a, b)                                                        \
+    if (strcmp(a, b) != 0) {                                                       \
+        TEST_PRINTF(                                                               \
+            "Assertion failed: strcmp(" #a ", " #b                                 \
+            ", " ") == 0\n  ----- left ------\n%.*s\n  ----- right -----\n%.*s\n", \
+            a, b                                                                   \
+        );                                                                         \
+        return TEST_FAIL;                                                          \
     }
 
 #endif // TEST_H_

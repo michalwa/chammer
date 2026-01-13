@@ -14,7 +14,7 @@ TEST(buffer_printf) {
 
     ASSERT_INT_EQ(b.len, 14);
     ASSERT_INT_EQ(b.capacity, 16);
-    ASSERT_STRN_EQ(b.data, b.len, "Hello, world!\n", 14);
+    ASSERT_STR_EQ(b.data, "Hello, world!\n");
 
     buffer_printf(&b, "...");
 
@@ -32,12 +32,13 @@ TEST(buffer_putc) {
     buffer_putc(&b, '?');
     ASSERT_INT_EQ(b.len, 1);
     ASSERT_INT_EQ(b.capacity, 8);
+    ASSERT_INT_EQ(b.data[b.len], '\0');
 
     for (int i = 0; i < 20; i++) buffer_putc(&b, 'a' + i);
 
     ASSERT_INT_EQ(b.len, 21);
     ASSERT_INT_EQ(b.capacity, 32);
-    ASSERT_STRN_EQ(b.data, b.len, "?abcdefghijklmnopqrst", 21);
+    ASSERT_STR_EQ(b.data, "?abcdefghijklmnopqrst");
 
     buffer_free(&b);
     return TEST_OK;

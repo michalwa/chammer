@@ -12,10 +12,15 @@ TEST(parse_tuple_or_parens) {
     Parser p;
     parser_init(&p);
 
+    Buffer output;
+    buffer_init(&output);
+
     ASSERT_INT_EQ(parse_tuple_or_parens(&p, &t), PARSE_OK);
-    SNAPSHOT("tuple_with_2_idents", f, node_print(*p.node, f));
+    node_print(*p.node, &output);
+    SNAPSHOT("tuple_with_2_idents", output.data);
 
     parser_free(&p);
+    buffer_free(&output);
 
     return TEST_OK;
 }

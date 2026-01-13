@@ -25,13 +25,13 @@ static bool node_has_token(node n) {
     }
 }
 
-static void node_print_flags(node_flags flags, FILE *f) {
+static void node_print_flags(node_flags flags, Buffer *b) {
     const char *prefix = "";
 
-#define _(name, _)                      \
-    if (flags & name) {                 \
-        fprintf(f, "%s" #name, prefix); \
-        prefix = " ";                   \
+#define _(name, _)                            \
+    if (flags & name) {                       \
+        buffer_printf(b, "%s" #name, prefix); \
+        prefix = " ";                         \
     }
 
     NODE_FLAGS
@@ -42,21 +42,21 @@ const char *node_name(node n) {
     return NODE_NAMES[n.type];
 }
 
-void node_print_(node n, FILE *f, int indent) {
-    fprintf(f, "%*s%s ", indent, "", NODE_NAMES[n.type]);
-    node_print_flags(n.flags, f);
-    if (node_has_token(n)) fprintf(f, " (" F_TOKEN ")", FA_TOKEN(n.token));
+void node_print_(node n, Buffer *b, int indent) {
+    buffer_printf(b, "%*s%s ", indent, "", NODE_NAMES[n.type]);
+    node_print_flags(n.flags, b);
+    if (node_has_token(n)) buffer_printf(b, " (" F_TOKEN ")", FA_TOKEN(n.token));
 
     node *child = n.first_child;
     while (child) {
-        putc('\n', f);
-        node_print_(*child, f, indent + 2);
+        buffer_putc(b, '\n');
+        node_print_(*child, b, indent + 2);
         child = child->next_sibling;
     }
 }
 
-inline void node_print(node n, FILE *f) {
-    node_print_(n, f, 0);
+inline void node_print(node n, Buffer *b) {
+    node_print_(n, b, 0);
 }
 
 void node_add_children_(node *parent, int n, ...) {

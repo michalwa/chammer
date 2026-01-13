@@ -11,7 +11,7 @@
 
 typedef struct StackBlock StackBlock;
 
-typedef struct {
+typedef struct Stack {
     StackBlock *head;
     size_t      block_size;
     size_t      cursor;
@@ -23,7 +23,6 @@ void      stack_init(Stack *);
 void      stack_init_block_size(Stack *, size_t block_size);
 void     *stack_push_(Stack *, size_t size);
 void     *stack_push_zeroed_(Stack *, size_t size);
-string    stack_push_str(Stack *, size_t len);
 stack_ptr stack_top(Stack *);
 void      stack_rewind(Stack *, stack_ptr);
 void      stack_free(Stack *);

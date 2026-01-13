@@ -5,18 +5,12 @@
 
 #include "../../lib/buffer.h"
 
-#define SNAPSHOT(name, file, body)                                 \
-    {                                                              \
-        FILE *file = tmpfile();                                    \
-        if (!file) return TEST_FAIL;                               \
-        body;                                                      \
-        int result = snapshot(output_, SNAPSHOT_FILE(name), file); \
-        fclose(file);                                              \
-        if (result != TEST_OK) return result;                      \
+#define SNAPSHOT(name, data)                        \
+    {                                               \
+        int result = snapshot(output_, name, data); \
+        if (result != TEST_OK) return result;       \
     }
 
-#define SNAPSHOT_FILE(name) "test/snapshots/" name ".txt"
-
-int snapshot(Buffer *output, const char *filename, FILE *current);
+int snapshot(Buffer *output, const char *name, const char *data);
 
 #endif // SNAPSHOT_H_

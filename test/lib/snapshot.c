@@ -7,82 +7,81 @@
 
 #include "test.h"
 
-static void next_line(string *line) {
-    line->data += line->len;
-    while (*line->data == '\n') line->data++;
-    line->len = strcspn(line->data, "\n");
+static void next_line(const char **line, size_t *len) {
+    *line += *len;
+    if (**line == '\n') (*line)++;
+    *len = strcspn(*line, "\n");
 }
 
-static void snapshot_diff(Buffer *output, const Buffer *a, const Buffer *b) {
-    const char *a_end = a->data + a->len;
-    const char *b_end = b->data + b->len;
-    string      a_line = { a->data, 0 };
-    string      b_line = { b->data, 0 };
+static void snapshot_diff(Buffer *output, const char *a, const char *b) {
+    const char *a_line = a, *b_line = b;
+    size_t      a_len = 0, b_len = 0;
 
-    next_line(&a_line);
-    next_line(&b_line);
+    next_line(&a_line, &a_len);
+    next_line(&b_line, &b_len);
 
-    while (a_line.data < a_end || b_line.data < b_end) {
-        if (a_line.data < a_end && b_line.data < b_end) {
-            if (string_eq(a_line, b_line)) {
-                buffer_printf(output, "  " F_STRING "\n", FA_STRING(a_line));
+    while (*a_line || *b_line) {
+        if (*a_line && *b_line) {
+            if (a_len == b_len && strncmp(a_line, b_line, a_len) == 0) {
+                buffer_printf(output, "  %.*s\n", (int)a_len, a_line);
             } else {
-                buffer_printf(output, RED("- " F_STRING "\n"), FA_STRING(a_line));
-                buffer_printf(output, GREEN("+ " F_STRING "\n"), FA_STRING(b_line));
+                buffer_printf(output, RED("- %.*s\n"), (int)a_len, a_line);
+                buffer_printf(output, GREEN("+ %.*s\n"), (int)b_len, b_line);
             }
 
-            next_line(&a_line);
-            next_line(&b_line);
-        } else if (a_line.data < a_end) {
-            buffer_printf(output, RED("- " F_STRING "\n"), FA_STRING(a_line));
-            next_line(&a_line);
-        } else if (b_line.data < b_end) {
-            buffer_printf(output, GREEN("+ " F_STRING "\n"), FA_STRING(b_line));
-            next_line(&b_line);
+            next_line(&a_line, &a_len);
+            next_line(&b_line, &b_len);
+        } else if (*a_line) {
+            buffer_printf(output, RED("- %.*s\n"), (int)a_len, a_line);
+            next_line(&a_line, &a_len);
+        } else if (*b_line) {
+            buffer_printf(output, GREEN("+ %.*s\n"), (int)b_len, b_line);
+            next_line(&b_line, &b_len);
         }
     }
 }
 
-static void snapshot_save(const char *filename, const Buffer *new_buf) {
+static void snapshot_save(const char *filename, const char *data) {
     FILE *new = fopen(filename, "w");
-    fprintf(new, F_BUFFER, FA_BUFFER(*new_buf));
+    fprintf(new, "%s", data);
     fclose(new);
 }
 
-int snapshot(Buffer *output, const char *filename, FILE *new) {
+int snapshot(Buffer *output, const char *name, const char *data) {
     int status = TEST_OK;
 
-    Buffer new_buf;
-    buffer_init(&new_buf);
-    fread_to_buffer(new, &new_buf);
+    Buffer filename;
+    buffer_init(&filename);
+    buffer_printf(&filename, "test/snapshots/%s.txt", name);
 
-    FILE *old = fopen(filename, "r");
+    FILE *old = fopen(filename.data, "r");
+    buffer_free(&filename);
 
     if (old) {
         Buffer old_buf;
         buffer_init(&old_buf);
         fread_to_buffer(old, &old_buf);
 
-        if (!string_eq(buffer_to_string(old_buf), buffer_to_string(new_buf))) {
+        if (strcmp(old_buf.data, data) != 0) {
             if (getenv("HAMMER_SNAPSHOT_REVIEW")) {
                 Buffer tmp;
                 buffer_init(&tmp);
 
-                snapshot_diff(&tmp, &new_buf, &old_buf);
+                snapshot_diff(&tmp, data, old_buf.data);
                 printf(
                     "\n\nSnapshot changed: %s\n\n" F_BUFFER "\nAccept new version? (y/N) ",
-                    filename, FA_BUFFER(tmp)
+                    filename.data, FA_BUFFER(tmp)
                 );
 
                 buffer_free(&tmp);
 
                 if (getchar() == 'y')
-                    snapshot_save(filename, &new_buf);
+                    snapshot_save(filename.data, data);
                 else
                     status = TEST_FAIL;
             } else {
-                buffer_printf(output, "Snapshot changed: %s\n\n", filename);
-                snapshot_diff(output, &new_buf, &old_buf);
+                buffer_printf(output, "Snapshot changed: %s\n\n", filename.data);
+                snapshot_diff(output, data, old_buf.data);
                 status = TEST_FAIL;
             }
         }
@@ -90,9 +89,8 @@ int snapshot(Buffer *output, const char *filename, FILE *new) {
         buffer_free(&old_buf);
         fclose(old);
     } else {
-        snapshot_save(filename, &new_buf);
+        snapshot_save(filename.data, data);
     }
 
-    buffer_free(&new_buf);
     return status;
 }
