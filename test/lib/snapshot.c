@@ -55,6 +55,7 @@ int snapshot(Buffer *output, const char *name, const char *data) {
     buffer_printf(&filename, "test/snapshots/%s.txt", name);
 
     FILE *old = fopen(filename.data, "r");
+    buffer_free(&filename);
 
     if (old) {
         Buffer old_buf;
