@@ -11,6 +11,7 @@
         if (result != TEST_OK) return result;       \
     }
 
+void snapshot_diff(Buffer *output, const char *a, const char *b);
 int snapshot(Buffer *output, const char *name, const char *data);
 
 #endif // SNAPSHOT_H_

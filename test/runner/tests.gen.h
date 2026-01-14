@@ -11,4 +11,7 @@
     _(atoms) \
     _(parse_tuple_or_parens) \
     _(elaborate_expression) \
+    _(snapshot_diff) \
+    _(snapshot_diff_empty_lines) \
+    _(snapshot_diff_line_endings) \
     _(stack)

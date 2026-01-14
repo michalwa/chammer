@@ -61,6 +61,11 @@ char *buffer_alloc(Buffer *b, size_t len) {
     return c;
 }
 
+void buffer_clear(Buffer *b) {
+    b->len = 0;
+    b->data[b->len] = '\0';
+}
+
 void buffer_free(Buffer *b) {
     free(b->data);
 }
@@ -71,5 +76,10 @@ void fread_to_buffer(FILE *f, Buffer *b) {
     char  *data = buffer_alloc(b, size);
 
     rewind(f);
-    fread(data, size, 1, f);
+
+    // `fread' performs line ending conversion on Windows, trim the buffer just
+    // in case. But probably best to use `rb' instead of `r' anyway
+    size_t actual_size = fread(data, 1, size, f);
+    b->len -= size - actual_size;
+    data[b->len] = '\0';
 }

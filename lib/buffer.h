@@ -26,6 +26,7 @@ void  buffer_init_capacity(Buffer *, size_t);
 void  buffer_putc(Buffer *, char);
 void  buffer_printf(Buffer *, const char *format, ...);
 char *buffer_alloc(Buffer *, size_t len);
+void  buffer_clear(Buffer *);
 void  buffer_free(Buffer *);
 
 void fread_to_buffer(FILE *, Buffer *);

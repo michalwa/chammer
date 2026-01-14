@@ -8,11 +8,14 @@
 
 static void next_line(const char **line, size_t *len) {
     *line += *len;
+
+    if (**line == '\r') (*line)++;
     if (**line == '\n') (*line)++;
-    *len = strcspn(*line, "\n");
+
+    *len = strcspn(*line, "\r\n");
 }
 
-static void snapshot_diff(Buffer *output, const char *a, const char *b) {
+void snapshot_diff(Buffer *output, const char *a, const char *b) {
     const char *a_line = a, *b_line = b;
     size_t      a_len = 0, b_len = 0;
 
@@ -41,7 +44,7 @@ static void snapshot_diff(Buffer *output, const char *a, const char *b) {
 }
 
 static void snapshot_save(const char *filename, const char *data) {
-    FILE *new = fopen(filename, "w");
+    FILE *new = fopen(filename, "wb");
     fprintf(new, "%s", data);
     fclose(new);
 }
@@ -53,7 +56,7 @@ int snapshot(Buffer *output, const char *name, const char *data) {
     buffer_init(&filename);
     buffer_printf(&filename, "test/snapshots/%s.txt", name);
 
-    FILE *old = fopen(filename.data, "r");
+    FILE *old = fopen(filename.data, "rb");
 
     if (old) {
         Buffer old_buf;
@@ -65,7 +68,7 @@ int snapshot(Buffer *output, const char *name, const char *data) {
                 Buffer tmp;
                 buffer_init(&tmp);
 
-                snapshot_diff(&tmp, data, old_buf.data);
+                snapshot_diff(&tmp, old_buf.data, data);
                 printf(
                     "\n\nSnapshot changed: %s\n\n" F_BUFFER "\nAccept new version? (y/N) ",
                     filename.data, FA_BUFFER(tmp)
@@ -79,7 +82,7 @@ int snapshot(Buffer *output, const char *name, const char *data) {
                     status = TEST_FAIL;
             } else {
                 buffer_printf(output, "Snapshot changed: %s\n\n", filename.data);
-                snapshot_diff(output, data, old_buf.data);
+                snapshot_diff(output, old_buf.data, data);
                 status = TEST_FAIL;
             }
         }
