@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <unistd.h>
 
 #include "../../lib/buffer.h"
 #include "../lib/test.h"
@@ -28,14 +27,23 @@ void run_test(int (*test)(Buffer *), const char *label, stats *stats, Buffer *ou
     buffer_free(&buffer);
 }
 
-int main(void) {
+int main(int argc, const char **argv) {
     stats  stats = { 0 };
     Buffer output;
     buffer_init(&output);
 
-#define _(name)                                     \
-    int test_##name(Buffer *);                      \
-    run_test(&test_##name, #name, &stats, &output);
+    const char *test_name = NULL;
+
+    if (argc == 2) {
+        test_name = argv[1];
+    } else if (argc > 2) {
+        fprintf(stderr, "Usage: %s [<test_name>]\n", argv[0]);
+        return 1;
+    }
+
+#define _(name)                \
+    int test_##name(Buffer *); \
+    if (!test_name || strcmp(test_name, #name) == 0) run_test(&test_##name, #name, &stats, &output);
     TESTS
 #undef _
 

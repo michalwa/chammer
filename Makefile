@@ -19,7 +19,7 @@ debug: bin/hammer-debug
 
 .PHONY: test
 test: bin/test
-	bin/test
+	bin/test $(TEST)
 
 bin/hammer: $(SRC_BIN) $(SRC_LIB)
 	mkdir -p bin

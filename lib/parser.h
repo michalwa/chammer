@@ -23,11 +23,11 @@
     _(N_APPLY)  /* function application  */ \
     _(N_IF)     /* if expression         */ \
     _(N_MATCH)  /* match expression      */ \
-    _(N_CASE)   /* match case            */ \
     _(N_LAMBDA) /* lambda expression     */ \
     _(N_BLOCK)  /* block expression      */ \
     _(N_DOBLK)  /* do-block expression   */ \
     _(N_DOBIND) /* monadic binding       */ \
+    _(N_VOID)   /* expression statement  */ \
     _(N_PIDENT) /* identifier pattern    */ \
     _(N_PWILD)  /* wildcard pattern      */ \
     _(N_PAPPLY) /* function pattern      */ \
@@ -89,11 +89,15 @@ typedef struct Parser {
 
 typedef enum parse_expr_flags {
     EXPR_ALL = -1,
-    /**
-     * Expressions which can occur as operands of a binary infix operation
-     */
     EXPR_BINARY = 1,
+    EXPR_UNARY = 1 << 1,
+    EXPR_APPLY = 1 << 2,
 } parse_expr_flags;
+
+typedef enum parse_stmt_flags {
+    STMT_ALL = -1,
+    STMT_DOBIND = 1,
+} parse_stmt_flags;
 
 #define node_add_children(parent, ...) node_add_children_(parent, ARGC(__VA_ARGS__), __VA_ARGS__)
 
@@ -104,15 +108,36 @@ void        node_add_children_(node *parent, int n, ...);
 void         parser_init(Parser *);
 void         parser_free(Parser *);
 parse_result parse(Parser *, token *);
-parse_result parse_expr(Parser *, token *, parse_expr_flags);
-parse_result parse_pattern(Parser *, token *);
+
 parse_result parse_ident(Parser *, token *);
 parse_result parse_string(Parser *, token *);
 parse_result parse_int(Parser *, token *);
 parse_result parse_dec(Parser *, token *);
+
+parse_result parse_stmt(Parser *, token *, parse_stmt_flags);
 parse_result parse_assign(Parser *, token *);
+parse_result parse_dobind(Parser *, token *);
+parse_result parse_void(Parser *, token *);
+
+parse_result parse_expr(Parser *, token *, parse_expr_flags);
 parse_result parse_tuple_or_parens(Parser *, token *);
+parse_result parse_list(Parser *, token *);
 parse_result parse_spread(Parser *, token *);
+parse_result parse_block(Parser *, token *);
+parse_result parse_doblk(Parser *, token *);
+parse_result parse_doblk_body(Parser *, token *);
+parse_result parse_if(Parser *, token *);
+parse_result parse_match(Parser *, token *);
+parse_result parse_lambda(Parser *, token *);
+parse_result parse_apply(Parser *, token *);
 parse_result parse_unary(Parser *, token *);
+parse_result parse_binary(Parser *, token *);
+
+/**
+ * Patterns which are valid in the LHS position of an assignment or monadic
+ * binding. Includes things like function definition patterns.
+ */
+parse_result parse_lhs_pattern(Parser *, token *);
+parse_result parse_pattern(Parser *, token *);
 
 #endif // PARSER_H_

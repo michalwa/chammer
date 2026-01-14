@@ -1,5 +1,3 @@
-#include <stdlib.h>
-
 #include "../lib/stack.h"
 #include "lib/test.h"
 

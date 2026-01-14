@@ -15,5 +15,6 @@ IndentCaseLabels: false
 IndentWidth: 4
 MacroBlockBegin: "^_BEGIN$"
 MacroBlockEnd: "^_END$"
+PointerAlignment: Right
 RemoveBracesLLVM: true
 SpacesBeforeTrailingComments: 1

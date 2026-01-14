@@ -1,6 +1,5 @@
 #include "snapshot.h"
 
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -55,7 +54,6 @@ int snapshot(Buffer *output, const char *name, const char *data) {
     buffer_printf(&filename, "test/snapshots/%s.txt", name);
 
     FILE *old = fopen(filename.data, "r");
-    buffer_free(&filename);
 
     if (old) {
         Buffer old_buf;
@@ -91,6 +89,8 @@ int snapshot(Buffer *output, const char *name, const char *data) {
     } else {
         snapshot_save(filename.data, data);
     }
+
+    buffer_free(&filename);
 
     return status;
 }
