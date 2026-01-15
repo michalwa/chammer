@@ -650,6 +650,8 @@ parse_result parse_pattern(Parser *p, token *ts) {
     return PARSE_ETOK;
 }
 
+#undef DISCARD
+#undef COMMIT
 #undef NEXT_TOKEN
 #undef THEN_TOKEN
 #undef THEN_TOKEN_
