@@ -16,26 +16,22 @@
             _END                                                     \
             _BEGIN(N_MATCH)                                          \
                 _ATOM(N_IDENT, T_IDENT, "xs")                        \
-                _BEGIN(N_CASE)                                       \
-                    _ATOM(N_PLIST)                                   \
-                    _ATOM(N_LIST)                                    \
+                _ATOM(N_PLIST)                                       \
+                _ATOM(N_LIST)                                        \
+                _BEGIN(N_PLIST)                                      \
+                    _ATOM(N_PIDENT, T_IDENT, "x")                    \
+                    _ATOM(N_PLTAIL, T_IDENT, "xs", NF_NAMED)         \
                 _END                                                 \
-                _BEGIN(N_CASE)                                       \
-                    _BEGIN(N_PLIST)                                  \
-                        _ATOM(N_PIDENT, T_IDENT, "x")                \
-                        _ATOM(N_PLTAIL, T_IDENT, "xs", NF_NAMED)     \
+                _BEGIN(N_LIST)                                       \
+                    _BEGIN(N_APPLY)                                  \
+                        _ATOM(N_IDENT, T_IDENT, "f")                 \
+                        _ATOM(N_IDENT, T_IDENT, "x")                 \
                     _END                                             \
-                    _BEGIN(N_LIST)                                   \
+                    _BEGIN(N_SPREAD)                                 \
                         _BEGIN(N_APPLY)                              \
+                            _ATOM(N_IDENT, T_IDENT, "map")           \
                             _ATOM(N_IDENT, T_IDENT, "f")             \
-                            _ATOM(N_IDENT, T_IDENT, "x")             \
-                        _END                                         \
-                        _BEGIN(N_SPREAD)                             \
-                            _BEGIN(N_APPLY)                          \
-                                _ATOM(N_IDENT, T_IDENT, "map")       \
-                                _ATOM(N_IDENT, T_IDENT, "f")         \
-                                _ATOM(N_IDENT, T_IDENT, "xs")        \
-                            _END                                     \
+                            _ATOM(N_IDENT, T_IDENT, "xs")            \
                         _END                                         \
                     _END                                             \
                 _END                                                 \

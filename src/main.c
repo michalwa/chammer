@@ -38,6 +38,13 @@ int main(void) {
 #undef _BEGIN
 #undef _END
 
-    node_print(*n, stdout);
+    Buffer output;
+    buffer_init(&output);
+
+    node_print(*n, &output);
+
+    printf(F_BUFFER "\n", FA_BUFFER(output));
+    buffer_free(&output);
+
     stack_free(&stack);
 }

@@ -41,11 +41,11 @@ int main(int argc, const char **argv) {
         return 1;
     }
 
-#define _(name)                \
+#define RUN(name)              \
     int test_##name(Buffer *); \
     if (!test_name || strcmp(test_name, #name) == 0) run_test(&test_##name, #name, &stats, &output);
-    TESTS
-#undef _
+    EACH_TEST(RUN)
+#undef RUN
 
     printf("\n%d passed, %d failed\n", stats.passed, stats.failed);
 

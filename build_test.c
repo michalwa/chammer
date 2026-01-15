@@ -13,7 +13,7 @@ int main(int argc, const char **argv) {
     }
 
     FILE *output_file = fopen(argv[1], "w");
-    fprintf(output_file, "#define TESTS");
+    fprintf(output_file, "#define EACH_TEST(_)");
 
     for (int i = 2; i < argc; i++) {
         FILE *input_file = fopen(argv[i], "r");

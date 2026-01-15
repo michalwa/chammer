@@ -1,4 +1,4 @@
-#define TESTS                        \
+#define EACH_TEST(_)                 \
     _(buffer_putc)                   \
     _(buffer_printf)                 \
     _(buffer_alloc)                  \

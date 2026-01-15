@@ -109,11 +109,9 @@ SUM(x, y) * z // x + y * z
 MUL(x, y + z) // x * y + z
 ```
 
-This is to avoid operator precedence errors.
-
 ### Statement safety
 
-Use `do { ... } while (0)` to wrap macros which expand to statements. This ensures the macro call behaves syntactically like a function call, specifically composed with single-statement `if`-s.
+Use `do { ... } while (0)` to wrap macros which expand to statements.
 
 ```c
 // good
@@ -124,6 +122,8 @@ Use `do { ... } while (0)` to wrap macros which expand to statements. This ensur
 #define FAIL(code) printf("fail\n"); return code
 #define FAIL(code) { printf("fail\n"); return code; }
 ```
+
+This ensures the macro call behaves syntactically like a function call, especially when composed with single-statement `if`-s.
 
 ### Minimal macros
 
@@ -148,18 +148,21 @@ void foo(int i) {
 
 ### X macros
 
+- Prefix list-like macros with `EACH_`.
+- Prefer providing the X macros as arguments. This allows for some higher-order macro passing.
 - Use `_` (or `UPPER_CASE` names prefixed with `_` if more than one) as the name for the variable macros in X macros.
-- Use `#undef _` immediately after usage of the macro.
+- Use normal descriptive names for the concrete implementations of the X macros (at the call site).
+- `#undef` the concrete implementation macros immediately after usage.
 
 ```c
-#define LIST_OF_THINGS \
+#define EACH_THING(_) \
     _(foo) \
     _(bar) \
     _(baz)
 
-#define _(name) #name,
-static const char **NAMES = { LIST_OF_THINGS };
-#undef _
+#define ENUM_MEMBER(name) name,
+typedef enum { EACH_THING(ENUM_MEMBER) } thing;
+#undef ENUM_MEMBER
 ```
 
 ## Documentation
