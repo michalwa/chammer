@@ -1,4 +1,4 @@
-# NOTE: Keep in sync with Makefile
+# NOTE: Keep in sync with CFLAGS + CFLAGS_DEBUG in the Makefile
 CompileFlags:
   Add:
     - -xc # only required for the language server

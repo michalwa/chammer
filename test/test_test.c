@@ -1,5 +1,7 @@
 #include "lib/test.h"
 
+// TEST(this comment should be ignored)
+
 TEST(buffer_print_c_string_literal) {
     Buffer buffer;
     buffer_init(&buffer);
