@@ -40,7 +40,7 @@ typedef enum { EACH_NODE_TYPE(ENUM_MEMBER) } node_type;
 
 #define EACH_NODE_FLAG(_)                                        \
     /* _(name, node_type, value) */                              \
-    _(NF_REC, N_ASSIGN, 1)   /* recursive function definition */ \
+    _(NF_REC, N_PAPPLY, 1)   /* recursive function definition */ \
     _(NF_NAMED, N_PLTAIL, 1) /* named/captured list tail     */
 
 #define ENUM_MEMBER(name, node_type, value) name = value,
