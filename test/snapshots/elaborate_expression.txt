@@ -1,15 +1,15 @@
 N_TUPLE 
-  N_INT  (T_INT `1')
-  N_INT  (T_INT `2')
-  N_STRING  (T_STRING `"foo"')
-  N_IDENT  (T_IDENT `foo')
+  N_INT  (T_INT `1`)
+  N_INT  (T_INT `2`)
+  N_STRING  (T_STRING `"foo"`)
+  N_IDENT  (T_IDENT `foo`)
   N_LIST 
-    N_INT  (T_INT `42')
-    N_IDENT  (T_IDENT `bar')
-    N_DEC  (T_DEC `3.14')
+    N_INT  (T_INT `42`)
+    N_IDENT  (T_IDENT `bar`)
+    N_DEC  (T_DEC `3.14`)
   N_TUPLE 
   N_LIST 
   N_IF 
-    N_INT  (T_INT `1')
-    N_INT  (T_INT `2')
-    N_INT  (T_INT `3')
+    N_INT  (T_INT `1`)
+    N_INT  (T_INT `2`)
+    N_INT  (T_INT `3`)

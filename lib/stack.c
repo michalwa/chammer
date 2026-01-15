@@ -35,7 +35,7 @@ void stack_init_block_size(Stack *s, size_t block_size) {
 
 void *stack_push_(Stack *s, size_t size) {
     if (size > s->block_size) {
-        fprintf(stderr, "WARN: `stack_push' called with `size > block_size'\n");
+        fprintf(stderr, "WARN: `stack_push` called with `size > block_size`\n");
         return NULL;
     }
 
@@ -72,7 +72,7 @@ stack_ptr stack_top(Stack *s) {
 
 void stack_rewind(Stack *s, stack_ptr cursor) {
     if ((size_t)cursor > s->cursor) {
-        fprintf(stderr, "WARN: `stack_rewind' called with `stack_ptr > top'\n");
+        fprintf(stderr, "WARN: `stack_rewind` called with `stack_ptr > top`\n");
         return;
     }
 

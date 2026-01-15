@@ -8,7 +8,7 @@
 #define BUFFER_DEFAULT_CAPACITY 0x400
 
 /*
- * `min_len' must include the null terminator if needed
+ * `min_len` must include the null terminator if needed
  */
 static inline bool buffer_grow(Buffer *b, size_t min_len) {
     size_t old_capacity = b->capacity;
@@ -77,8 +77,8 @@ void fread_to_buffer(FILE *f, Buffer *b) {
 
     rewind(f);
 
-    // `fread' performs line ending conversion on Windows, trim the buffer just
-    // in case. But probably best to use `rb' instead of `r' anyway
+    // `fread` performs line ending conversion on Windows, trim the buffer just
+    // in case. But probably best to use `rb` instead of `r` anyway
     size_t actual_size = fread(data, 1, size, f);
     b->len -= size - actual_size;
     data[b->len] = '\0';

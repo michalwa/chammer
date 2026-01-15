@@ -17,7 +17,7 @@
 
 #define ASSERT_(expr, expr_str)                            \
     if (!(expr)) {                                         \
-        TEST_PRINTF("Assertion failed: `" expr_str "'\n"); \
+        TEST_PRINTF("Assertion failed: `" expr_str "`\n"); \
         return TEST_FAIL;                                  \
     }
 

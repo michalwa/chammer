@@ -11,7 +11,7 @@
 TEST(lexer_example) {
     FILE *f = fopen(EXAMPLE_FILE_PATH, "r");
     if (!f) {
-        perror("Could not open `" EXAMPLE_FILE_PATH "': ");
+        perror("Could not open `" EXAMPLE_FILE_PATH "`: ");
         return TEST_FAIL;
     }
 

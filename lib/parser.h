@@ -42,8 +42,8 @@ typedef enum { NODE_TYPES } node_type;
 #undef _
 
 #define NODE_FLAGS                            \
-    _(NF_REC, 1)   /* recursive `N_ASSIGN' */ \
-    _(NF_NAMED, 2) /* named `N_PLTAIL'     */
+    _(NF_REC, 1)   /* recursive `N_ASSIGN` */ \
+    _(NF_NAMED, 2) /* named `N_PLTAIL`     */
 
 #define _(name, value) name = value,
 typedef enum { NODE_FLAGS } node_flags;
@@ -56,11 +56,11 @@ typedef struct node {
     struct node *next_sibling;
     struct node *parent;
     /*
-     * For `N_IDENT', `N_STR', `N_INT', `N_DEC', `N_PIDENT'
+     * For `N_IDENT`, `N_STR`, `N_INT`, `N_DEC`, `N_PIDENT`
      *   this is the full token that was parsed into the node
-     * For `N_UNARY' and `N_BINARY' it is the `T_OP' token
-     * For `N_PAPPLY' and `N_PALIAS' it is the `T_IDENT' token
-     * For `N_PLTAIL' with the `NF_NAMED' flag it is the `T_IDENT' token
+     * For `N_UNARY` and `N_BINARY` it is the `T_OP` token
+     * For `N_PAPPLY` and `N_PALIAS` it is the `T_IDENT` token
+     * For `N_PLTAIL` with the `NF_NAMED` flag it is the `T_IDENT` token
      */
     token token;
 } node;
@@ -74,15 +74,15 @@ typedef enum parse_result {
 typedef struct Parser {
     Stack stack;
     /*
-     * Holds the root node in case of a successful `PARSE_OK' result
+     * Holds the root node in case of a successful `PARSE_OK` result
      */
     node *node;
     /*
-     * Holds the lexer result in case of a `PARSE_ELEX' result
+     * Holds the lexer result in case of a `PARSE_ELEX` result
      */
     lex_result lex_result;
     /*
-     * Holds the expected token type in case of a `PARSE_ETOK' result
+     * Holds the expected token type in case of a `PARSE_ETOK` result
      */
     token_type expected_token;
 } Parser;

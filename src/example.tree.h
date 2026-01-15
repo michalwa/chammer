@@ -4,8 +4,8 @@
  * An X-macro describing the syntax tree of the example source file
  *
  * Variable macros:
- *   `_BEGIN(<token_type>[, <token_type>, <token_str>[, <flags>[, <str_parsed>]]])'
- *   `_END'
+ *   `_BEGIN(<token_type>[, <token_type>, <token_str>[, <flags>[, <str_parsed>]]])`
+ *   `_END`
  */
 #define EXAMPLE_TREE                                                 \
     _BEGIN(N_DOBLK)                                                  \
