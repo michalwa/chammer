@@ -129,6 +129,23 @@ Use `do { ... } while (0)` to wrap macros which expand to statements. This ensur
 
 Avoid long macros containing several statements. If needed (e.g. when the macro includes control flow statements) prefer defining a helper function and calling it from a more minimal macro.
 
+```c
+// good
+#define FOO(i) do { foo(i); return; } while (0)
+void foo(int i) {
+    printf("%d\n", i);
+    printf("%d\n", i);
+}
+
+// bad
+#define foo(i)               \
+    do {                     \
+        printf("%d\n", (i)); \
+        printf("%d\n", (i)); \
+        return;              \
+    } while (0)
+```
+
 ### X macros
 
 - Use `_` (or `UPPER_CASE` names prefixed with `_` if more than one) as the name for the variable macros in X macros.
@@ -143,17 +160,6 @@ Avoid long macros containing several statements. If needed (e.g. when the macro 
 #define _(name) #name,
 static const char **NAMES = { LIST_OF_THINGS };
 #undef _
-```
-
-```c
-// good
-#define foo(i) do { foo_(i); return; } while (0)
-void foo_(int i) {
-    printf("%d\n", i);
-}
-
-// bad
-#define foo(i) do { printf("%d\n", (i)); return; } while (0)
 ```
 
 ## Documentation
