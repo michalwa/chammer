@@ -28,13 +28,13 @@ static bool node_has_token(node n) {
     }
 }
 
-static void node_print_flags(node_flags flags, Buffer *b) {
+static void node_print_flags(node n, Buffer *b) {
     const char *prefix = "";
 
-#define _(name, _)                            \
-    if (flags & name) {                       \
-        buffer_printf(b, "%s" #name, prefix); \
-        prefix = " ";                         \
+#define _(name, node_type, value)                \
+    if (n.type == node_type && n.flags & name) { \
+        buffer_printf(b, "%s" #name, prefix);    \
+        prefix = " ";                            \
     }
 
     NODE_FLAGS
@@ -47,7 +47,7 @@ const char *node_name(node n) {
 
 void node_print_(node n, Buffer *b, int indent) {
     buffer_printf(b, "%*s%s ", indent, "", NODE_NAMES[n.type]);
-    node_print_flags(n.flags, b);
+    node_print_flags(n, b);
     if (node_has_token(n)) buffer_printf(b, " (" F_TOKEN ")", FA_TOKEN(n.token));
 
     node *child = n.first_child;
@@ -85,7 +85,7 @@ static inline void node_assign_parent(node *parent) {
     for (node *n = parent->first_child; n; n = n->next_sibling) n->parent = parent;
 }
 
-/**
+/*
  * Appends a node to a double-ended linked list of siblings
  */
 static inline void node_double_ended_append(node **first, node **last, node *n) {
@@ -106,7 +106,7 @@ void parser_free(Parser *p) {
     stack_free(&p->stack);
 }
 
-/**
+/*
  * A container for the discardable state of a parser routine
  *
  * This struct and associated macros and functions define a framework of

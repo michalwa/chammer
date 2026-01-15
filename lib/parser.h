@@ -1,12 +1,9 @@
 #ifndef PARSER_H_
 #define PARSER_H_
 
-#include <stdio.h>
-
 #include "buffer.h"
 #include "lexer.h"
 #include "stack.h"
-#include "string.h"
 #include "utils.h"
 
 #define NODE_TYPES                          \
@@ -41,11 +38,12 @@
 typedef enum { NODE_TYPES } node_type;
 #undef _
 
-#define NODE_FLAGS                            \
-    _(NF_REC, 1)   /* recursive `N_ASSIGN` */ \
-    _(NF_NAMED, 2) /* named `N_PLTAIL`     */
+#define NODE_FLAGS                                               \
+    /* _(name, node_type, value) */                              \
+    _(NF_REC, N_ASSIGN, 1)   /* recursive function definition */ \
+    _(NF_NAMED, N_PLTAIL, 1) /* named/captured list tail     */
 
-#define _(name, value) name = value,
+#define _(name, node_type, value) name = value,
 typedef enum { NODE_FLAGS } node_flags;
 #undef _
 
@@ -133,7 +131,7 @@ parse_result parse_apply(Parser *, token *);
 parse_result parse_unary(Parser *, token *);
 parse_result parse_binary(Parser *, token *);
 
-/**
+/*
  * Patterns which are valid in the LHS position of an assignment or monadic
  * binding. Includes things like function definition patterns.
  */
