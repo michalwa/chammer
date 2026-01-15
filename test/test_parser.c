@@ -25,7 +25,7 @@ TEST(parser_example) {
 
     Parser parser;
     parser_init(&parser);
-    ASSERT_INT_EQ(parse_program(&parser, &token), PARSE_OK);
+    ASSERT_ENUM_EQ(parse_program(&parser, &token), PARSE_OK, parse_result_name);
     node_print(*parser.node, &output);
     SNAPSHOT("parser_example", output.data);
 
@@ -41,20 +41,20 @@ TEST(atoms) {
 
     parser_init(&p);
     token_begin(&t, "1");
-    ASSERT_INT_EQ(parse_int(&p, &t), PARSE_OK);
-    ASSERT_INT_EQ(p.node->type, N_INT);
+    ASSERT_ENUM_EQ(parse_int(&p, &t), PARSE_OK, parse_result_name);
+    ASSERT_ENUM_EQ(p.node->type, N_INT, node_type_name);
     parser_free(&p);
 
     parser_init(&p);
     token_begin(&t, "foo");
-    ASSERT_INT_EQ(parse_ident(&p, &t), PARSE_OK);
-    ASSERT_INT_EQ(p.node->type, N_IDENT);
+    ASSERT_ENUM_EQ(parse_ident(&p, &t), PARSE_OK, parse_result_name);
+    ASSERT_ENUM_EQ(p.node->type, N_IDENT, node_type_name);
     parser_free(&p);
 
     parser_init(&p);
     token_begin(&t, "1");
-    ASSERT_INT_EQ(parse_ident(&p, &t), PARSE_ETOK);
-    ASSERT_INT_EQ(p.expected_token, T_IDENT);
+    ASSERT_ENUM_EQ(parse_ident(&p, &t), PARSE_ETOK, parse_result_name);
+    ASSERT_ENUM_EQ(p.expected_token, T_IDENT, token_type_name);
     parser_free(&p);
 
     return TEST_OK;
@@ -70,7 +70,7 @@ TEST(parse_tuple_or_parens) {
     Buffer output;
     buffer_init(&output);
 
-    ASSERT_INT_EQ(parse_tuple_or_parens(&p, &t), PARSE_OK);
+    ASSERT_ENUM_EQ(parse_tuple_or_parens(&p, &t), PARSE_OK, parse_result_name);
     node_print(*p.node, &output);
     SNAPSHOT("tuple_with_2_idents", output.data);
 
@@ -89,7 +89,7 @@ TEST(parse_binary) {
     Buffer output;
     buffer_init(&output);
 
-    ASSERT_INT_EQ(parse_binary(&p, &t), PARSE_OK);
+    ASSERT_ENUM_EQ(parse_binary(&p, &t), PARSE_OK, parse_result_name);
     node_print(*p.node, &output);
     SNAPSHOT("binary", output.data);
 
@@ -108,7 +108,7 @@ TEST(elaborate_expression) {
     Buffer output;
     buffer_init(&output);
 
-    ASSERT_INT_EQ(parse_expr(&p, &t, EXPR_ALL), PARSE_OK);
+    ASSERT_ENUM_EQ(parse_expr(&p, &t, EXPR_ALL), PARSE_OK, parse_result_name);
     node_print(*p.node, &output);
     SNAPSHOT("elaborate_expression", output.data);
 

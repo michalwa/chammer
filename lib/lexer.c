@@ -10,10 +10,6 @@ typedef struct {
     token_type  type;
 } keyword;
 
-#define _(name) [name] = #name,
-static const char *TOKEN_NAMES[] = { TOKEN_TYPES };
-#undef _
-
 static const char *OP_CHARSET = "~!@#$%^&*-+=|:<>./?";
 
 static const keyword KEYWORDS[] = {
@@ -46,6 +42,14 @@ static const keyword KEYWORD_CHARS[] = {
     { ",",  T_COMMA  },
     { ";",  T_SEMI   },
 };
+
+const char *token_type_name(token_type value) {
+    RETURN_ENUM_NAME(token_type, value, EACH_TOKEN_TYPE);
+}
+
+const char *lex_result_name(lex_result value) {
+    RETURN_ENUM_NAME(lex_result, value, EACH_LEX_RESULT);
+}
 
 static lex_result token_find_keyword(token *t, const keyword *keywords, size_t num_keywords) {
     for (size_t i = 0; i < num_keywords; i++) {
@@ -218,8 +222,4 @@ loc token_loc(token t, const char *buffer) {
     }
 
     return l;
-}
-
-const char *token_name(token t) {
-    return TOKEN_NAMES[t.type];
 }

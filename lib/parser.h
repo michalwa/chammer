@@ -6,7 +6,7 @@
 #include "stack.h"
 #include "utils.h"
 
-#define NODE_TYPES                          \
+#define EACH_NODE_TYPE(_)                   \
     _(N_ASSIGN) /* assignment            */ \
     _(N_IDENT)  /* identifier expression */ \
     _(N_STRING) /* string literal        */ \
@@ -34,18 +34,18 @@
     _(N_PALIAS) /* alias pattern         */ \
     _(N_PCONST) /* const/expr pattern    */
 
-#define _(name) name,
-typedef enum { NODE_TYPES } node_type;
-#undef _
+#define ENUM_MEMBER(name) name,
+typedef enum { EACH_NODE_TYPE(ENUM_MEMBER) } node_type;
+#undef ENUM_MEMBER
 
-#define NODE_FLAGS                                               \
+#define EACH_NODE_FLAG(_)                                        \
     /* _(name, node_type, value) */                              \
     _(NF_REC, N_ASSIGN, 1)   /* recursive function definition */ \
     _(NF_NAMED, N_PLTAIL, 1) /* named/captured list tail     */
 
-#define _(name, node_type, value) name = value,
-typedef enum { NODE_FLAGS } node_flags;
-#undef _
+#define ENUM_MEMBER(name, node_type, value) name = value,
+typedef enum { EACH_NODE_FLAG(ENUM_MEMBER) } node_flags;
+#undef ENUM_MEMBER
 
 typedef struct node node;
 struct node {
@@ -64,11 +64,14 @@ struct node {
     token      token;
 };
 
-typedef enum {
-    PARSE_OK = 0,
-    PARSE_ELEX = 1,
-    PARSE_ETOK = 2,
-} parse_result;
+#define EACH_PARSE_RESULT(_) \
+    _(PARSE_OK)              \
+    _(PARSE_ELEX)            \
+    _(PARSE_ETOK)
+
+#define ENUM_MEMBER(name) name,
+typedef enum { EACH_PARSE_RESULT(ENUM_MEMBER) } parse_result;
+#undef ENUM_MEMBER
 
 typedef struct {
     Stack      stack;
@@ -100,9 +103,11 @@ typedef enum {
 
 #define node_add_children(parent, ...) node_add_children_(parent, ARGC(__VA_ARGS__), __VA_ARGS__)
 
-const char *node_name(node);
-void        node_print(node, Buffer *);
-void        node_add_children_(node *parent, int n, ...);
+const char *node_type_name(node_type);
+const char *parse_result_name(parse_result);
+
+void node_print(node, Buffer *);
+void node_add_children_(node *parent, int n, ...);
 
 void parser_init(Parser *);
 void parser_free(Parser *);

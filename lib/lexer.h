@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define TOKEN_TYPES                   \
+#define EACH_TOKEN_TYPE(_)            \
     _(T_BCOMM)  /* block comment   */ \
     _(T_LCOMM)  /* line comment    */ \
     _(T_LET)    /* `let`           */ \
@@ -37,12 +37,12 @@
     _(T_COMMA)  /* `,`             */ \
     _(T_SEMI)   /* `;`             */
 
-#define _(name) name,
-typedef enum { TOKEN_TYPES } token_type;
-#undef _
+#define ENUM_MEMBER(name) name,
+typedef enum { EACH_TOKEN_TYPE(ENUM_MEMBER) } token_type;
+#undef ENUM_MEMBER
 
 #define F_TOKEN         "%s `%.*s`"
-#define FA_TOKEN(token) token_name(token), (int)(token).len, (token).str
+#define FA_TOKEN(token) token_type_name((token).type), (int)(token).len, (token).str
 
 typedef struct {
     token_type  type;
@@ -50,21 +50,26 @@ typedef struct {
     size_t      len;
 } token;
 
-typedef enum {
-    LEX_NONE = 0,
-    LEX_OK,
-    LEX_EEOI, // Unexpected end of input
-    LEX_ENUM, // Malformed number
-} lex_result;
+#define EACH_LEX_RESULT(_)                    \
+    _(LEX_NONE)                               \
+    _(LEX_OK)                                 \
+    _(LEX_EEOI) /* unexpected end of input */ \
+    _(LEX_ENUM) /* malformed number */
+
+#define ENUM_MEMBER(name) name,
+typedef enum { EACH_LEX_RESULT(ENUM_MEMBER) } lex_result;
+#undef ENUM_MEMBER
 
 typedef struct {
     uint16_t line, col;
 } loc;
 
-void        token_begin(token *, const char *);
-lex_result  token_next(token *);
-bool        token_eq(token, token);
-loc         token_loc(token, const char *);
-const char *token_name(token);
+const char *token_type_name(token_type);
+const char *lex_result_name(lex_result);
+
+void       token_begin(token *, const char *);
+lex_result token_next(token *);
+bool       token_eq(token, token);
+loc        token_loc(token, const char *);
 
 #endif // LEXER_H_

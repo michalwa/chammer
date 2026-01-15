@@ -14,6 +14,20 @@
 #define DO(body)           \
     do { body; } while (0)
 
-void panic(const char *, ...);
+#define RETURN_ENUM_NAME(type, value, x_macro)               \
+    do {                                                     \
+        type value_ = (value);                               \
+        switch (value_) {                                    \
+            x_macro(RETURN_ENUM_NAME_CASE_);                 \
+        default: panic("invalid " #type ": %d", (int)value); \
+        }                                                    \
+    } while (0)
+
+#define RETURN_ENUM_NAME_CASE_(name) \
+    case name: return #name;
+
+#define panic(fmt, ...) panic_(fmt, __FILE__, __LINE__, __VA_ARGS__)
+
+void panic_(const char *fmt, const char *file, int line, ...);
 
 #endif // UTILS_H_

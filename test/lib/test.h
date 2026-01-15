@@ -15,31 +15,33 @@
 
 #define test_printf(...) buffer_printf(output_, __VA_ARGS__)
 
-#define ASSERT(expr) ASSERT_(expr, #expr)
-
-#define ASSERT_(expr, expr_str)                                                         \
-    do {                                                                                \
-        if (!(expr)) {                                                                  \
-            test_printf("Assertion failed: " expr_str "\n%s:%d\n", __FILE__, __LINE__); \
-            return TEST_FAIL;                                                           \
-        }                                                                               \
+#define ASSERT_(expr, expr_str, ...)                                                       \
+    do {                                                                                   \
+        if (!(expr)) {                                                                     \
+            test_printf(                                                                   \
+                "Assertion failed: " expr_str "\n%s:%d\n", __VA_ARGS__, __FILE__, __LINE__ \
+            );                                                                             \
+            return TEST_FAIL;                                                              \
+        }                                                                                  \
     } while (0)
 
-#define ASSERT_EQ(type, format, a, b)                                                         \
-    do {                                                                                      \
-        type a_ = (a);                                                                        \
-        type b_ = (b);                                                                        \
-        if (a_ != b_) {                                                                       \
-            test_printf(                                                                      \
-                "Assertion failed: " #a " == " #b "\n   left = " format "\n  right = " format \
-                "\n%s:%d\n",                                                                  \
-                a_, b_, __FILE__, __LINE__                                                    \
-            );                                                                                \
-            return TEST_FAIL;                                                                 \
-        }                                                                                     \
+#define ASSERT(expr) ASSERT_(expr, "%s", #expr)
+
+#define ASSERT_EQ_(type, fmt, a, b)                                                    \
+    do {                                                                               \
+        type a_ = (a);                                                                 \
+        type b_ = (b);                                                                 \
+        ASSERT_(a_ == b_, #a " == " #b "\n   left = " fmt "\n  right = " fmt, a_, b_); \
     } while (0)
 
-#define ASSERT_INT_EQ(a, b) ASSERT_EQ(int, "%d", a, b)
+#define ASSERT_INT_EQ(a, b) ASSERT_EQ_(int, "%d", a, b)
+
+#define ASSERT_ENUM_EQ(a, b, name_fn)                                                             \
+    do {                                                                                          \
+        int a_ = (a);                                                                             \
+        int b_ = (b);                                                                             \
+        ASSERT_(a_ == b_, #a " == " #b "\n   left = %s\n  right = %s", name_fn(a_), name_fn(b_)); \
+    } while (0)
 
 #define ASSERT_STR_EQ(a, b)                                                           \
     do {                                                                              \

@@ -6,9 +6,13 @@
 #include "stack.h"
 #include "utils.h"
 
-#define _(name) [name] = #name,
-static const char *NODE_NAMES[] = { NODE_TYPES };
-#undef _
+const char *node_type_name(node_type value) {
+    RETURN_ENUM_NAME(node_type, value, EACH_NODE_TYPE);
+}
+
+const char *parse_result_name(parse_result value) {
+    RETURN_ENUM_NAME(parse_result, value, EACH_PARSE_RESULT);
+}
 
 static bool node_has_token(node n) {
     switch (n.type) {
@@ -29,22 +33,18 @@ static bool node_has_token(node n) {
 static void node_print_flags(node n, Buffer *b) {
     const char *prefix = "";
 
-#define _(name, node_type, value)                \
+#define CHECK(name, node_type, value)            \
     if (n.type == node_type && n.flags & name) { \
         buffer_printf(b, "%s" #name, prefix);    \
         prefix = " ";                            \
     }
 
-    NODE_FLAGS
-#undef _
-}
-
-const char *node_name(node n) {
-    return NODE_NAMES[n.type];
+    EACH_NODE_FLAG(CHECK)
+#undef CHECK
 }
 
 void node_print_(node n, Buffer *b, int indent) {
-    buffer_printf(b, "%*s%s ", indent, "", NODE_NAMES[n.type]);
+    buffer_printf(b, "%*s%s ", indent, "", node_type_name(n.type));
     node_print_flags(n, b);
     if (node_has_token(n)) buffer_printf(b, " (" F_TOKEN ")", FA_TOKEN(n.token));
 
@@ -138,7 +138,7 @@ static inline parse_result discard(frame f) {
 
 static inline parse_result discard_checked(frame f, const char *file, int line) {
     if (f.result == PARSE_OK)
-        panic("`DISCARD` called, but last parse result is `PARSE_OK` (%s:%d)\n", file, line);
+        panic_("`DISCARD` called, but last parse result is `PARSE_OK`\n", file, line);
 
     return discard(f);
 }
