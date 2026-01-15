@@ -1,6 +1,7 @@
 # NOTE: Keep in sync with Makefile
 CompileFlags:
   Add:
+    - -xc # only required for the language server
     - -std=c99
     - -Wall
     - -Wextra
