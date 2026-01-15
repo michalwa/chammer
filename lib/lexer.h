@@ -44,20 +44,20 @@ typedef enum { TOKEN_TYPES } token_type;
 #define F_TOKEN         "%s `%.*s`"
 #define FA_TOKEN(token) token_name(token), (int)(token).len, (token).str
 
-typedef struct token {
+typedef struct {
     token_type  type;
     const char *str;
     size_t      len;
 } token;
 
-typedef enum lex_result {
+typedef enum {
     LEX_NONE = 0,
     LEX_OK,
     LEX_EEOI, // Unexpected end of input
     LEX_ENUM, // Malformed number
 } lex_result;
 
-typedef struct loc {
+typedef struct {
     uint16_t line, col;
 } loc;
 

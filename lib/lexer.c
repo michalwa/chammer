@@ -3,6 +3,8 @@
 #include <ctype.h>
 #include <string.h>
 
+#include "utils.h"
+
 typedef struct {
     const char *str;
     token_type  type;
@@ -190,19 +192,14 @@ lex_result token_next(token *t) {
 
     lex_result result;
 
-#define TRY(fn)                            \
-    result = fn(t);                        \
-    if (result != LEX_NONE) return result;
-
-    TRY(token_next_block_comment);
-    TRY(token_next_line_comment);
-    TRY(token_next_string);
-    TRY(token_next_word);
-    TRY(token_next_glyph);
-    TRY(token_next_char);
-    TRY(token_next_infix);
-    TRY(token_next_number);
-#undef TRY
+    if ((result = token_next_block_comment(t)) != LEX_NONE) return result;
+    if ((result = token_next_line_comment(t)) != LEX_NONE) return result;
+    if ((result = token_next_string(t)) != LEX_NONE) return result;
+    if ((result = token_next_word(t)) != LEX_NONE) return result;
+    if ((result = token_next_glyph(t)) != LEX_NONE) return result;
+    if ((result = token_next_char(t)) != LEX_NONE) return result;
+    if ((result = token_next_infix(t)) != LEX_NONE) return result;
+    if ((result = token_next_number(t)) != LEX_NONE) return result;
 
     return LEX_NONE;
 }

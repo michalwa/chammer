@@ -9,7 +9,7 @@
 /*
  * A growable container of bytes
  */
-typedef struct Buffer {
+typedef struct {
     /*
      * Ensured to point to a valid null-terminated string
      */

@@ -47,12 +47,13 @@ typedef enum { NODE_TYPES } node_type;
 typedef enum { NODE_FLAGS } node_flags;
 #undef _
 
-typedef struct node {
-    node_type    type;
-    node_flags   flags;
-    struct node *first_child;
-    struct node *next_sibling;
-    struct node *parent;
+typedef struct node node;
+struct node {
+    node_type  type;
+    node_flags flags;
+    node      *first_child;
+    node      *next_sibling;
+    node      *parent;
     /*
      * For `N_IDENT`, `N_STR`, `N_INT`, `N_DEC`, `N_PIDENT`
      *   this is the full token that was parsed into the node
@@ -60,16 +61,16 @@ typedef struct node {
      * For `N_PAPPLY` and `N_PALIAS` it is the `T_IDENT` token
      * For `N_PLTAIL` with the `NF_NAMED` flag it is the `T_IDENT` token
      */
-    token        token;
-} node;
+    token      token;
+};
 
-typedef enum parse_result {
+typedef enum {
     PARSE_OK = 0,
     PARSE_ELEX = 1,
     PARSE_ETOK = 2,
 } parse_result;
 
-typedef struct Parser {
+typedef struct {
     Stack      stack;
     /*
      * Holds the root node in case of a successful `PARSE_OK` result
@@ -85,14 +86,14 @@ typedef struct Parser {
     token_type expected_token;
 } Parser;
 
-typedef enum parse_expr_flags {
+typedef enum {
     EXPR_ALL = -1,
     EXPR_BINARY = 1,
     EXPR_UNARY = 1 << 1,
     EXPR_APPLY = 1 << 2,
 } parse_expr_flags;
 
-typedef enum parse_stmt_flags {
+typedef enum {
     STMT_ALL = -1,
     STMT_DOBIND = 1,
 } parse_stmt_flags;
@@ -103,20 +104,18 @@ const char *node_name(node);
 void        node_print(node, Buffer *);
 void        node_add_children_(node *parent, int n, ...);
 
-void         parser_init(Parser *);
-void         parser_free(Parser *);
-parse_result parse(Parser *, token *);
+void parser_init(Parser *);
+void parser_free(Parser *);
 
+parse_result parse(Parser *, token *);
 parse_result parse_ident(Parser *, token *);
 parse_result parse_string(Parser *, token *);
 parse_result parse_int(Parser *, token *);
 parse_result parse_dec(Parser *, token *);
-
 parse_result parse_stmt(Parser *, token *, parse_stmt_flags);
 parse_result parse_assign(Parser *, token *);
 parse_result parse_dobind(Parser *, token *);
 parse_result parse_void(Parser *, token *);
-
 parse_result parse_expr(Parser *, token *, parse_expr_flags);
 parse_result parse_tuple_or_parens(Parser *, token *);
 parse_result parse_list(Parser *, token *);
@@ -130,7 +129,6 @@ parse_result parse_lambda(Parser *, token *);
 parse_result parse_apply(Parser *, token *);
 parse_result parse_unary(Parser *, token *);
 parse_result parse_binary(Parser *, token *);
-
 /*
  * Patterns which are valid in the LHS position of an assignment or monadic
  * binding. Includes things like function definition patterns.

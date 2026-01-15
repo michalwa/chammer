@@ -4,7 +4,7 @@
 #include <string.h>
 
 #define TEST_NAME_PREFIX "TEST("
-#define TEST_NAME_OFFSET (sizeof("TEST(") - 1)
+#define TEST_NAME_OFFSET (sizeof(TEST_NAME_PREFIX) - 1)
 
 int main(int argc, const char **argv) {
     if (argc < 2) {

@@ -6,19 +6,19 @@
 
 #define STACK_DEFAULT_BLOCK_SIZE 0x400
 
-struct StackBlock {
-    char       *data;
-    StackBlock *next;
+struct stack_block {
+    char        *data;
+    stack_block *next;
 };
 
-static StackBlock *stack_block_new(size_t size) {
-    StackBlock *block = malloc(sizeof(StackBlock));
+static stack_block *stack_block_new(size_t size) {
+    stack_block *block = malloc(sizeof(stack_block));
     block->data = malloc(size);
     block->next = NULL;
     return block;
 }
 
-static void stack_block_free(StackBlock *block) {
+static void stack_block_free(stack_block *block) {
     free(block->data);
     free(block);
 }
@@ -39,8 +39,8 @@ void *stack_push_(Stack *s, size_t size) {
         return NULL;
     }
 
-    size_t      offset = s->cursor;
-    StackBlock *block = s->head;
+    size_t       offset = s->cursor;
+    stack_block *block = s->head;
 
     while (offset >= s->block_size) {
         block = block->next;
@@ -80,10 +80,10 @@ void stack_rewind(Stack *s, stack_ptr cursor) {
 }
 
 void stack_free(Stack *s) {
-    StackBlock *block = s->head;
+    stack_block *block = s->head;
 
     while (block) {
-        StackBlock *next = block->next;
+        stack_block *next = block->next;
         stack_block_free(block);
         block = next;
     }
