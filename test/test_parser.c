@@ -3,6 +3,38 @@
 #include "lib/snapshot.h"
 #include "lib/test.h"
 
+#define EXAMPLE_FILE_PATH "test/example.ham"
+
+TEST(parser_example) {
+    FILE *f = fopen(EXAMPLE_FILE_PATH, "r");
+    if (!f) {
+        perror("Could not open `" EXAMPLE_FILE_PATH "`: ");
+        return TEST_FAIL;
+    }
+
+    Buffer input;
+    buffer_init(&input);
+    buffer_read_file(&input, f);
+    fclose(f);
+
+    Buffer output;
+    buffer_init(&output);
+
+    token token;
+    token_begin(&token, input.data);
+
+    Parser parser;
+    parser_init(&parser);
+    ASSERT_INT_EQ(parse_program(&parser, &token), PARSE_OK);
+    node_print(*parser.node, &output);
+    SNAPSHOT("parser_example", output.data);
+
+    buffer_free(&input);
+    buffer_free(&output);
+
+    return TEST_OK;
+}
+
 TEST(atoms) {
     token  t;
     Parser p;
@@ -29,12 +61,13 @@ TEST(atoms) {
 }
 
 TEST(parse_tuple_or_parens) {
-    token  t;
-    Parser p;
-    Buffer output;
-
+    token t;
     token_begin(&t, "(foo, bar)");
+
+    Parser p;
     parser_init(&p);
+
+    Buffer output;
     buffer_init(&output);
 
     ASSERT_INT_EQ(parse_tuple_or_parens(&p, &t), PARSE_OK);
@@ -43,18 +76,36 @@ TEST(parse_tuple_or_parens) {
 
     parser_free(&p);
     buffer_free(&output);
+    return TEST_OK;
+}
 
+TEST(parse_binary) {
+    token t;
+    token_begin(&t, "1 + 2 * 3");
+
+    Parser p;
+    parser_init(&p);
+
+    Buffer output;
+    buffer_init(&output);
+
+    ASSERT_INT_EQ(parse_binary(&p, &t), PARSE_OK);
+    node_print(*p.node, &output);
+    SNAPSHOT("binary", output.data);
+
+    parser_free(&p);
+    buffer_free(&output);
     return TEST_OK;
 }
 
 TEST(elaborate_expression) {
-    token  t;
-    Parser p;
-    Buffer output;
-
+    token t;
     token_begin(&t, "(1, 2, \"foo\", foo, [42, bar, 3.14], (), [], if 1 then 2 else 3)");
 
+    Parser p;
     parser_init(&p);
+
+    Buffer output;
     buffer_init(&output);
 
     ASSERT_INT_EQ(parse_expr(&p, &t, EXPR_ALL), PARSE_OK);
@@ -63,6 +114,5 @@ TEST(elaborate_expression) {
 
     parser_free(&p);
     buffer_free(&output);
-
     return TEST_OK;
 }

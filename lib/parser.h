@@ -107,7 +107,7 @@ void        node_add_children_(node *parent, int n, ...);
 void parser_init(Parser *);
 void parser_free(Parser *);
 
-parse_result parse(Parser *, token *);
+parse_result parse_program(Parser *, token *);
 parse_result parse_ident(Parser *, token *);
 parse_result parse_string(Parser *, token *);
 parse_result parse_int(Parser *, token *);

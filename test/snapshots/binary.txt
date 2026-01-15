@@ -1,0 +1,5 @@
+N_BINARY  (T_OP `*`)
+  N_BINARY  (T_OP `+`)
+    N_INT  (T_INT `1`)
+    N_INT  (T_INT `2`)
+  N_INT  (T_INT `3`)

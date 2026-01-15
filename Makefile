@@ -4,7 +4,7 @@ endif
 
 CFLAGS         += -std=c99 -Wall -Wextra -Wpedantic -Wno-char-subscripts -Wno-parentheses -Wimplicit-fallthrough -Werror=incompatible-pointer-types
 CFLAGS_RELEASE += -O3
-CFLAGS_DEBUG   += -g -O0 -fsanitize=address -fsanitize=undefined
+CFLAGS_DEBUG   += -g -O0 -fsanitize=address -fsanitize=undefined -DHAMMER_DEBUG
 
 SRC_LIB  = lib/*.c lib/*.h
 SRC_BIN  = src/*.c src/*.h

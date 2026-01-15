@@ -1,6 +1,8 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
+#define HAMMER_DEBUG_ASSERTION_FAILURE 100
+
 #define ARGC(...)                                         ARGC_(__VA_ARGS__, ARGC_SEQ_)
 #define ARGC_(...)                                        ARGC_NTH_(__VA_ARGS__)
 #define ARGC_NTH_(_1, _2, _3, _4, _5, _6, _7, _8, N, ...) N
@@ -11,5 +13,7 @@
  */
 #define DO(body)           \
     do { body; } while (0)
+
+void panic(const char *, ...);
 
 #endif // UTILS_H_
