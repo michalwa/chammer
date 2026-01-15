@@ -1,8 +1,8 @@
 #define TESTS                       \
-    _(buffer_printf)                \
     _(buffer_putc)                  \
+    _(buffer_printf)                \
     _(buffer_alloc)                 \
-    _(fread_to_buffer)              \
+    _(buffer_read_file)             \
     _(lexer_example)                \
     _(lexer_empty)                  \
     _(lexer_unclosed_string)        \

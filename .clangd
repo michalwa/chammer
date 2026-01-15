@@ -9,3 +9,4 @@ CompileFlags:
     - -Wno-char-subscripts
     - -Wno-parentheses
     - -Wimplicit-fallthrough
+    - -Werror=incompatible-pointer-types

@@ -60,7 +60,7 @@ typedef struct node {
      * For `N_PAPPLY` and `N_PALIAS` it is the `T_IDENT` token
      * For `N_PLTAIL` with the `NF_NAMED` flag it is the `T_IDENT` token
      */
-    token token;
+    token        token;
 } node;
 
 typedef enum parse_result {
@@ -70,11 +70,11 @@ typedef enum parse_result {
 } parse_result;
 
 typedef struct Parser {
-    Stack stack;
+    Stack      stack;
     /*
      * Holds the root node in case of a successful `PARSE_OK` result
      */
-    node *node;
+    node      *node;
     /*
      * Holds the lexer result in case of a `PARSE_ELEX` result
      */

@@ -61,7 +61,7 @@ int snapshot(Buffer *output, const char *name, const char *data) {
     if (old) {
         Buffer old_buf;
         buffer_init(&old_buf);
-        fread_to_buffer(old, &old_buf);
+        buffer_read_file(&old_buf, old);
 
         if (strcmp(old_buf.data, data) != 0) {
             if (getenv("HAMMER_SNAPSHOT_REVIEW")) {

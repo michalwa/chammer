@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
 
 #include "../lib/buffer.h"
 #include "../lib/lexer.h"
@@ -17,7 +16,7 @@ TEST(lexer_example) {
 
     Buffer input;
     buffer_init(&input);
-    fread_to_buffer(f, &input);
+    buffer_read_file(&input, f);
     fclose(f);
 
     Buffer output;
