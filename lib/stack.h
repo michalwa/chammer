@@ -21,10 +21,10 @@ typedef struct stack_item *stack_ptr;
 
 void      stack_init(Stack *);
 void      stack_init_block_size(Stack *, size_t block_size);
+void      stack_free(Stack *);
 void     *stack_push_(Stack *, size_t size);
 void     *stack_push_zeroed_(Stack *, size_t size);
 stack_ptr stack_top(Stack *);
 void      stack_rewind(Stack *, stack_ptr);
-void      stack_free(Stack *);
 
 #endif // STACK_H_

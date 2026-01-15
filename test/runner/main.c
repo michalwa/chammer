@@ -13,7 +13,7 @@ void run_test(int (*test)(Buffer *), const char *label, stats *stats, Buffer *ou
     Buffer buffer;
     buffer_init(&buffer);
 
-    printf("%-30s", label);
+    printf("%-40s", label);
 
     if (test(&buffer)) {
         stats->failed++;

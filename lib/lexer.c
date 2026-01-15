@@ -96,14 +96,11 @@ static lex_result token_next_string(token *t) {
 
     while (1) {
         switch (t->str[++t->len]) {
-        case '\\':
-            escape = true;
-            continue;
+        case '\\': escape = true; continue;
         case '"':
             if (!escape) goto end;
             break;
-        case '\0':
-            return LEX_EEOI;
+        case '\0': return LEX_EEOI;
         }
 
         escape = false;

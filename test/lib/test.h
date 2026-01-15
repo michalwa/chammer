@@ -1,9 +1,9 @@
 #ifndef TEST_H_
 #define TEST_H_
 
-#include <string.h>
+#include <string.h> // strcmp
 
-#include "../../lib/buffer.h"
+#include "../../lib/buffer.h" // buffer_printf
 
 #define RED(str)   "\033[0;31m" str "\033[0m"
 #define GREEN(str) "\033[0;32m" str "\033[0m"
@@ -13,44 +13,48 @@
 #define TEST_OK   0
 #define TEST_FAIL 1
 
-#define TEST_PRINTF(...) buffer_printf(output_, __VA_ARGS__)
-
-#define ASSERT_(expr, expr_str)                            \
-    if (!(expr)) {                                         \
-        TEST_PRINTF("Assertion failed: `" expr_str "`\n"); \
-        return TEST_FAIL;                                  \
-    }
+#define test_printf(...) buffer_printf(output_, __VA_ARGS__)
 
 #define ASSERT(expr) ASSERT_(expr, #expr)
 
-#define ASSERT_EQ(type, format, a, b, expr_str)                                               \
-    {                                                                                         \
-        type a_ = a;                                                                          \
-        type b_ = b;                                                                          \
+#define ASSERT_(expr, expr_str)                                                         \
+    do {                                                                                \
+        if (!(expr)) {                                                                  \
+            test_printf("Assertion failed: " expr_str "\n%s:%d\n", __FILE__, __LINE__); \
+            return TEST_FAIL;                                                           \
+        }                                                                               \
+    } while (0)
+
+#define ASSERT_EQ(type, format, a, b)                                                         \
+    do {                                                                                      \
+        type a_ = (a);                                                                        \
+        type b_ = (b);                                                                        \
         if (a_ != b_) {                                                                       \
-            TEST_PRINTF(                                                                      \
+            test_printf(                                                                      \
                 "Assertion failed: " #a " == " #b "\n   left = " format "\n  right = " format \
-                "\n",                                                                         \
-                a_, b_                                                                        \
+                "\n%s:%d\n",                                                                  \
+                a_, b_, __FILE__, __LINE__                                                    \
             );                                                                                \
             return TEST_FAIL;                                                                 \
         }                                                                                     \
-    }
+    } while (0)
 
-#define ASSERT_INT_EQ(a, b) ASSERT_EQ(int, "%d", (int)(a), (int)(b), #a " == " #b)
+#define ASSERT_INT_EQ(a, b) ASSERT_EQ(int, "%d", a, b)
 
-#define ASSERT_STR_EQ(a, b)                                                   \
-    {                                                                         \
-        const char *a_ = a;                                                   \
-        const char *b_ = b;                                                   \
-        if (strcmp(a_, b_) != 0) {                                            \
-            TEST_PRINTF(                                                      \
-                "Assertion failed: strcmp(" #a ", " #b                        \
-                ") == 0\n  ----- left ------\n%s\n  ----- right -----\n%s\n", \
-                a_, b_                                                        \
-            );                                                                \
-            return TEST_FAIL;                                                 \
-        }                                                                     \
-    }
+#define ASSERT_STR_EQ(a, b)                                                           \
+    do {                                                                              \
+        const char *a_ = (a);                                                         \
+        const char *b_ = (b);                                                         \
+        if (strcmp(a_, b_) != 0) {                                                    \
+            test_printf("Assertion failed: strcmp(" #a ", " #b ") == 0\n   left = "); \
+            buffer_print_c_string_literal(output_, a_);                               \
+            test_printf("\n  right = ");                                              \
+            buffer_print_c_string_literal(output_, b_);                               \
+            test_printf("\n%s:%d\n", __FILE__, __LINE__);                             \
+            return TEST_FAIL;                                                         \
+        }                                                                             \
+    } while (0)
+
+void buffer_print_c_string_literal(Buffer *, const char *);
 
 #endif // TEST_H_

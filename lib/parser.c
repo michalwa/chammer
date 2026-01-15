@@ -20,12 +20,9 @@ static bool node_has_token(node n) {
     case N_UNARY:
     case N_BINARY:
     case N_PAPPLY:
-    case N_PALIAS:
-        return true;
-    case N_PLTAIL:
-        return n.flags & NF_NAMED;
-    default:
-        return false;
+    case N_PALIAS: return true;
+    case N_PLTAIL: return n.flags & NF_NAMED;
+    default: return false;
     }
 }
 

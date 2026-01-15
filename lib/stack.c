@@ -33,6 +33,16 @@ void stack_init_block_size(Stack *s, size_t block_size) {
     s->head = stack_block_new(s->block_size);
 }
 
+void stack_free(Stack *s) {
+    stack_block *block = s->head;
+
+    while (block) {
+        stack_block *next = block->next;
+        stack_block_free(block);
+        block = next;
+    }
+}
+
 void *stack_push_(Stack *s, size_t size) {
     if (size > s->block_size) {
         fprintf(stderr, "WARN: `stack_push` called with `size > block_size`\n");
@@ -77,14 +87,4 @@ void stack_rewind(Stack *s, stack_ptr cursor) {
     }
 
     s->cursor = (size_t)cursor;
-}
-
-void stack_free(Stack *s) {
-    stack_block *block = s->head;
-
-    while (block) {
-        stack_block *next = block->next;
-        stack_block_free(block);
-        block = next;
-    }
 }

@@ -5,6 +5,7 @@ AlignConsecutiveMacros: AcrossComments
 AlignEscapedNewlines: LeftWithLastLine
 AlignOperands: DontAlign
 AllowShortBlocksOnASingleLine: Always
+AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: Empty
 BasedOnStyle: Google
 BreakAdjacentStringLiterals: false
