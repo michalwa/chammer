@@ -50,7 +50,7 @@ void buffer_printf(Buffer *b, const char *format, ...) {
         va_start(args, format);
         len = vsnprintf(b->data + b->len, b->capacity - b->len, format, args);
         va_end(args);
-    } while (buffer_grow(b, b->len + len + 1));
+    } while (buffer_grow(b, b->len + len));
 
     b->len += len;
     b->data[b->len] = '\0';
