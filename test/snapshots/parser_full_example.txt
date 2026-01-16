@@ -1,0 +1,37 @@
+N_DOBLK 
+  N_ASSIGN 
+    N_PAPPLY NF_REC (T_IDENT `map`)
+      N_PIDENT  (T_IDENT `f`)
+      N_PIDENT  (T_IDENT `xs`)
+    N_MATCH 
+      N_IDENT  (T_IDENT `xs`)
+      N_PLIST 
+      N_LIST 
+      N_PLIST 
+        N_PIDENT  (T_IDENT `x`)
+        N_PLTAIL NF_NAMED (T_IDENT `xs`)
+      N_LIST 
+        N_APPLY 
+          N_IDENT  (T_IDENT `f`)
+          N_IDENT  (T_IDENT `x`)
+        N_SPREAD 
+          N_APPLY 
+            N_IDENT  (T_IDENT `map`)
+            N_IDENT  (T_IDENT `f`)
+            N_IDENT  (T_IDENT `xs`)
+  N_BINARY  (T_OP `$`)
+    N_IDENT  (T_IDENT `print`)
+    N_APPLY 
+      N_IDENT  (T_IDENT `map`)
+      N_LAMBDA 
+        N_PIDENT  (T_IDENT `x`)
+        N_BINARY  (T_OP `+`)
+          N_IDENT  (T_IDENT `x`)
+          N_INT  (T_INT `1`)
+      N_LIST 
+        N_INT  (T_INT `1`)
+        N_BINARY  (T_INFIX ``mod`)
+          N_INT  (T_INT `2`)
+          N_INT  (T_INT `3`)
+        N_DEC  (T_DEC `3.14`)
+        N_STRING  (T_STRING `"string \""`)

@@ -1,0 +1,9 @@
+N_MATCH 
+  N_INT  (T_INT `1`)
+  N_PCONST 
+    N_INT  (T_INT `1`)
+  N_INT  (T_INT `2`)
+  N_PCONST 
+    N_INT  (T_INT `2`)
+  N_INT  (T_INT `3`)
+  N_INT  (T_INT `4`)

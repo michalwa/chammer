@@ -208,7 +208,7 @@ static inline parse_result commit(frame f) {
 #define NEXT_TOKEN(f, t) DO(if (!next_token(&(f), &(t))) DISCARD(f))
 
 static inline bool next_token(frame *f, token *t) {
-    f->parser->lex_result = token_next(t);
+    f->parser->lex_result = token_next(t, 0);
     f->result = f->parser->lex_result == LEX_OK ? PARSE_OK : PARSE_LEX_ERROR;
     return f->result == PARSE_OK;
 }
@@ -219,7 +219,7 @@ static inline bool next_token(frame *f, token *t) {
 static inline bool expect_token(frame *f, token_type t) {
     if (next_token(f, &f->current_token)) {
         f->parser->expected_token = t;
-        f->result = f->current_token.type == t ? PARSE_OK : PARSE_UNEXPECTED_TOKEN;
+        f->result = f->current_token.type == t ? PARSE_OK : PARSE_EXPECTED_TOKEN;
     }
     return f->result == PARSE_OK;
 }
@@ -247,7 +247,7 @@ parse_result parse_atom(Parser *p, token *ts, token_type t, node_type n) {
 inline parse_result parse_program(Parser *p, token *ts) {
     parse_result r = parse_doblk_body(p, ts);
     token        t = *ts;
-    if (token_next(&t) != LEX_NONE) return PARSE_LEFTOVER_TOKENS;
+    if (r == PARSE_OK && token_next(&t, 0) != LEX_NONE) return PARSE_LEFTOVER_TOKENS;
     return r;
 }
 
@@ -377,7 +377,7 @@ parse_result parse_tuple_or_parens(Parser *p, token *ts) {
 
             if (!first_item) {
                 p->expected_token = T_PCLOSE; // arbitrary
-                f.result = PARSE_UNEXPECTED_TOKEN;
+                f.result = PARSE_EXPECTED_TOKEN;
                 DISCARD(f);
             }
 
@@ -430,7 +430,7 @@ parse_result parse_list(Parser *p, token *ts) {
 
             if (!first_item) {
                 p->expected_token = T_SCLOSE; // arbitrary
-                f.result = PARSE_UNEXPECTED_TOKEN;
+                f.result = PARSE_EXPECTED_TOKEN;
                 DISCARD(f);
             }
 
@@ -450,7 +450,7 @@ parse_result parse_list(Parser *p, token *ts) {
         default:
             if (last_item) {
                 p->expected_token = T_COMMA;
-                f.result = PARSE_UNEXPECTED_TOKEN;
+                f.result = PARSE_EXPECTED_TOKEN;
                 DISCARD(f);
             }
         }
@@ -571,7 +571,7 @@ parse_result parse_match(Parser *p, token *ts) {
 
     while (true) {
         peek = f.current_token;
-        NEXT_TOKEN(f, peek);
+        if (token_next(&peek, 0) != LEX_OK) break;
 
         switch (peek.type) {
         case T_CASE:
@@ -580,6 +580,7 @@ parse_result parse_match(Parser *p, token *ts) {
             node *lhs, *rhs;
             THEN_V(f, lhs, parse_pattern, ~PAT_APPLY);
             node_double_ended_append(&first_child, &last_child, lhs);
+            THEN_TOKEN_(f, T_THEN);
             THEN_V(f, rhs, parse_expr, EXPR_ALL);
             node_double_ended_append(&first_child, &last_child, rhs);
 
@@ -595,7 +596,7 @@ parse_result parse_match(Parser *p, token *ts) {
         default:
             if (!first_child) {
                 p->expected_token = T_CASE;
-                f.result = PARSE_UNEXPECTED_TOKEN;
+                f.result = PARSE_EXPECTED_TOKEN;
                 DISCARD(f);
             }
 
@@ -690,16 +691,26 @@ parse_result parse_binary(Parser *p, token *ts) {
     // to bind tighter, though arguably that seems like a reasonable choice
     // anyway.
     while (true) {
+        op_token = f.current_token;
+
         if (rhs) {
             // If `rhs` is set from last iteration, then at least one operator
             // was consumed and we can peek at the next one in a relaxed way,
             // i.e. and and commit the parse if there is no more operators
-            op_token = f.current_token;
-            if (token_next(&op_token) != LEX_OK || op_token.type != T_OP) break;
-            f.current_token = op_token;
+            if (token_next(&op_token, 0) != LEX_OK
+                || (op_token.type != T_OP && op_token.type != T_INFIX))
+                break;
         } else {
-            THEN_TOKEN(f, op_token, T_OP);
+            NEXT_TOKEN(f, op_token);
+
+            if (op_token.type != T_OP && op_token.type != T_INFIX) {
+                p->expected_token = T_OP;
+                f.result = PARSE_EXPECTED_TOKEN;
+                DISCARD(f);
+            }
         }
+
+        f.current_token = op_token;
 
         THEN_V(f, rhs, parse_expr, ~EXPR_BINARY);
 
@@ -805,7 +816,7 @@ parse_result parse_papply(Parser *p, token *ts) {
     while (TRY_V(f, parse_pattern, ~PAT_APPLY))
         node_double_ended_append(&first_arg, &last_arg, p->node);
 
-    if (first_arg == last_arg) DISCARD(f);
+    if (!first_arg) DISCARD(f);
 
     p->node = stack_push_zeroed(&p->stack, node);
     p->node->type = N_PAPPLY;
@@ -849,7 +860,7 @@ parse_result parse_ptuple_or_parens(Parser *p, token *ts) {
 
             if (!first_item) {
                 p->expected_token = T_PCLOSE; // arbitrary
-                f.result = PARSE_UNEXPECTED_TOKEN;
+                f.result = PARSE_EXPECTED_TOKEN;
                 DISCARD(f);
             }
 
@@ -904,7 +915,7 @@ parse_result parse_plist(Parser *p, token *ts) {
 
             if (!first_item) {
                 p->expected_token = T_SCLOSE; // arbitrary
-                f.result = PARSE_UNEXPECTED_TOKEN;
+                f.result = PARSE_EXPECTED_TOKEN;
                 DISCARD(f);
             }
 
@@ -912,13 +923,13 @@ parse_result parse_plist(Parser *p, token *ts) {
         default:
             if (last_item) {
                 p->expected_token = T_COMMA;
-                f.result = PARSE_UNEXPECTED_TOKEN;
+                f.result = PARSE_EXPECTED_TOKEN;
                 DISCARD(f);
             }
 
             if (tail) {
                 p->expected_token = T_SCLOSE;
-                f.result = PARSE_UNEXPECTED_TOKEN;
+                f.result = PARSE_EXPECTED_TOKEN;
                 DISCARD(f);
             }
         }
@@ -952,7 +963,7 @@ parse_result parse_pltail(Parser *p, token *ts) {
     p->node->type = N_PLTAIL;
 
     peek = f.current_token;
-    if (token_next(&peek) == LEX_OK && peek.type == T_IDENT) {
+    if (token_next(&peek, 0) == LEX_OK && peek.type == T_IDENT) {
         f.current_token = peek;
         p->node->token = peek;
         p->node->flags |= NF_NAMED;

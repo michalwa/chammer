@@ -1,0 +1,8 @@
+N_ASSIGN 
+  N_PIDENT  (T_IDENT `f`)
+  N_LAMBDA 
+    N_PIDENT  (T_IDENT `x`)
+    N_PIDENT  (T_IDENT `y`)
+    N_BINARY  (T_OP `+`)
+      N_IDENT  (T_IDENT `x`)
+      N_IDENT  (T_IDENT `y`)

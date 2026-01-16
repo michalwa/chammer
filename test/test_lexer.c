@@ -25,7 +25,7 @@ TEST(lexer_full_example) {
     token token;
     token_begin(&token, input.data);
 
-    while (token_next(&token) == LEX_OK) {
+    while (token_next(&token, LEX_ALL) == LEX_OK) {
         loc loc = token_loc(token, input.data);
         buffer_printf(&output, F_TOKEN " at %d:%d\n", FA_TOKEN(token), loc.line + 1, loc.col + 1);
     }
@@ -42,7 +42,7 @@ TEST(lexer_empty) {
     token token;
     token_begin(&token, "");
 
-    ASSERT_ENUM_EQ(token_next(&token), LEX_NONE, lex_result_name);
+    ASSERT_ENUM_EQ(token_next(&token, LEX_ALL), LEX_NONE, lex_result_name);
 
     return TEST_OK;
 }
@@ -51,7 +51,7 @@ TEST(lexer_unclosed_string) {
     token token;
     token_begin(&token, "\"foo");
 
-    ASSERT_ENUM_EQ(token_next(&token), LEX_EEOI, lex_result_name);
+    ASSERT_ENUM_EQ(token_next(&token, LEX_ALL), LEX_EEOI, lex_result_name);
 
     return TEST_OK;
 }
@@ -60,7 +60,7 @@ TEST(lexer_unclosed_block_comment) {
     token token;
     token_begin(&token, "{- foo");
 
-    ASSERT_ENUM_EQ(token_next(&token), LEX_EEOI, lex_result_name);
+    ASSERT_ENUM_EQ(token_next(&token, LEX_ALL), LEX_EEOI, lex_result_name);
 
     return TEST_OK;
 }
@@ -69,7 +69,17 @@ TEST(lexer_unclosed_decimal) {
     token token;
     token_begin(&token, "1.");
 
-    ASSERT_ENUM_EQ(token_next(&token), LEX_ENUM, lex_result_name);
+    ASSERT_ENUM_EQ(token_next(&token, LEX_ALL), LEX_ENUM, lex_result_name);
+
+    return TEST_OK;
+}
+
+TEST(lexer_under) {
+    token token;
+    token_begin(&token, "_");
+
+    ASSERT_ENUM_EQ(token_next(&token, LEX_ALL), LEX_OK, lex_result_name);
+    ASSERT_ENUM_EQ(token.type, T_UNDER, token_type_name);
 
     return TEST_OK;
 }

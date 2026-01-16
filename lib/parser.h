@@ -67,10 +67,10 @@ struct node {
     token      token;
 };
 
-#define EACH_PARSE_RESULT(_)  \
-    _(PARSE_OK)               \
-    _(PARSE_LEX_ERROR)        \
-    _(PARSE_UNEXPECTED_TOKEN) \
+#define EACH_PARSE_RESULT(_) \
+    _(PARSE_OK)              \
+    _(PARSE_LEX_ERROR)       \
+    _(PARSE_EXPECTED_TOKEN)  \
     _(PARSE_LEFTOVER_TOKENS)
 
 #define ENUM_MEMBER(name) name,
@@ -100,7 +100,7 @@ typedef struct {
      */
     lex_result lex_result;
     /*
-     * Holds the expected token type in case of a `PARSE_UNEXPECTED_TOKEN` result
+     * Holds the expected token type in case of a `PARSE_EXPECTED_TOKEN` result
      */
     token_type expected_token;
 } Parser;

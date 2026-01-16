@@ -42,8 +42,9 @@
 typedef enum { EACH_TOKEN_TYPE(ENUM_MEMBER) } token_type;
 #undef ENUM_MEMBER
 
-#define F_TOKEN         "%s `%.*s`"
-#define FA_TOKEN(token) token_type_name((token).type), (int)(token).len, (token).str
+#define F_TOKEN "%s `%.*s`"
+#define FA_TOKEN(token)                                                                      \
+    ((token).len ? token_type_name((token).type) : "(begin)"), (int)(token).len, (token).str
 
 typedef struct {
     token_type  type;
@@ -61,6 +62,11 @@ typedef struct {
 typedef enum { EACH_LEX_RESULT(ENUM_MEMBER) } lex_result;
 #undef ENUM_MEMBER
 
+typedef enum {
+    LEX_ALL = -1,
+    LEX_COMMENTS = 1,
+} lex_flags;
+
 typedef struct {
     uint16_t line, col;
 } loc;
@@ -69,8 +75,9 @@ const char *token_type_name(token_type);
 const char *lex_result_name(lex_result);
 
 void       token_begin(token *, const char *);
-lex_result token_next(token *);
+lex_result token_next(token *, lex_flags);
 bool       token_eq(token, token);
 loc        token_loc(token, const char *);
+bool       token_is_comment(token);
 
 #endif // LEXER_H_

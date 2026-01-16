@@ -1,0 +1,8 @@
+N_ASSIGN 
+  N_PAPPLY NF_REC (T_IDENT `f`)
+    N_PIDENT  (T_IDENT `x`)
+  N_APPLY 
+    N_IDENT  (T_IDENT `f`)
+    N_APPLY 
+      N_IDENT  (T_IDENT `f`)
+      N_IDENT  (T_IDENT `x`)

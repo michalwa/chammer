@@ -54,6 +54,7 @@ const char *lex_result_name(lex_result value) {
 
 static lex_result token_find_keyword(token *t, const keyword *keywords, size_t num_keywords) {
     for (size_t i = 0; i < num_keywords; i++) {
+        // FIXME: Compare lengths
         if (strncmp(keywords[i].str, t->str, t->len) == 0) {
             t->type = keywords[i].type;
             return LEX_OK;
@@ -120,7 +121,7 @@ end:
 static lex_result token_next_word(token *t) {
     if (!isalpha(*t->str) && *t->str != '_') return LEX_NONE;
 
-    t->len = 0;
+    t->len = 1;
     while (isalnum(t->str[t->len])) t->len++;
 
     t->type = T_IDENT;
@@ -186,7 +187,7 @@ inline void token_begin(token *t, const char *buffer) {
     t->len = 0;
 }
 
-lex_result token_next(token *t) {
+static lex_result token_next_(token *t) {
     t->str += t->len;
     while (isspace(*t->str)) t->str++;
 
@@ -206,6 +207,16 @@ lex_result token_next(token *t) {
     return LEX_NONE;
 }
 
+lex_result token_next(token *t, lex_flags flags) {
+    lex_result r;
+
+    while (true) {
+        if ((r = token_next_(t)) != LEX_OK) return r;
+        if (!(flags & LEX_COMMENTS) && token_is_comment(*t)) continue;
+        return r;
+    }
+}
+
 inline bool token_eq(token a, token b) {
     return a.type == b.type && a.len == b.len && strncmp(a.str, b.str, a.len) == 0;
 }
@@ -223,4 +234,8 @@ loc token_loc(token t, const char *buffer) {
     }
 
     return l;
+}
+
+bool token_is_comment(token t) {
+    return t.type == T_BCOMM || t.type == T_LCOMM;
 }
