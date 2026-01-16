@@ -1,0 +1,2 @@
+N_TUPLE 
+  N_IDENT  (T_IDENT `foo`)

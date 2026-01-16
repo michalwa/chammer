@@ -26,5 +26,6 @@ void     *stack_push_(Stack *, size_t size);
 void     *stack_push_zeroed_(Stack *, size_t size);
 stack_ptr stack_top(Stack *);
 void      stack_rewind(Stack *, stack_ptr);
+void      stack_clear(Stack *);
 
 #endif // STACK_H_

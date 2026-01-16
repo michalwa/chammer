@@ -5,7 +5,7 @@
 
 #define EXAMPLE_FILE_PATH "test/example.ham"
 
-TEST(parser_example) {
+TEST(parser_full_example) {
     FILE *f = fopen(EXAMPLE_FILE_PATH, "r");
     if (!f) {
         perror("Could not open `" EXAMPLE_FILE_PATH "`: ");
@@ -27,7 +27,7 @@ TEST(parser_example) {
     parser_init(&parser);
     ASSERT_ENUM_EQ(parse_program(&parser, &token), PARSE_OK, parse_result_name);
     node_print(*parser.node, &output);
-    SNAPSHOT("parser_example", output.data);
+    SNAPSHOT("parser_full_example", output.data);
 
     parser_free(&parser);
     buffer_free(&input);
@@ -36,89 +36,61 @@ TEST(parser_example) {
     return TEST_OK;
 }
 
-TEST(atoms) {
+#define EACH_EXAMPLE(_, p, t)                                                          \
+    /* _(name, parser, source) */                                                      \
+    _("int", parse_int(p, t), "1")                                                     \
+    _("ident", parse_ident(p, t), "foo")                                               \
+    _("tuple_empty", parse_tuple_or_parens(p, t), "()")                                \
+    _("not_a_tuple", parse_tuple_or_parens(p, t), "(foo)")                             \
+    _("tuple_singleton", parse_tuple_or_parens(p, t), "(foo,)")                        \
+    _("tuple_pair", parse_tuple_or_parens(p, t), "(foo, bar)")                         \
+    _("tuple_trailing_comma", parse_tuple_or_parens(p, t), "(foo, bar,)")              \
+    _("tuple_spread", parse_tuple_or_parens(p, t), "(foo, ...bar)")                    \
+    _("list_empty", parse_list(p, t), "[]")                                            \
+    _("list_singleton", parse_list(p, t), "[foo]")                                     \
+    _("list_pair", parse_list(p, t), "[foo, bar]")                                     \
+    _("list_trailing_comma", parse_list(p, t), "[foo, bar,]")                          \
+    _("list_spread", parse_list(p, t), "[foo, ...bar]")                                \
+    _("binary_precedence", parse_binary(p, t), "1 * 2 + 3 * 4 >> 5 >> 6 => 7 + 8 * 9") \
+    _("elaborate_expr", parse_expr(p, t, EXPR_ALL),                                    \
+      "(1, 2, \"foo\", foo, [42, bar, 3.14], (), [], if 1 then 2 else 3)")             \
+    _("assign", parse_assign(p, t), "let x = 1;")                                      \
+    _("dobind", parse_dobind(p, t), "let x <- 1;")                                     \
+    _("tuple_singleton_unpack", parse_assign(p, t), "let (a,) = (1,);")                \
+    _("tuple_pair_unpack", parse_assign(p, t), "let (a, b) = (1, 2);")                 \
+    _("list_pair_unpack", parse_assign(p, t), "let [a, b] = [1, 2];")                  \
+    _("list_tail", parse_assign(p, t), "let [a, ...] = [1, 2, 3];")                    \
+    _("list_tail_named", parse_assign(p, t), "let [a, ...rest] = [1, 2, 3];")
+
+static void define_example_operators(Parser *p) {
+    parser_define_operator(p, "*", 1, 100, ASSOC_LEFT);
+    parser_define_operator(p, "+", 1, 200, ASSOC_LEFT);
+    parser_define_operator(p, ">>", 2, 300, ASSOC_RIGHT);
+    parser_define_operator(p, "=>", 2, 400, ASSOC_RIGHT);
+}
+
+TEST(parser_examples) {
     token  t;
     Parser p;
-
-    parser_init(&p);
-    token_begin(&t, "1");
-    ASSERT_ENUM_EQ(parse_int(&p, &t), PARSE_OK, parse_result_name);
-    ASSERT_ENUM_EQ(p.node->type, N_INT, node_type_name);
-    parser_free(&p);
-
-    parser_init(&p);
-    token_begin(&t, "foo");
-    ASSERT_ENUM_EQ(parse_ident(&p, &t), PARSE_OK, parse_result_name);
-    ASSERT_ENUM_EQ(p.node->type, N_IDENT, node_type_name);
-    parser_free(&p);
-
-    parser_init(&p);
-    token_begin(&t, "1");
-    ASSERT_ENUM_EQ(parse_ident(&p, &t), PARSE_ETOK, parse_result_name);
-    ASSERT_ENUM_EQ(p.expected_token, T_IDENT, token_type_name);
-    parser_free(&p);
-
-    return TEST_OK;
-}
-
-TEST(parse_tuple_or_parens) {
-    token t;
-    token_begin(&t, "(foo, bar)");
-
-    Parser p;
-    parser_init(&p);
-
     Buffer output;
-    buffer_init(&output);
 
-    ASSERT_ENUM_EQ(parse_tuple_or_parens(&p, &t), PARSE_OK, parse_result_name);
-    node_print(*p.node, &output);
-    SNAPSHOT("tuple_with_2_idents", output.data);
+    buffer_init(&output);
+    parser_init(&p);
+    define_example_operators(&p);
+
+#define RUN(name, parse, source)                        \
+    token_begin(&t, source);                            \
+    ASSERT_ENUM_EQ(parse, PARSE_OK, parse_result_name); \
+    node_print(*p.node, &output);                       \
+    SNAPSHOT("parser_example_" name, output.data);      \
+    parser_reset(&p);                                   \
+    buffer_clear(&output);
+
+    EACH_EXAMPLE(RUN, &p, &t)
+#undef RUN
 
     parser_free(&p);
     buffer_free(&output);
-    return TEST_OK;
-}
 
-TEST(parse_binary) {
-    token t;
-    // (((1 * 2) + (3 * 4)) >> (5 >> 6)) => (7 + (8 * 9)))
-    token_begin(&t, "1 * 2 + 3 * 4 >> 5 >> 6 => 7 + 8 * 9");
-
-    Parser p;
-    parser_init(&p);
-    parser_define_operator(&p, "*", 1, 100, ASSOC_LEFT);
-    parser_define_operator(&p, "+", 1, 200, ASSOC_LEFT);
-    parser_define_operator(&p, ">>", 2, 300, ASSOC_RIGHT);
-    parser_define_operator(&p, "=>", 2, 400, ASSOC_RIGHT);
-
-    Buffer output;
-    buffer_init(&output);
-
-    ASSERT_ENUM_EQ(parse_binary(&p, &t), PARSE_OK, parse_result_name);
-    node_print(*p.node, &output);
-    SNAPSHOT("binary", output.data);
-
-    parser_free(&p);
-    buffer_free(&output);
-    return TEST_OK;
-}
-
-TEST(elaborate_expression) {
-    token t;
-    token_begin(&t, "(1, 2, \"foo\", foo, [42, bar, 3.14], (), [], if 1 then 2 else 3)");
-
-    Parser p;
-    parser_init(&p);
-
-    Buffer output;
-    buffer_init(&output);
-
-    ASSERT_ENUM_EQ(parse_expr(&p, &t, EXPR_ALL), PARSE_OK, parse_result_name);
-    node_print(*p.node, &output);
-    SNAPSHOT("elaborate_expression", output.data);
-
-    parser_free(&p);
-    buffer_free(&output);
     return TEST_OK;
 }

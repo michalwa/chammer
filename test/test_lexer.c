@@ -7,7 +7,7 @@
 
 #define EXAMPLE_FILE_PATH "test/example.ham"
 
-TEST(lexer_example) {
+TEST(lexer_full_example) {
     FILE *f = fopen(EXAMPLE_FILE_PATH, "r");
     if (!f) {
         perror("Could not open `" EXAMPLE_FILE_PATH "`: ");
@@ -30,7 +30,7 @@ TEST(lexer_example) {
         buffer_printf(&output, F_TOKEN " at %d:%d\n", FA_TOKEN(token), loc.line + 1, loc.col + 1);
     }
 
-    SNAPSHOT("tokens_example", output.data);
+    SNAPSHOT("lexer_full_example", output.data);
 
     buffer_free(&input);
     buffer_free(&output);

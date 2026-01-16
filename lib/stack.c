@@ -46,7 +46,7 @@ void stack_free(Stack *s) {
 }
 
 void *stack_push_(Stack *s, size_t size) {
-    if (size > s->block_size) panic("`stack_push` called with `size > block_size`\n");
+    if (size > s->block_size) panic("`stack_push` called with `size > block_size`");
 
     size_t       offset = s->cursor;
     stack_block *block = s->head;
@@ -80,7 +80,11 @@ stack_ptr stack_top(Stack *s) {
 }
 
 void stack_rewind(Stack *s, stack_ptr cursor) {
-    if ((size_t)cursor > s->cursor) panic("`stack_rewind` called with `stack_ptr > top`\n");
+    if ((size_t)cursor > s->cursor) panic("`stack_rewind` called with `stack_ptr > top`");
 
     s->cursor = (size_t)cursor;
+}
+
+void stack_clear(Stack *s) {
+    s->cursor = 0;
 }

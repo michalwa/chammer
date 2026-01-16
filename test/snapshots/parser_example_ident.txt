@@ -1,0 +1,1 @@
+N_IDENT  (T_IDENT `foo`)

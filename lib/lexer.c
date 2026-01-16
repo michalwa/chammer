@@ -25,6 +25,7 @@ static const keyword KEYWORDS[] = {
 };
 
 static const keyword KEYWORD_GLYPHS[] = {
+    { "@",   T_AT     },
     { "=",   T_EQ     },
     { "<-",  T_LARROW },
     { "->",  T_RARROW },

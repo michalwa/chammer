@@ -3,16 +3,13 @@
     _(buffer_printf)                 \
     _(buffer_alloc)                  \
     _(buffer_read_file)              \
-    _(lexer_example)                 \
+    _(lexer_full_example)            \
     _(lexer_empty)                   \
     _(lexer_unclosed_string)         \
     _(lexer_unclosed_block_comment)  \
     _(lexer_unclosed_decimal)        \
-    _(parser_example)                \
-    _(atoms)                         \
-    _(parse_tuple_or_parens)         \
-    _(parse_binary)                  \
-    _(elaborate_expression)          \
+    _(parser_full_example)           \
+    _(parser_examples)               \
     _(snapshot_diff)                 \
     _(snapshot_diff_empty_lines)     \
     _(snapshot_diff_line_endings)    \

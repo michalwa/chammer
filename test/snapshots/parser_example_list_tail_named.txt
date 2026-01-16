@@ -1,0 +1,8 @@
+N_ASSIGN 
+  N_PLIST 
+    N_PIDENT  (T_IDENT `a`)
+    N_PLTAIL NF_NAMED (T_IDENT `rest`)
+  N_LIST 
+    N_INT  (T_INT `1`)
+    N_INT  (T_INT `2`)
+    N_INT  (T_INT `3`)

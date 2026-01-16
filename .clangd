@@ -10,4 +10,5 @@ CompileFlags:
     - -Wno-parentheses
     - -Wimplicit-fallthrough
     - -Werror=incompatible-pointer-types
+    - -Werror=enum-conversion
     - -DHAMMER_DEBUG

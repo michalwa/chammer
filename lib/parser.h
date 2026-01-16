@@ -116,6 +116,11 @@ typedef enum {
     STMT_DOBIND = 1,
 } parse_stmt_flags;
 
+typedef enum {
+    PAT_ALL = -1,
+    PAT_APPLY = 1,
+} parse_pattern_flags;
+
 #define node_add_children(parent, ...) node_add_children_(parent, ARGC(__VA_ARGS__), __VA_ARGS__)
 
 const char *node_type_name(node_type);
@@ -127,6 +132,7 @@ void node_add_children_(node *parent, int n, ...);
 
 void parser_init(Parser *);
 void parser_free(Parser *);
+void parser_reset(Parser *);
 void parser_define_operator(Parser *, const char *, size_t, int precedence, assoc);
 
 parse_result parse_program(Parser *, token *);
@@ -141,6 +147,7 @@ parse_result parse_void(Parser *, token *);
 parse_result parse_expr(Parser *, token *, parse_expr_flags);
 parse_result parse_tuple_or_parens(Parser *, token *);
 parse_result parse_list(Parser *, token *);
+parse_result parse_list_or_tuple_item(Parser *, token *);
 parse_result parse_spread(Parser *, token *);
 parse_result parse_block(Parser *, token *);
 parse_result parse_doblk(Parser *, token *);
@@ -151,11 +158,15 @@ parse_result parse_lambda(Parser *, token *);
 parse_result parse_apply(Parser *, token *);
 parse_result parse_unary(Parser *, token *);
 parse_result parse_binary(Parser *, token *);
-/*
- * Patterns which are valid in the LHS position of an assignment or monadic
- * binding. Includes things like function definition patterns.
- */
-parse_result parse_lhs_pattern(Parser *, token *);
-parse_result parse_pattern(Parser *, token *);
+parse_result parse_pattern(Parser *, token *, parse_pattern_flags);
+parse_result parse_palias(Parser *, token *);
+parse_result parse_papply(Parser *, token *);
+parse_result parse_ptuple_or_parens(Parser *, token *);
+parse_result parse_plist(Parser *, token *);
+parse_result parse_plist_item(Parser *, token *);
+parse_result parse_pltail(Parser *, token *);
+parse_result parse_pident(Parser *, token *);
+parse_result parse_pwild(Parser *, token *);
+parse_result parse_pconst(Parser *, token *);
 
 #endif // PARSER_H_

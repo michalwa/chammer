@@ -1,0 +1,3 @@
+N_ASSIGN 
+  N_PIDENT  (T_IDENT `x`)
+  N_INT  (T_INT `1`)

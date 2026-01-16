@@ -23,6 +23,7 @@
     _(T_INT)    /* integer literal */ \
     _(T_DEC)    /* decimal literal */ \
     _(T_OP)     /* operator        */ \
+    _(T_AT)     /* `@`             */ \
     _(T_EQ)     /* `=`             */ \
     _(T_LARROW) /* `<-`            */ \
     _(T_RARROW) /* `->`            */ \

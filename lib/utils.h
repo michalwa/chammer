@@ -29,7 +29,7 @@
 #define panic(...) panic_(__FILE__, __LINE__, __VA_ARGS__)
 
 #ifdef HAMMER_DEBUG
-#define debug_assert(expr) DO(if (!(expr)) panic("assertion failed: " #expr "\n"))
+#define debug_assert(expr) DO(if (!(expr)) panic("assertion failed: " #expr))
 #else
 #define debug_assert(expr) (void)0
 #endif
