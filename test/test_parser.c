@@ -62,6 +62,7 @@ TEST(parser_full_example) {
     _("list_trailing_comma", parse_list(p, t), "[foo, bar,]")                           \
     _("list_spread", parse_list(p, t), "[foo, ...bar]")                                 \
     _("binary_precedence", parse_binary(p, t), "1 * 2 + 3 * 4 >> 5 >> 6 => 7 + 8 * 9")  \
+    _("infix_precedence", parse_binary(p, t), "1 `mod 2 + 3 `div 4")                    \
     _("elaborate_expr", parse_expr(p, t, EXPR_ALL),                                     \
       "(1, 2, \"foo\", foo, [42, bar, 3.14], (), [], if 1 then 2 else 3)")              \
     _("assign", parse_assign(p, t), "let x = 1;")                                       \
