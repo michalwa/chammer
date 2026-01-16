@@ -8,21 +8,15 @@
 
 #define STACK_DEFAULT_BLOCK_SIZE 0x400
 
-struct StackBlock {
-    char       *data;
-    StackBlock *next;
+struct stack_block {
+    stack_block *next;
+    char         data[];
 };
 
-static StackBlock *stack_block_new(size_t size) {
-    StackBlock *block = malloc(sizeof(StackBlock));
-    block->data = malloc(size);
+static stack_block *stack_block_new(size_t size) {
+    stack_block *block = malloc(sizeof(stack_block) + size);
     block->next = NULL;
     return block;
-}
-
-static void stack_block_free(StackBlock *block) {
-    free(block->data);
-    free(block);
 }
 
 void stack_init(Stack *s) {
@@ -36,11 +30,11 @@ void stack_init_block_size(Stack *s, size_t block_size) {
 }
 
 void stack_free(Stack *s) {
-    StackBlock *block = s->head;
+    stack_block *block = s->head;
 
     while (block) {
-        StackBlock *next = block->next;
-        stack_block_free(block);
+        stack_block *next = block->next;
+        free(block);
         block = next;
     }
 }
@@ -48,8 +42,8 @@ void stack_free(Stack *s) {
 void *stack_push_(Stack *s, size_t size) {
     if (size > s->block_size) panic("`stack_push` called with `size > block_size`");
 
-    size_t      offset = s->cursor;
-    StackBlock *block = s->head;
+    size_t       offset = s->cursor;
+    stack_block *block = s->head;
 
     while (offset >= s->block_size) {
         block = block->next;
