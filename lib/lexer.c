@@ -100,8 +100,9 @@ static lex_result token_next_string(token *t) {
 
     bool escape = false;
 
+    t->len = 1;
     while (1) {
-        switch (t->str[++t->len]) {
+        switch (t->str[t->len++]) {
         case '\\': escape = true; continue;
         case '"':
             if (!escape) goto end;
@@ -113,7 +114,6 @@ static lex_result token_next_string(token *t) {
     }
 
 end:
-    t->len++;
     t->type = T_STRING;
     return LEX_OK;
 }
@@ -122,7 +122,7 @@ static lex_result token_next_word(token *t) {
     if (!isalpha(*t->str) && *t->str != '_') return LEX_NONE;
 
     t->len = 1;
-    while (isalnum(t->str[t->len])) t->len++;
+    while (isalnum(t->str[t->len]) || t->str[t->len] == '_') t->len++;
 
     t->type = T_IDENT;
     token_find_keyword(t, KEYWORDS, sizeof(KEYWORDS) / sizeof(keyword));

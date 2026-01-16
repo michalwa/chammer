@@ -9,29 +9,127 @@ N_DOBLK
       N_LIST 
       N_PLIST 
         N_PIDENT  (T_IDENT `x`)
-        N_PLTAIL NF_NAMED (T_IDENT `xs`)
-      N_LIST 
-        N_APPLY 
-          N_IDENT  (T_IDENT `f`)
-          N_IDENT  (T_IDENT `x`)
-        N_SPREAD 
+        N_PLTAIL NF_NAMED (T_IDENT `rest`)
+      N_BINARY  (T_OP `+`)
+        N_LIST 
           N_APPLY 
-            N_IDENT  (T_IDENT `map`)
             N_IDENT  (T_IDENT `f`)
-            N_IDENT  (T_IDENT `xs`)
-  N_BINARY  (T_OP `$`)
-    N_IDENT  (T_IDENT `print`)
-    N_APPLY 
-      N_IDENT  (T_IDENT `map`)
-      N_LAMBDA 
+            N_IDENT  (T_IDENT `x`)
+        N_APPLY 
+          N_IDENT  (T_IDENT `map`)
+          N_IDENT  (T_IDENT `f`)
+          N_IDENT  (T_IDENT `rest`)
+  N_ASSIGN 
+    N_PAPPLY NF_REC (T_IDENT `concat`)
+      N_PIDENT  (T_IDENT `strings`)
+    N_MATCH 
+      N_IDENT  (T_IDENT `strings`)
+      N_PLIST 
+      N_STRING  (T_STRING `""`)
+      N_PLIST 
+        N_PIDENT  (T_IDENT `xs`)
+        N_PLTAIL NF_NAMED (T_IDENT `rest`)
+      N_BINARY  (T_OP `+`)
+        N_IDENT  (T_IDENT `xs`)
+        N_APPLY 
+          N_IDENT  (T_IDENT `concat`)
+          N_IDENT  (T_IDENT `rest`)
+  N_ASSIGN 
+    N_PAPPLY NF_REC (T_IDENT `join`)
+      N_PIDENT  (T_IDENT `separator`)
+      N_PIDENT  (T_IDENT `xs`)
+    N_MATCH 
+      N_IDENT  (T_IDENT `xs`)
+      N_PLIST 
+      N_STRING  (T_STRING `""`)
+      N_PLIST 
         N_PIDENT  (T_IDENT `x`)
+      N_IDENT  (T_IDENT `x`)
+      N_PLIST 
+        N_PIDENT  (T_IDENT `x`)
+        N_PLTAIL NF_NAMED (T_IDENT `rest`)
+      N_BINARY  (T_OP `+`)
         N_BINARY  (T_OP `+`)
           N_IDENT  (T_IDENT `x`)
-          N_INT  (T_INT `1`)
+          N_IDENT  (T_IDENT `separator`)
+        N_APPLY 
+          N_IDENT  (T_IDENT `join`)
+          N_IDENT  (T_IDENT `separator`)
+          N_IDENT  (T_IDENT `rest`)
+  N_ASSIGN 
+    N_PAPPLY  (T_IDENT `h`)
+      N_PIDENT  (T_IDENT `name`)
+      N_PIDENT  (T_IDENT `attrs`)
+      N_PIDENT  (T_IDENT `children`)
+    N_BLOCK 
+      N_ASSIGN 
+        N_PIDENT  (T_IDENT `str_attrs`)
+        N_APPLY 
+          N_IDENT  (T_IDENT `concat`)
+          N_APPLY 
+            N_IDENT  (T_IDENT `map`)
+            N_LAMBDA 
+              N_PTUPLE 
+                N_PIDENT  (T_IDENT `k`)
+                N_PIDENT  (T_IDENT `v`)
+              N_BINARY  (T_OP `+`)
+                N_BINARY  (T_OP `+`)
+                  N_BINARY  (T_OP `+`)
+                    N_BINARY  (T_OP `+`)
+                      N_STRING  (T_STRING `" "`)
+                      N_IDENT  (T_IDENT `k`)
+                    N_STRING  (T_STRING `"=\""`)
+                  N_IDENT  (T_IDENT `v`)
+                N_STRING  (T_STRING `"\""`)
+            N_IDENT  (T_IDENT `attrs`)
+      N_ASSIGN 
+        N_PIDENT  (T_IDENT `str_children`)
+        N_APPLY 
+          N_IDENT  (T_IDENT `join`)
+          N_STRING  (T_STRING `"\n"`)
+          N_IDENT  (T_IDENT `children`)
+      N_BINARY  (T_OP `+`)
+        N_BINARY  (T_OP `+`)
+          N_BINARY  (T_OP `+`)
+            N_BINARY  (T_OP `+`)
+              N_BINARY  (T_OP `+`)
+                N_BINARY  (T_OP `+`)
+                  N_BINARY  (T_OP `+`)
+                    N_STRING  (T_STRING `"<"`)
+                    N_IDENT  (T_IDENT `name`)
+                  N_IDENT  (T_IDENT `str_attrs`)
+                N_STRING  (T_STRING `">"`)
+              N_IDENT  (T_IDENT `str_children`)
+            N_STRING  (T_STRING `"</"`)
+          N_IDENT  (T_IDENT `name`)
+        N_STRING  (T_STRING `">"`)
+  N_ASSIGN 
+    N_PIDENT  (T_IDENT `document`)
+    N_APPLY 
+      N_IDENT  (T_IDENT `h`)
+      N_STRING  (T_STRING `"body"`)
       N_LIST 
-        N_INT  (T_INT `1`)
-        N_BINARY  (T_INFIX ``mod`)
-          N_INT  (T_INT `2`)
-          N_INT  (T_INT `3`)
-        N_DEC  (T_DEC `3.14`)
-        N_STRING  (T_STRING `"string \""`)
+      N_LIST 
+        N_APPLY 
+          N_IDENT  (T_IDENT `h`)
+          N_STRING  (T_STRING `"div"`)
+          N_LIST 
+            N_TUPLE 
+              N_STRING  (T_STRING `"class"`)
+              N_STRING  (T_STRING `"container"`)
+          N_LIST 
+            N_APPLY 
+              N_IDENT  (T_IDENT `h`)
+              N_STRING  (T_STRING `"h1"`)
+              N_LIST 
+              N_LIST 
+                N_STRING  (T_STRING `"Hello, Hammer!"`)
+            N_APPLY 
+              N_IDENT  (T_IDENT `h`)
+              N_STRING  (T_STRING `"p"`)
+              N_LIST 
+              N_LIST 
+                N_STRING  (T_STRING `"Lorem ipsum dolor sit amet"`)
+  N_APPLY 
+    N_IDENT  (T_IDENT `print`)
+    N_IDENT  (T_IDENT `document`)

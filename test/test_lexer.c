@@ -5,7 +5,7 @@
 #include "lib/snapshot.h"
 #include "lib/test.h"
 
-#define EXAMPLE_FILE_PATH "test/example.ham"
+#define EXAMPLE_FILE_PATH "examples/html.ham"
 
 TEST(lexer_full_example) {
     FILE *f = fopen(EXAMPLE_FILE_PATH, "r");
@@ -43,6 +43,20 @@ TEST(lexer_empty) {
     token_begin(&token, "");
 
     ASSERT_ENUM_EQ(token_next(&token, LEX_ALL), LEX_NONE, lex_result_name);
+
+    return TEST_OK;
+}
+
+TEST(lexer_empty_string_after_keyword) {
+    token token;
+    token_begin(&token, "then \"\"");
+
+    ASSERT_ENUM_EQ(token_next(&token, LEX_ALL), LEX_OK, lex_result_name);
+    ASSERT_ENUM_EQ(token.type, T_THEN, token_type_name);
+
+    ASSERT_ENUM_EQ(token_next(&token, LEX_ALL), LEX_OK, lex_result_name);
+    ASSERT_ENUM_EQ(token.type, T_STRING, token_type_name);
+    ASSERT_INT_EQ(token.len, 2);
 
     return TEST_OK;
 }

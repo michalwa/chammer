@@ -3,7 +3,7 @@
 #include "lib/snapshot.h"
 #include "lib/test.h"
 
-#define EXAMPLE_FILE_PATH "test/example.ham"
+#define EXAMPLE_FILE_PATH "examples/html.ham"
 
 TEST(parser_full_example) {
     FILE *f = fopen(EXAMPLE_FILE_PATH, "r");
@@ -27,8 +27,13 @@ TEST(parser_full_example) {
     parser_init(&parser);
     parse_result result = parse_program(&parser, &token);
 
-    if (result == PARSE_LEFTOVER_TOKENS)
-        printf("WARN: unexpected token " F_TOKEN "\n", FA_TOKEN(token));
+    if (result == PARSE_LEFTOVER_TOKENS) {
+        loc loc = token_loc(token, input.data);
+        printf(
+            "WARN: unexpected token " F_TOKEN " at %d:%d\n", FA_TOKEN(token), (int)loc.line + 1,
+            (int)loc.col + 1
+        );
+    }
 
     ASSERT_ENUM_EQ(result, PARSE_OK, parse_result_name);
     node_print(*parser.node, &output);
