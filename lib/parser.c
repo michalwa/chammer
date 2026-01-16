@@ -10,6 +10,9 @@
 
 struct opdef {
     char  name[OPERATOR_MAX_LEN + 1];
+    /*
+     * Lower values mean tighter binding
+     */
     int   precedence;
     assoc assoc;
 };
@@ -653,11 +656,17 @@ parse_result parse_binary(Parser *p, token *ts) {
     frame f = begin(p, ts);
 
     token op_token;
-    node *root, *rightmost = NULL, *rhs = NULL;
-    int   last_precedence;
+    node *root, *rightmost = NULL, *new_parent, *rhs = NULL;
 
     THEN_V(f, root, parse_expr, ~EXPR_BINARY);
 
+    // Random greedy bottom-up algorithm I came up with. I would be interested
+    // in benchmarking it against some classic form of precedence climbing. The
+    // advantage I foresee is less recursive calls and less failed parses in
+    // `parse_expr`, however other features here may just as well end up making
+    // it slower. One clear disadvantage is that unary operators cannot mix
+    // precedence with binary operators, they will always be assumed to bind
+    // tighter, though arguably that seems like a reasonable choice anyway.
     while (true) {
         if (rhs) {
             op_token = f.current_token;
@@ -673,21 +682,47 @@ parse_result parse_binary(Parser *p, token *ts) {
         p->node->type = N_BINARY;
         p->node->token = op_token;
 
-        opdef *op = parser_get_operator(p, op_token.str, op_token.len);
-        int    precedence = op ? op->precedence : 0;
+        opdef *right_op = parser_get_operator(p, op_token.str, op_token.len);
+        int    right_prec = right_op ? right_op->precedence : 0;
+        assoc  right_assoc = right_op ? right_op->assoc : ASSOC_LEFT;
 
-        if (!rightmost || precedence > last_precedence
-            || precedence == last_precedence && op->assoc == ASSOC_LEFT) {
-            node_add_children(p->node, root, rhs);
-            rightmost = root = p->node;
-        } else {
-            node_add_children(p->node, rightmost->first_child->next_sibling, rhs);
-            rightmost->first_child->next_sibling = p->node;
-            p->node->parent = rightmost->first_child;
-            rightmost = p->node;
+        // At this point:
+        // * `root` points at the current root of the tree, which does not yet
+        //   include the new operator or `rhs`,
+        // * `rightmost` is either the rightmost `N_BINARY` node or `NULL` in
+        //   the first iteration.
+        //
+        // We walk up the tree, starting from `rightmost`, to find the first
+        // `N_BINARY` with looser binding, or same precedence but right
+        // associativity; or to end up at the root
+        new_parent = rightmost;
+        while (new_parent) {
+            debug_assert(new_parent->type == N_BINARY);
+            opdef *left_op = parser_get_operator(p, new_parent->token.str, new_parent->token.len);
+            int    left_prec = left_op ? left_op->precedence : 0;
+
+            if (left_prec > right_prec || (left_prec == right_prec && right_assoc == ASSOC_RIGHT))
+                break;
+
+            new_parent = new_parent->parent;
         }
 
-        last_precedence = precedence;
+        if (new_parent) {
+            // Once found, the second child of the node in question is replaced
+            // with the newly constructed `N_BINARY`, with the original second
+            // child as the left operand, and `rhs` as the right
+            debug_assert(new_parent->first_child);
+            node_add_children(p->node, new_parent->first_child->next_sibling, rhs);
+            new_parent->first_child->next_sibling = p->node;
+            p->node->parent = new_parent;
+            rightmost = p->node;
+        } else {
+            // In the first iteration, or if the root was reached in the upwards
+            // traversal, just make the new `N_BINARY` the new root and
+            // `rightmost`
+            node_add_children(p->node, root, rhs);
+            rightmost = root = p->node;
+        }
     }
 
     p->node = root;

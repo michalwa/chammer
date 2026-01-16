@@ -81,13 +81,15 @@ TEST(parse_tuple_or_parens) {
 
 TEST(parse_binary) {
     token t;
-    token_begin(&t, "1 * 2 + 3 * 4 >> 5 >> 6");
+    // (((1 * 2) + (3 * 4)) >> (5 >> 6)) => (7 + (8 * 9)))
+    token_begin(&t, "1 * 2 + 3 * 4 >> 5 >> 6 => 7 + 8 * 9");
 
     Parser p;
     parser_init(&p);
     parser_define_operator(&p, "*", 1, 100, ASSOC_LEFT);
     parser_define_operator(&p, "+", 1, 200, ASSOC_LEFT);
     parser_define_operator(&p, ">>", 2, 300, ASSOC_RIGHT);
+    parser_define_operator(&p, "=>", 2, 400, ASSOC_RIGHT);
 
     Buffer output;
     buffer_init(&output);

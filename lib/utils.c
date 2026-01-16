@@ -10,7 +10,7 @@ void panic_(const char *file, int line, const char *fmt, ...) {
 
     fprintf(stderr, "%s:%d: ", file, line);
     vfprintf(stderr, fmt, args);
-    exit(HAMMER_DEBUG_ASSERTION_FAILURE);
+    exit(HAMMER_EXIT_PANIC);
 
     va_end(args);
 }

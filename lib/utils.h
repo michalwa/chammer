@@ -1,8 +1,6 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
-#define HAMMER_DEBUG_ASSERTION_FAILURE 100
-
 #define ARGC(...)                                         ARGC_(__VA_ARGS__, ARGC_SEQ_)
 #define ARGC_(...)                                        ARGC_NTH_(__VA_ARGS__)
 #define ARGC_NTH_(_1, _2, _3, _4, _5, _6, _7, _8, N, ...) N
@@ -26,7 +24,15 @@
 #define RETURN_ENUM_NAME_CASE_(name) \
     case name: return #name;
 
+#define HAMMER_EXIT_PANIC 100
+
 #define panic(...) panic_(__FILE__, __LINE__, __VA_ARGS__)
+
+#ifdef HAMMER_DEBUG
+#define debug_assert(expr) DO(if (!(expr)) panic("assertion failed: " #expr "\n"))
+#else
+#define debug_assert(expr) (void)0
+#endif
 
 void panic_(const char *file, int line, const char *fmt, ...);
 
