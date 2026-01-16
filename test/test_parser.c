@@ -37,7 +37,7 @@ TEST(parser_full_example) {
 
     ASSERT_ENUM_EQ(result, PARSE_OK, parse_result_name);
     node_print(*parser.node, &output);
-    SNAPSHOT("parser_full_example", output.data);
+    SNAPSHOT("ast_full_example", output.data);
 
     parser_free(&parser);
     buffer_free(&input);
@@ -107,7 +107,7 @@ TEST(parser_examples) {
     test_printf("%s\n", name);                          \
     ASSERT_ENUM_EQ(parse, PARSE_OK, parse_result_name); \
     node_print(*p.node, &output);                       \
-    SNAPSHOT("parser_example_" name, output.data);      \
+    SNAPSHOT("ast_" name, output.data);                 \
     parser_reset(&p);                                   \
     buffer_clear(&output);
 
