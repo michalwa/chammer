@@ -660,15 +660,19 @@ parse_result parse_binary(Parser *p, token *ts) {
 
     THEN_V(f, root, parse_expr, ~EXPR_BINARY);
 
-    // Random greedy bottom-up algorithm I came up with. I would be interested
-    // in benchmarking it against some classic form of precedence climbing. The
-    // advantage I foresee is less recursive calls and less failed parses in
-    // `parse_expr`, however other features here may just as well end up making
-    // it slower. One clear disadvantage is that unary operators cannot mix
-    // precedence with binary operators, they will always be assumed to bind
-    // tighter, though arguably that seems like a reasonable choice anyway.
+    // Weird little greedy bottom-up algorithm I came up with. I would be
+    // interested in benchmarking it against some classic form of precedence
+    // climbing. The advantage I foresee is less recursive calls and less failed
+    // parses in `parse_expr`, however other features here may just as well end
+    // up making it slower. One clear disadvantage is that unary operators
+    // cannot mix precedence with binary operators, they will always be assumed
+    // to bind tighter, though arguably that seems like a reasonable choice
+    // anyway.
     while (true) {
         if (rhs) {
+            // If `rhs` is set from last iteration, then at least one operator
+            // was consumed and we can peek at the next one in a relaxed way,
+            // i.e. and and commit the parse if there is no more operators
             op_token = f.current_token;
             if (token_next(&op_token) != LEX_OK || op_token.type != T_OP) break;
             f.current_token = op_token;
