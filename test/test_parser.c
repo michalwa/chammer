@@ -82,7 +82,8 @@ TEST(parser_full_example) {
       "if if 1 then 2 else 3 then if 4 then 5 else 6 else if 7 then 8 else 9")          \
     _("match_one_case", parse_match(p, t), "match 1 case _ then 2")                     \
     _("match_two_cases", parse_match(p, t), "match 1 case 1 then 2 case 2 then 3")      \
-    _("match_else", parse_match(p, t), "match 1 case 1 then 2 case 2 then 3 else 4")
+    _("match_else", parse_match(p, t), "match 1 case 1 then 2 case 2 then 3 else 4")    \
+    _("match_nested", parse_match(p, t), "match 1 case 1 then match 2 case 2 then 3 case 3 then 4")
 
 static void define_example_operators(Parser *p) {
     parser_define_operator(p, "*", 1, 100, ASSOC_LEFT);
