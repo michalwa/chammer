@@ -209,7 +209,7 @@ static inline parse_result commit(frame f) {
 
 static inline bool next_token(frame *f, token *t) {
     f->parser->lex_result = token_next(t);
-    f->result = f->parser->lex_result == LEX_OK ? PARSE_OK : PARSE_ELEX;
+    f->result = f->parser->lex_result == LEX_OK ? PARSE_OK : PARSE_LEX_ERROR;
     return f->result == PARSE_OK;
 }
 
@@ -219,7 +219,7 @@ static inline bool next_token(frame *f, token *t) {
 static inline bool expect_token(frame *f, token_type t) {
     if (next_token(f, &f->current_token)) {
         f->parser->expected_token = t;
-        f->result = f->current_token.type == t ? PARSE_OK : PARSE_ETOK;
+        f->result = f->current_token.type == t ? PARSE_OK : PARSE_UNEXPECTED_TOKEN;
     }
     return f->result == PARSE_OK;
 }
@@ -245,7 +245,10 @@ parse_result parse_atom(Parser *p, token *ts, token_type t, node_type n) {
 }
 
 inline parse_result parse_program(Parser *p, token *ts) {
-    return parse_doblk_body(p, ts);
+    parse_result r = parse_doblk_body(p, ts);
+    token        t = *ts;
+    if (token_next(&t) != LEX_NONE) return PARSE_LEFTOVER_TOKENS;
+    return r;
 }
 
 #define PARSER_ATOM(name, token_type, node_type)         \
@@ -374,7 +377,7 @@ parse_result parse_tuple_or_parens(Parser *p, token *ts) {
 
             if (!first_item) {
                 p->expected_token = T_PCLOSE; // arbitrary
-                f.result = PARSE_ETOK;
+                f.result = PARSE_UNEXPECTED_TOKEN;
                 DISCARD(f);
             }
 
@@ -427,7 +430,7 @@ parse_result parse_list(Parser *p, token *ts) {
 
             if (!first_item) {
                 p->expected_token = T_SCLOSE; // arbitrary
-                f.result = PARSE_ETOK;
+                f.result = PARSE_UNEXPECTED_TOKEN;
                 DISCARD(f);
             }
 
@@ -447,7 +450,7 @@ parse_result parse_list(Parser *p, token *ts) {
         default:
             if (last_item) {
                 p->expected_token = T_COMMA;
-                f.result = PARSE_ETOK;
+                f.result = PARSE_UNEXPECTED_TOKEN;
                 DISCARD(f);
             }
         }
@@ -592,7 +595,7 @@ parse_result parse_match(Parser *p, token *ts) {
         default:
             if (!first_child) {
                 p->expected_token = T_CASE;
-                f.result = PARSE_ETOK;
+                f.result = PARSE_UNEXPECTED_TOKEN;
                 DISCARD(f);
             }
 
@@ -846,7 +849,7 @@ parse_result parse_ptuple_or_parens(Parser *p, token *ts) {
 
             if (!first_item) {
                 p->expected_token = T_PCLOSE; // arbitrary
-                f.result = PARSE_ETOK;
+                f.result = PARSE_UNEXPECTED_TOKEN;
                 DISCARD(f);
             }
 
@@ -901,7 +904,7 @@ parse_result parse_plist(Parser *p, token *ts) {
 
             if (!first_item) {
                 p->expected_token = T_SCLOSE; // arbitrary
-                f.result = PARSE_ETOK;
+                f.result = PARSE_UNEXPECTED_TOKEN;
                 DISCARD(f);
             }
 
@@ -909,13 +912,13 @@ parse_result parse_plist(Parser *p, token *ts) {
         default:
             if (last_item) {
                 p->expected_token = T_COMMA;
-                f.result = PARSE_ETOK;
+                f.result = PARSE_UNEXPECTED_TOKEN;
                 DISCARD(f);
             }
 
             if (tail) {
                 p->expected_token = T_SCLOSE;
-                f.result = PARSE_ETOK;
+                f.result = PARSE_UNEXPECTED_TOKEN;
                 DISCARD(f);
             }
         }
