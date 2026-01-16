@@ -15,7 +15,7 @@ CFLAGS_RELEASE += -O3
 CFLAGS_DEBUG   += -g -O0 -fsanitize=address -fsanitize=undefined -DHAMMER_DEBUG
 
 SRC_LIB  = lib/*.c lib/*.h
-SRC_BIN  = src/*.c src/*.h
+SRC_BIN  = src/*.c
 SRC_TEST = test/*.c test/**/*.c test/**/*.h
 SRC      = $(SRC_LIB) $(SRC_BIN) $(SRC_TEST)
 
