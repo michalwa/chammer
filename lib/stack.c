@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "utils.h"
+
 #define STACK_DEFAULT_BLOCK_SIZE 0x400
 
 struct stack_block {
@@ -44,10 +46,7 @@ void stack_free(Stack *s) {
 }
 
 void *stack_push_(Stack *s, size_t size) {
-    if (size > s->block_size) {
-        fprintf(stderr, "WARN: `stack_push` called with `size > block_size`\n");
-        return NULL;
-    }
+    if (size > s->block_size) panic("`stack_push` called with `size > block_size`\n");
 
     size_t       offset = s->cursor;
     stack_block *block = s->head;
@@ -81,10 +80,7 @@ stack_ptr stack_top(Stack *s) {
 }
 
 void stack_rewind(Stack *s, stack_ptr cursor) {
-    if ((size_t)cursor > s->cursor) {
-        fprintf(stderr, "WARN: `stack_rewind` called with `stack_ptr > top`\n");
-        return;
-    }
+    if ((size_t)cursor > s->cursor) panic("`stack_rewind` called with `stack_ptr > top`\n");
 
     s->cursor = (size_t)cursor;
 }

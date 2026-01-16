@@ -6,6 +6,9 @@
 #include "stack.h"
 #include "utils.h"
 
+#define MAX_OPERATORS    0x100
+#define OPERATOR_MAX_LEN 8
+
 #define EACH_NODE_TYPE(_)                   \
     _(N_ASSIGN) /* assignment            */ \
     _(N_IDENT)  /* identifier expression */ \
@@ -73,7 +76,19 @@ struct node {
 typedef enum { EACH_PARSE_RESULT(ENUM_MEMBER) } parse_result;
 #undef ENUM_MEMBER
 
+#define EACH_ASSOC(_) \
+    _(ASSOC_LEFT)     \
+    _(ASSOC_RIGHT)
+
+#define ENUM_MEMBER(name) name,
+typedef enum { EACH_ASSOC(ENUM_MEMBER) } assoc;
+#undef ENUM_MEMBER
+
+typedef struct opdef opdef;
+
 typedef struct {
+    opdef     *operators;
+    size_t     operators_len;
     Stack      stack;
     /*
      * Holds the root node in case of a successful `PARSE_OK` result
@@ -105,12 +120,14 @@ typedef enum {
 
 const char *node_type_name(node_type);
 const char *parse_result_name(parse_result);
+const char *assoc_name(assoc);
 
 void node_print(node, Buffer *);
 void node_add_children_(node *parent, int n, ...);
 
 void parser_init(Parser *);
 void parser_free(Parser *);
+void parser_define_operator(Parser *, const char *, size_t, int precedence, assoc);
 
 parse_result parse_program(Parser *, token *);
 parse_result parse_ident(Parser *, token *);

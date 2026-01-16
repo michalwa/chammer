@@ -1,10 +1,18 @@
 #include "parser.h"
 
 #include <stdarg.h>
+#include <string.h>
 
+#include "buffer.h"
 #include "lexer.h"
 #include "stack.h"
 #include "utils.h"
+
+struct opdef {
+    char  name[OPERATOR_MAX_LEN + 1];
+    int   precedence;
+    assoc assoc;
+};
 
 const char *node_type_name(node_type value) {
     RETURN_ENUM_NAME(node_type, value, EACH_NODE_TYPE);
@@ -12,6 +20,10 @@ const char *node_type_name(node_type value) {
 
 const char *parse_result_name(parse_result value) {
     RETURN_ENUM_NAME(parse_result, value, EACH_PARSE_RESULT);
+}
+
+const char *assoc_name(assoc value) {
+    RETURN_ENUM_NAME(assoc, value, EACH_ASSOC);
 }
 
 static bool node_has_token(node n) {
@@ -97,11 +109,42 @@ static inline void node_double_ended_append(node **first, node **last, node *n) 
 
 void parser_init(Parser *p) {
     stack_init(&p->stack);
+    p->operators = calloc(MAX_OPERATORS, sizeof(opdef));
+    p->operators_len = 0;
     p->node = NULL;
 }
 
 void parser_free(Parser *p) {
     stack_free(&p->stack);
+    free(p->operators);
+}
+
+static opdef *parser_get_operator(Parser *p, const char *name, size_t name_len) {
+    for (size_t i = 0; i < p->operators_len; i++)
+        if (strlen(p->operators[i].name) == name_len
+            && strncmp(p->operators[i].name, name, name_len) == 0)
+            return &p->operators[i];
+
+    return NULL;
+}
+
+void parser_define_operator(
+    Parser *p, const char *name, size_t name_len, int precedence, assoc assoc
+) {
+    opdef *op = parser_get_operator(p, name, name_len);
+
+    if (op) {
+        fprintf(stderr, "WARN: redefinition of operator %.*s\n", (int)name_len, name);
+    } else {
+        if (p->operators_len >= MAX_OPERATORS) panic("`MAX_OPERATORS` limit reached");
+        op = &p->operators[p->operators_len++];
+    }
+
+    if (name_len > OPERATOR_MAX_LEN) panic("`OPERATOR_MAX_LEN` exceeded\n");
+
+    strncpy(op->name, name, name_len);
+    op->precedence = precedence;
+    op->assoc = assoc;
 }
 
 /*
@@ -134,11 +177,11 @@ static inline parse_result discard(frame f) {
 }
 
 #ifdef HAMMER_DEBUG
-#define DISCARD(f) DO(return discard_checked(f, __FILE__, __LINE__))
+#define DISCARD(f) DO(return discard_checked(__FILE__, __LINE__, f))
 
-static inline parse_result discard_checked(frame f, const char *file, int line) {
+static inline parse_result discard_checked(const char *file, int line, frame f) {
     if (f.result == PARSE_OK)
-        panic_("`DISCARD` called, but last parse result is `PARSE_OK`\n", file, line);
+        panic_(file, line, "`DISCARD` called, but last parse result is `PARSE_OK`\n");
 
     return discard(f);
 }
@@ -609,29 +652,45 @@ parse_result parse_unary(Parser *p, token *ts) {
 parse_result parse_binary(Parser *p, token *ts) {
     frame f = begin(p, ts);
 
-    token op;
-    node *lhs, *rhs = NULL;
+    token op_token;
+    node *root, *rightmost = NULL, *rhs = NULL;
+    int   last_precedence;
 
-    THEN_V(f, lhs, parse_expr, ~EXPR_BINARY);
+    THEN_V(f, root, parse_expr, ~EXPR_BINARY);
 
     while (true) {
         if (rhs) {
-            op = f.current_token;
-            if (token_next(&op) != LEX_OK || op.type != T_OP) break;
-            f.current_token = op;
+            op_token = f.current_token;
+            if (token_next(&op_token) != LEX_OK || op_token.type != T_OP) break;
+            f.current_token = op_token;
         } else {
-            THEN_TOKEN(f, op, T_OP);
+            THEN_TOKEN(f, op_token, T_OP);
         }
 
         THEN_V(f, rhs, parse_expr, ~EXPR_BINARY);
 
-        // TODO: Precedence
         p->node = stack_push_zeroed(&p->stack, node);
         p->node->type = N_BINARY;
-        p->node->token = op;
-        node_add_children(p->node, lhs, rhs);
-        lhs = p->node;
+        p->node->token = op_token;
+
+        opdef *op = parser_get_operator(p, op_token.str, op_token.len);
+        int    precedence = op ? op->precedence : 0;
+
+        if (!rightmost || precedence > last_precedence
+            || precedence == last_precedence && op->assoc == ASSOC_LEFT) {
+            node_add_children(p->node, root, rhs);
+            rightmost = root = p->node;
+        } else {
+            node_add_children(p->node, rightmost->first_child->next_sibling, rhs);
+            rightmost->first_child->next_sibling = p->node;
+            p->node->parent = rightmost->first_child;
+            rightmost = p->node;
+        }
+
+        last_precedence = precedence;
     }
+
+    p->node = root;
 
     COMMIT(f);
 }

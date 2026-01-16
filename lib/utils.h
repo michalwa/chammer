@@ -26,8 +26,8 @@
 #define RETURN_ENUM_NAME_CASE_(name) \
     case name: return #name;
 
-#define panic(fmt, ...) panic_(fmt, __FILE__, __LINE__, __VA_ARGS__)
+#define panic(...) panic_(__FILE__, __LINE__, __VA_ARGS__)
 
-void panic_(const char *fmt, const char *file, int line, ...);
+void panic_(const char *file, int line, const char *fmt, ...);
 
 #endif // UTILS_H_
