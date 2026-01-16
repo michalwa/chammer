@@ -16,6 +16,7 @@ TEST(snapshot_diff) {
     snapshot_diff(&output, "foo", "bar");
     ASSERT_STR_EQ(output.data, RED("- foo\n") GREEN("+ bar\n"));
 
+    buffer_free(&output);
     return TEST_OK;
 }
 
@@ -26,6 +27,7 @@ TEST(snapshot_diff_empty_lines) {
     snapshot_diff(&output, "foo\r\nbar", "foo\r\n\nbar");
     ASSERT_STR_EQ(output.data, "  foo\n" RED("- bar\n") GREEN("+ \n") GREEN("+ bar\n"));
 
+    buffer_free(&output);
     return TEST_OK;
 }
 
@@ -44,5 +46,6 @@ TEST(snapshot_diff_line_endings) {
     snapshot_diff(&output, "foo\r\nbar", "foo\nbar");
     ASSERT_STR_EQ(output.data, "  foo\n  bar\n");
 
+    buffer_free(&output);
     return TEST_OK;
 }

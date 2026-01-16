@@ -29,6 +29,7 @@ TEST(parser_example) {
     node_print(*parser.node, &output);
     SNAPSHOT("parser_example", output.data);
 
+    parser_free(&parser);
     buffer_free(&input);
     buffer_free(&output);
 
