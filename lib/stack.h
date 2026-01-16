@@ -9,12 +9,12 @@
 #define stack_push_zeroed(stack, item_type)                   \
     (item_type *)stack_push_zeroed_(stack, sizeof(item_type))
 
-typedef struct stack_block stack_block;
+typedef struct StackBlock StackBlock;
 
 typedef struct {
-    stack_block *head;
-    size_t       block_size;
-    size_t       cursor;
+    StackBlock *head;
+    size_t      block_size;
+    size_t      cursor;
 } Stack;
 
 typedef struct stack_item *stack_ptr;
