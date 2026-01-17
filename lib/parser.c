@@ -29,7 +29,7 @@ const char *assoc_name(assoc value) {
     RETURN_ENUM_NAME(assoc, value, EACH_ASSOC);
 }
 
-static bool node_has_token(node n) {
+bool node_has_token(node n) {
     switch (n.type) {
     case N_IDENT:
     case N_STRING:

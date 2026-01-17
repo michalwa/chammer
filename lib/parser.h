@@ -128,6 +128,7 @@ const char *node_type_name(node_type);
 const char *parse_result_name(parse_result);
 const char *assoc_name(assoc);
 
+bool node_has_token(node n);
 void node_print(node, Buffer *);
 void node_add_children_(node *parent, int n, ...);
 
