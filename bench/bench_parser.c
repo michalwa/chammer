@@ -5,7 +5,7 @@
 
 struct parse_binary {
     Parser parser;
-    char   buffer[4001];
+    char   buffer[40001];
 };
 
 UBENCH_F_SETUP(parse_binary) {
@@ -27,13 +27,11 @@ UBENCH_F_SETUP(parse_binary) {
     srand(0);
     char *cursor = buffer + strlen(buffer);
 
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < 10000; i++) {
         char operator = OPERATOR_SET[rand() % (sizeof(OPERATOR_SET) - 1)];
         char operand = 'a' + (rand() % ('z' - 'a'));
         cursor += sprintf(cursor, " %c %c", operator, operand);
     }
-
-    printf("%s\n", buffer);
 }
 
 UBENCH_F_TEARDOWN(parse_binary) {
