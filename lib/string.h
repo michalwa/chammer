@@ -2,7 +2,7 @@
 #define STRING_H_
 
 #include <stdbool.h>
-#include <stdlib.h>
+#include <stddef.h>
 
 typedef struct {
     const char *data;

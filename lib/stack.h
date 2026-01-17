@@ -1,7 +1,7 @@
 #ifndef STACK_H_
 #define STACK_H_
 
-#include <inttypes.h>
+#include <stddef.h>
 
 #define stack_push(stack, item_type) (item_type *)stack_push_(stack, sizeof(item_type))
 #define stack_push_zeroed(stack, item_type)                   \
