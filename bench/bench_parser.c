@@ -13,15 +13,15 @@ UBENCH_F_SETUP(parse_binary) {
     char   *buffer = ubench_fixture->buffer;
 
     parser_init(p);
-    parser_define_operator(p, "*", 1, 100, ASSOC_LEFT);
-    parser_define_operator(p, "+", 1, 200, ASSOC_LEFT);
-    parser_define_operator(p, "-", 1, 200, ASSOC_LEFT);
-    parser_define_operator(p, "&", 1, 300, ASSOC_LEFT);
-    parser_define_operator(p, "|", 1, 300, ASSOC_LEFT);
-    parser_define_operator(p, "<", 1, 400, ASSOC_LEFT);
-    parser_define_operator(p, ">", 1, 400, ASSOC_LEFT);
-    parser_define_operator(p, "$", 1, 500, ASSOC_RIGHT);
-    parser_define_operator(p, "#", 1, 600, ASSOC_RIGHT);
+    parser_define_operator(p, "*", 1, 600, ASSOC_LEFT);
+    parser_define_operator(p, "+", 1, 500, ASSOC_LEFT);
+    parser_define_operator(p, "-", 1, 500, ASSOC_LEFT);
+    parser_define_operator(p, "&", 1, 400, ASSOC_LEFT);
+    parser_define_operator(p, "|", 1, 400, ASSOC_LEFT);
+    parser_define_operator(p, "<", 1, 300, ASSOC_LEFT);
+    parser_define_operator(p, ">", 1, 300, ASSOC_LEFT);
+    parser_define_operator(p, "$", 1, 200, ASSOC_RIGHT);
+    parser_define_operator(p, "#", 1, 100, ASSOC_RIGHT);
 
     strcpy(buffer, "a");
     srand(0);

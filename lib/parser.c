@@ -8,12 +8,17 @@
 #include "stack.h"
 #include "utils.h"
 
+/*
+ * Default operator precedence
+ */
+#define PREC_DEFAULT 1000
+
 struct opdef {
     char  name[OPERATOR_MAX_LEN + 1];
     /*
-     * Lower values mean tighter binding
+     * Higher values mean tighter binding
      */
-    int   precedence;
+    int   prec;
     assoc assoc;
 };
 
@@ -152,7 +157,7 @@ void parser_define_operator(
     if (name_len > OPERATOR_MAX_LEN) panic("`OPERATOR_MAX_LEN` exceeded");
 
     strncpy(op->name, name, name_len);
-    op->precedence = precedence;
+    op->prec = precedence;
     op->assoc = assoc;
 }
 
@@ -674,94 +679,55 @@ parse_result parse_unary(Parser *p, token *ts) {
     COMMIT(f);
 }
 
-parse_result parse_binary(Parser *p, token *ts) {
+static parse_result parse_binary_(Parser *p, token *ts, int min_prec, node *lhs) {
     frame f = begin(p, ts);
 
-    token op_token;
-    node *root, *rightmost = NULL, *new_parent, *rhs = NULL;
+    token peek, op_token;
+    node *rhs;
 
-    THEN_V(f, root, parse_expr, ~EXPR_BINARY);
+    peek = f.current_token;
+    NEXT_TOKEN(f, peek);
 
-    // Weird little greedy bottom-up algorithm I came up with. I would be
-    // interested in benchmarking it against some classic form of precedence
-    // climbing. The advantage I foresee is less recursive calls and less failed
-    // parses in `parse_expr`, however other features here may just as well end
-    // up making it slower. One clear disadvantage is that unary operators
-    // cannot mix precedence with binary operators, they will always be assumed
-    // to bind tighter, though arguably that seems like a reasonable choice
-    // anyway.
-    while (true) {
-        op_token = f.current_token;
+    while (token_is_binary_op(peek)) {
+        opdef *op1 = parser_get_operator(p, peek.str, peek.len);
+        int    prec1 = op1 ? op1->prec : PREC_DEFAULT;
 
-        if (rhs) {
-            // If `rhs` is set from last iteration, then at least one operator
-            // was consumed and we can peek at the next one in a relaxed way,
-            // i.e. and and commit the parse if there is no more operators
-            if (token_next(&op_token, 0) != LEX_OK
-                || (op_token.type != T_OP && op_token.type != T_INFIX))
-                break;
-        } else {
-            NEXT_TOKEN(f, op_token);
+        if (prec1 < min_prec) break;
 
-            if (op_token.type != T_OP && op_token.type != T_INFIX) {
-                p->expected_token = T_OP;
-                f.result = PARSE_EXPECTED_TOKEN;
-                DISCARD(f);
-            }
-        }
-
-        f.current_token = op_token;
+        f.current_token = op_token = peek;
 
         THEN_V(f, rhs, parse_expr, ~EXPR_BINARY);
+
+        while (true) {
+            peek = f.current_token;
+            if (token_next(&peek, 0) != LEX_OK || !token_is_binary_op(peek)) break;
+
+            opdef *op2 = parser_get_operator(p, peek.str, peek.len);
+            int    prec2 = op2 ? op2->prec : PREC_DEFAULT;
+            assoc  assoc = op2 ? op2->assoc : ASSOC_LEFT;
+
+            if (prec1 > prec2 || prec1 == prec2 && assoc == ASSOC_LEFT) break;
+
+            THEN_V(f, rhs, parse_binary_, (prec1 < prec2) ? prec1 + 1 : prec1, rhs);
+        }
 
         p->node = stack_push_zeroed(&p->stack, node);
         p->node->type = N_BINARY;
         p->node->token = op_token;
-
-        opdef *right_op = parser_get_operator(p, op_token.str, op_token.len);
-        int    right_prec = right_op ? right_op->precedence : 0;
-        assoc  right_assoc = right_op ? right_op->assoc : ASSOC_LEFT;
-
-        // At this point:
-        // * `root` points at the current root of the tree, which does not yet
-        //   include the new operator or `rhs`,
-        // * `rightmost` is either the rightmost `N_BINARY` node or `NULL` in
-        //   the first iteration.
-        //
-        // We walk up the tree, starting from `rightmost`, to find the first
-        // `N_BINARY` with looser binding, or same precedence but right
-        // associativity; or to end up at the root
-        new_parent = rightmost;
-        while (new_parent) {
-            debug_assert(new_parent->type == N_BINARY);
-            opdef *left_op = parser_get_operator(p, new_parent->token.str, new_parent->token.len);
-            int    left_prec = left_op ? left_op->precedence : 0;
-
-            if (left_prec > right_prec || (left_prec == right_prec && right_assoc == ASSOC_RIGHT))
-                break;
-
-            new_parent = new_parent->parent;
-        }
-
-        if (new_parent) {
-            // Once found, the second child of the node in question is replaced
-            // with the newly constructed `N_BINARY`, with the original second
-            // child as the left operand, and `rhs` as the right
-            debug_assert(new_parent->first_child);
-            node_add_children(p->node, new_parent->first_child->next_sibling, rhs);
-            new_parent->first_child->next_sibling = p->node;
-            p->node->parent = new_parent;
-            rightmost = p->node;
-        } else {
-            // In the first iteration, or if the root was reached in the upwards
-            // traversal, just make the new `N_BINARY` the new root and
-            // `rightmost`
-            node_add_children(p->node, root, rhs);
-            rightmost = root = p->node;
-        }
+        node_add_children(p->node, lhs, rhs);
+        lhs = p->node;
     }
 
-    p->node = root;
+    COMMIT(f);
+}
+
+parse_result parse_binary(Parser *p, token *ts) {
+    frame f = begin(p, ts);
+
+    node *lhs;
+
+    THEN_V(f, lhs, parse_expr, ~EXPR_BINARY);
+    THEN_V_(f, parse_binary_, 0, lhs);
 
     COMMIT(f);
 }

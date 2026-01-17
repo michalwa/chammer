@@ -81,5 +81,6 @@ lex_result token_next(token *, lex_flags);
 string     token_string(token);
 loc        token_loc(token, const char *);
 bool       token_is_comment(token);
+bool       token_is_binary_op(token);
 
 #endif // LEXER_H_

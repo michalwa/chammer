@@ -236,6 +236,10 @@ loc token_loc(token t, const char *buffer) {
     return l;
 }
 
-bool token_is_comment(token t) {
+inline bool token_is_comment(token t) {
     return t.type == T_BCOMM || t.type == T_LCOMM;
+}
+
+inline bool token_is_binary_op(token t) {
+    return t.type == T_OP || t.type == T_INFIX;
 }
