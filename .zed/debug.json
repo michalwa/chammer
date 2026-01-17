@@ -13,4 +13,14 @@
       "args": ["bin/test"],
     },
   },
+  {
+    "label": "Debug benchmarks",
+    "adapter": "CodeLLDB",
+    "request": "launch",
+    "program": "bin/bench-debug",
+    "build": {
+      "command": "make",
+      "args": ["bin/bench-debug"],
+    },
+  },
 ]

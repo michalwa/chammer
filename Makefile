@@ -54,6 +54,10 @@ bin/bench: $(SRC_BENCH) $(SRC_LIB)
 	mkdir -p bin
 	$(CC) $(filter %.c, $^) -o $@ $(CFLAGS) $(CFLAGS_RELEASE) -Dasm=__asm__
 
+bin/bench-debug: $(SRC_BENCH) $(SRC_LIB)
+	mkdir -p bin
+	$(CC) $(filter %.c, $^) -o $@ $(CFLAGS) $(CFLAGS_DEBUG) -Dasm=__asm__
+
 .PHONY: format
 format:
 	clang-format -i $(SRC)
