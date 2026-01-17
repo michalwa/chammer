@@ -97,3 +97,16 @@ TEST(lexer_under) {
 
     return TEST_OK;
 }
+
+TEST(lexer_minus_and_rarrow) {
+    token token;
+    token_begin(&token, "- ->");
+
+    ASSERT_ENUM_EQ(token_next(&token, LEX_ALL), LEX_OK, lex_result_name);
+    ASSERT_ENUM_EQ(token.type, T_OP, token_type_name);
+
+    ASSERT_ENUM_EQ(token_next(&token, LEX_ALL), LEX_OK, lex_result_name);
+    ASSERT_ENUM_EQ(token.type, T_RARROW, token_type_name);
+
+    return TEST_OK;
+}

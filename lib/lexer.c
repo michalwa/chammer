@@ -3,45 +3,46 @@
 #include <ctype.h>
 #include <string.h>
 
+#include "string.h"
 #include "utils.h"
 
 typedef struct {
-    const char *str;
-    token_type  type;
+    string     str;
+    token_type type;
 } keyword;
 
 static const char *OP_CHARSET = "~!@#$%^&*-+=|:<>./?";
 
 static const keyword KEYWORDS[] = {
-    { "let",   T_LET   },
-    { "do",    T_DO    },
-    { "if",    T_IF    },
-    { "then",  T_THEN  },
-    { "else",  T_ELSE  },
-    { "match", T_MATCH },
-    { "case",  T_CASE  },
-    { "rec",   T_REC   },
-    { "_",     T_UNDER },
+    { STRING("let"),   T_LET   },
+    { STRING("do"),    T_DO    },
+    { STRING("if"),    T_IF    },
+    { STRING("then"),  T_THEN  },
+    { STRING("else"),  T_ELSE  },
+    { STRING("match"), T_MATCH },
+    { STRING("case"),  T_CASE  },
+    { STRING("rec"),   T_REC   },
+    { STRING("_"),     T_UNDER },
 };
 
 static const keyword KEYWORD_GLYPHS[] = {
-    { "@",   T_AT     },
-    { "=",   T_EQ     },
-    { "<-",  T_LARROW },
-    { "->",  T_RARROW },
-    { "...", T_ELLIPS },
+    { STRING("@"),   T_AT     },
+    { STRING("="),   T_EQ     },
+    { STRING("<-"),  T_LARROW },
+    { STRING("->"),  T_RARROW },
+    { STRING("..."), T_ELLIPS },
 };
 
 static const keyword KEYWORD_CHARS[] = {
-    { "\\", T_BSLASH },
-    { "(",  T_POPEN  },
-    { ")",  T_PCLOSE },
-    { "[",  T_SOPEN  },
-    { "]",  T_SCLOSE },
-    { "{",  T_COPEN  },
-    { "}",  T_CCLOSE },
-    { ",",  T_COMMA  },
-    { ";",  T_SEMI   },
+    { STRING("\\"), T_BSLASH },
+    { STRING("("),  T_POPEN  },
+    { STRING(")"),  T_PCLOSE },
+    { STRING("["),  T_SOPEN  },
+    { STRING("]"),  T_SCLOSE },
+    { STRING("{"),  T_COPEN  },
+    { STRING("}"),  T_CCLOSE },
+    { STRING(","),  T_COMMA  },
+    { STRING(";"),  T_SEMI   },
 };
 
 const char *token_type_name(token_type value) {
@@ -54,8 +55,7 @@ const char *lex_result_name(lex_result value) {
 
 static lex_result token_find_keyword(token *t, const keyword *keywords, size_t num_keywords) {
     for (size_t i = 0; i < num_keywords; i++) {
-        // FIXME: Compare lengths
-        if (strncmp(keywords[i].str, t->str, t->len) == 0) {
+        if (string_eq(token_string(*t), keywords[i].str)) {
             t->type = keywords[i].type;
             return LEX_OK;
         }
@@ -133,8 +133,8 @@ static lex_result token_next_word(token *t) {
 static lex_result token_next_glyph(token *t) {
     if (!strchr(OP_CHARSET, *t->str)) return LEX_NONE;
 
-    t->len = 0;
-    while (strchr(OP_CHARSET, t->str[t->len])) t->len++;
+    t->len = 1;
+    while (t->str[t->len] && strchr(OP_CHARSET, t->str[t->len])) t->len++;
 
     t->type = T_OP;
     token_find_keyword(t, KEYWORD_GLYPHS, sizeof(KEYWORD_GLYPHS) / sizeof(keyword));
@@ -159,7 +159,7 @@ static lex_result token_next_infix(token *t) {
 static lex_result token_next_number(token *t) {
     if (!isdigit(*t->str)) return LEX_NONE;
 
-    t->len = 0;
+    t->len = 1;
     while (isdigit(t->str[t->len])) t->len++;
 
     t->type = T_INT;
@@ -217,8 +217,8 @@ lex_result token_next(token *t, lex_flags flags) {
     }
 }
 
-inline bool token_eq(token a, token b) {
-    return a.type == b.type && a.len == b.len && strncmp(a.str, b.str, a.len) == 0;
+inline string token_string(token t) {
+    return (string){ .data = t.str, .len = t.len };
 }
 
 loc token_loc(token t, const char *buffer) {

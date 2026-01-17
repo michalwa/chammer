@@ -10,6 +10,7 @@
     _(lexer_unclosed_block_comment)     \
     _(lexer_unclosed_decimal)           \
     _(lexer_under)                      \
+    _(lexer_minus_and_rarrow)           \
     _(parser_full_example)              \
     _(parser_examples)                  \
     _(snapshot_diff)                    \

@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "string.h"
+
 #define EACH_TOKEN_TYPE(_)            \
     _(T_BCOMM)  /* block comment   */ \
     _(T_LCOMM)  /* line comment    */ \
@@ -76,7 +78,7 @@ const char *lex_result_name(lex_result);
 
 void       token_begin(token *, const char *);
 lex_result token_next(token *, lex_flags);
-bool       token_eq(token, token);
+string     token_string(token);
 loc        token_loc(token, const char *);
 bool       token_is_comment(token);
 
