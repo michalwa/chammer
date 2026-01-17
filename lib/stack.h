@@ -3,8 +3,6 @@
 
 #include <inttypes.h>
 
-#include "string.h"
-
 #define stack_push(stack, item_type) (item_type *)stack_push_(stack, sizeof(item_type))
 #define stack_push_zeroed(stack, item_type)                   \
     (item_type *)stack_push_zeroed_(stack, sizeof(item_type))

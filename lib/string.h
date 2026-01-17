@@ -1,8 +1,8 @@
 #ifndef STRING_H_
 #define STRING_H_
 
-#include <inttypes.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 typedef struct {
     const char *data;
