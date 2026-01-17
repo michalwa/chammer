@@ -56,7 +56,6 @@ struct node {
     node_flags flags;
     node      *first_child;
     node      *next_sibling;
-    node      *parent;
     /*
      * For `N_IDENT`, `N_STR`, `N_INT`, `N_DEC`, `N_PIDENT`
      *   this is the full token that was parsed into the node

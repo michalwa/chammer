@@ -89,19 +89,11 @@ void node_add_children_(node *parent, int n, ...) {
 
     while (n-- > 0) {
         node *child = va_arg(args, node *);
-
         *last_child = child;
-        child->parent = parent;
-
         last_child = &(*last_child)->next_sibling;
     }
 
     va_end(args);
-}
-
-static inline void node_set_first_child(node *parent, node *child) {
-    parent->first_child = child;
-    for (node *n = child; n; n = n->next_sibling) n->parent = parent;
 }
 
 /*
@@ -374,7 +366,7 @@ parse_result parse_tuple_or_parens(Parser *p, token *ts) {
             p->node = stack_push_zeroed(&p->stack, node);
             p->node->type = N_TUPLE;
 
-            if (first_item) node_set_first_child(p->node, first_item);
+            if (first_item) p->node->first_child = first_item;
 
             COMMIT(f);
         case T_COMMA:
@@ -393,7 +385,7 @@ parse_result parse_tuple_or_parens(Parser *p, token *ts) {
 
                 p->node = stack_push_zeroed(&p->stack, node);
                 p->node->type = N_TUPLE;
-                node_set_first_child(p->node, first_item);
+                p->node->first_child = first_item;
 
                 COMMIT(f);
             }
@@ -427,7 +419,7 @@ parse_result parse_list(Parser *p, token *ts) {
             p->node = stack_push_zeroed(&p->stack, node);
             p->node->type = N_LIST;
 
-            if (first_item) node_set_first_child(p->node, first_item);
+            if (first_item) p->node->first_child = first_item;
 
             COMMIT(f);
         case T_COMMA:
@@ -446,7 +438,7 @@ parse_result parse_list(Parser *p, token *ts) {
 
                 p->node = stack_push_zeroed(&p->stack, node);
                 p->node->type = N_LIST;
-                node_set_first_child(p->node, first_item);
+                p->node->first_child = first_item;
 
                 COMMIT(f);
             }
@@ -510,7 +502,7 @@ parse_result parse_block(Parser *p, token *ts) {
 
     p->node = stack_push_zeroed(&p->stack, node);
     p->node->type = N_BLOCK;
-    node_set_first_child(p->node, first_child);
+    p->node->first_child = first_child;
 
     COMMIT(f);
 }
@@ -539,7 +531,7 @@ parse_result parse_doblk_body(Parser *p, token *ts) {
 
     p->node = stack_push_zeroed(&p->stack, node);
     p->node->type = N_DOBLK;
-    node_set_first_child(p->node, first_child);
+    p->node->first_child = first_child;
 
     COMMIT(f);
 }
@@ -612,7 +604,7 @@ parse_result parse_match(Parser *p, token *ts) {
 done:
     p->node = stack_push_zeroed(&p->stack, node);
     p->node->type = N_MATCH;
-    node_set_first_child(p->node, first_child);
+    p->node->first_child = first_child;
 
     COMMIT(f);
 }
@@ -636,7 +628,7 @@ parse_result parse_lambda(Parser *p, token *ts) {
 
     p->node = stack_push_zeroed(&p->stack, node);
     p->node->type = N_LAMBDA;
-    node_set_first_child(p->node, first_child);
+    p->node->first_child = first_child;
 
     COMMIT(f);
 }
@@ -657,7 +649,7 @@ parse_result parse_apply(Parser *p, token *ts) {
 
     p->node = stack_push_zeroed(&p->stack, node);
     p->node->type = N_APPLY;
-    node_set_first_child(p->node, first_child);
+    p->node->first_child = first_child;
 
     COMMIT(f);
 }
@@ -759,7 +751,7 @@ parse_result parse_palias(Parser *p, token *ts) {
     p->node = stack_push_zeroed(&p->stack, node);
     p->node->type = N_PALIAS;
     p->node->token = ident;
-    node_set_first_child(p->node, inner);
+    p->node->first_child = inner;
 
     COMMIT(f);
 }
@@ -788,7 +780,7 @@ parse_result parse_papply(Parser *p, token *ts) {
     p->node->type = N_PAPPLY;
     p->node->flags = flags;
     p->node->token = ident;
-    node_set_first_child(p->node, first_arg);
+    p->node->first_child = first_arg;
 
     COMMIT(f);
 }
@@ -818,7 +810,7 @@ parse_result parse_ptuple_or_parens(Parser *p, token *ts) {
             p->node = stack_push_zeroed(&p->stack, node);
             p->node->type = N_PTUPLE;
 
-            if (first_item) node_set_first_child(p->node, first_item);
+            if (first_item) p->node->first_child = first_item;
 
             COMMIT(f);
         case T_COMMA:
@@ -837,7 +829,7 @@ parse_result parse_ptuple_or_parens(Parser *p, token *ts) {
 
                 p->node = stack_push_zeroed(&p->stack, node);
                 p->node->type = N_PTUPLE;
-                node_set_first_child(p->node, first_item);
+                p->node->first_child = first_item;
 
                 COMMIT(f);
             }
@@ -872,7 +864,7 @@ parse_result parse_plist(Parser *p, token *ts) {
             p->node = stack_push_zeroed(&p->stack, node);
             p->node->type = N_PLIST;
 
-            if (first_item) node_set_first_child(p->node, first_item);
+            if (first_item) p->node->first_child = first_item;
             if (tail) node_add_children(p->node, tail);
 
             COMMIT(f);
@@ -947,7 +939,7 @@ parse_result parse_pconst(Parser *p, token *ts) {
 
     p->node = stack_push_zeroed(&p->stack, node);
     p->node->type = N_PCONST;
-    node_set_first_child(p->node, expr);
+    p->node->first_child = expr;
 
     COMMIT(f);
 }
