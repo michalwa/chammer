@@ -3,7 +3,7 @@
 
 TEST(stack) {
     Stack stack;
-    stack_init_block_size(&stack, 8);
+    stack_init_block_size(&stack, 16);
 
     stack_ptr top = stack_top(&stack);
 

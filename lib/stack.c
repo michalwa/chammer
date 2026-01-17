@@ -14,9 +14,15 @@ struct stack_block {
 };
 
 static stack_block *stack_block_new(size_t size) {
-    stack_block *block = malloc(sizeof(stack_block) + size);
+    debug_assert(size > sizeof(stack_block));
+
+    stack_block *block = malloc(size);
     block->next = NULL;
     return block;
+}
+
+static inline size_t stack_block_capacity(Stack *s) {
+    return s->block_size - sizeof(stack_block);
 }
 
 void stack_init(Stack *s) {
@@ -40,21 +46,22 @@ void stack_free(Stack *s) {
 }
 
 void *stack_push_(Stack *s, size_t size) {
-    if (size > s->block_size) panic("`stack_push` called with `size > block_size`");
+    size_t capacity = stack_block_capacity(s);
+    debug_assert(size <= capacity);
 
     size_t       offset = s->cursor;
     stack_block *block = s->head;
 
-    while (offset >= s->block_size) {
+    while (offset >= capacity) {
         block = block->next;
-        offset -= s->block_size;
+        offset -= capacity;
     }
 
-    if (size > s->block_size - offset) {
-        block->next = stack_block_new(s->block_size);
+    if (size > capacity - offset) {
+        if (!block->next) block->next = stack_block_new(s->block_size);
         block = block->next;
 
-        s->cursor += s->block_size - offset;
+        s->cursor += capacity - offset;
         offset = 0;
     }
 
@@ -74,7 +81,7 @@ stack_ptr stack_top(Stack *s) {
 }
 
 void stack_rewind(Stack *s, stack_ptr cursor) {
-    if ((size_t)cursor > s->cursor) panic("`stack_rewind` called with `stack_ptr > top`");
+    debug_assert((size_t)cursor <= s->cursor);
 
     s->cursor = (size_t)cursor;
 }
