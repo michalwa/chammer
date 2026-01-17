@@ -1,0 +1,7 @@
+N_ASSIGN 
+  N_PLIST 
+    N_PIDENT  (T_IDENT `a`)
+    N_PIDENT  (T_IDENT `b`)
+  N_LIST 
+    N_INT  (T_INT `1`)
+    N_INT  (T_INT `2`)

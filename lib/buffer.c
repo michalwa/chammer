@@ -8,12 +8,12 @@
 #define BUFFER_DEFAULT_CAPACITY 0x400
 
 /*
- * `min_len' must include the null terminator if needed
+ * `min_len` does not include the null terminator
  */
-static inline bool buffer_grow(Buffer *b, size_t min_len) {
+static bool buffer_grow(Buffer *b, size_t min_len) {
     size_t old_capacity = b->capacity;
 
-    while (min_len > b->capacity) {
+    while (min_len + 1 > b->capacity) {
         b->capacity <<= 1;
         b->data = realloc(b->data, b->capacity);
     }
@@ -21,7 +21,7 @@ static inline bool buffer_grow(Buffer *b, size_t min_len) {
     return b->capacity > old_capacity;
 }
 
-void buffer_init(Buffer *b) {
+inline void buffer_init(Buffer *b) {
     buffer_init_capacity(b, BUFFER_DEFAULT_CAPACITY);
 }
 
@@ -32,8 +32,12 @@ void buffer_init_capacity(Buffer *b, size_t capacity) {
     b->data[b->len] = '\0';
 }
 
+void buffer_free(Buffer *b) {
+    free(b->data);
+}
+
 void buffer_putc(Buffer *b, char c) {
-    buffer_grow(b, b->len + 2);
+    buffer_grow(b, b->len + 1);
     b->data[b->len++] = c;
     b->data[b->len] = '\0';
 }
@@ -46,7 +50,7 @@ void buffer_printf(Buffer *b, const char *format, ...) {
         va_start(args, format);
         len = vsnprintf(b->data + b->len, b->capacity - b->len, format, args);
         va_end(args);
-    } while (buffer_grow(b, b->len + len + 1));
+    } while (buffer_grow(b, b->len + len));
 
     b->len += len;
     b->data[b->len] = '\0';
@@ -61,15 +65,22 @@ char *buffer_alloc(Buffer *b, size_t len) {
     return c;
 }
 
-void buffer_free(Buffer *b) {
-    free(b->data);
+void buffer_clear(Buffer *b) {
+    b->len = 0;
+    b->data[b->len] = '\0';
 }
 
-void fread_to_buffer(FILE *f, Buffer *b) {
+void buffer_read_file(Buffer *b, FILE *f) {
     fseek(f, 0, SEEK_END);
     size_t size = ftell(f);
     char  *data = buffer_alloc(b, size);
 
     rewind(f);
-    fread(data, size, 1, f);
+
+    // `fread` performs line ending conversion on Windows, so we have to trim
+    // the buffer just in case. Generally it's probably best to use `rb` instead
+    // of `r` anyway
+    size_t actual_size = fread(data, 1, size, f);
+    b->len -= size - actual_size;
+    b->data[b->len] = '\0';
 }

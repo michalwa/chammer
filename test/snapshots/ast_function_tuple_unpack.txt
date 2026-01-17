@@ -1,0 +1,13 @@
+N_ASSIGN 
+  N_PAPPLY  (T_IDENT `map`)
+    N_PIDENT  (T_IDENT `f`)
+    N_PTUPLE 
+      N_PIDENT  (T_IDENT `x`)
+      N_PIDENT  (T_IDENT `y`)
+  N_TUPLE 
+    N_APPLY 
+      N_IDENT  (T_IDENT `f`)
+      N_IDENT  (T_IDENT `x`)
+    N_APPLY 
+      N_IDENT  (T_IDENT `f`)
+      N_IDENT  (T_IDENT `y`)

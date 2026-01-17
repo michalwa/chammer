@@ -1,0 +1,26 @@
+// Project-local debug tasks
+//
+// For more documentation on how to configure debug tasks,
+// see: https://zed.dev/docs/debugger
+[
+  {
+    "label": "Debug tests",
+    "adapter": "CodeLLDB",
+    "request": "launch",
+    "program": "bin/test",
+    "build": {
+      "command": "make",
+      "args": ["bin/test"],
+    },
+  },
+  {
+    "label": "Debug benchmarks",
+    "adapter": "CodeLLDB",
+    "request": "launch",
+    "program": "bin/bench-debug",
+    "build": {
+      "command": "make",
+      "args": ["bin/bench-debug"],
+    },
+  },
+]

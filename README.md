@@ -45,10 +45,12 @@ Make and run tests:
 
 ```sh
 make test
+# or run a specific test
+make test TEST=<test-name>
 ```
 
 Review changed snapshots (interactive):
 
 ```sh
-HAMMER_SNAPSHOT_REVIEW=1 make test
+make test HAMMER_SNAPSHOT_REVIEW=1
 ```

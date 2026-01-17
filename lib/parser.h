@@ -1,15 +1,15 @@
 #ifndef PARSER_H_
 #define PARSER_H_
 
-#include <stdio.h>
-
 #include "buffer.h"
 #include "lexer.h"
 #include "stack.h"
-#include "string.h"
 #include "utils.h"
 
-#define NODE_TYPES                          \
+#define MAX_OPERATORS    0x100
+#define OPERATOR_MAX_LEN 8
+
+#define EACH_NODE_TYPE(_)                   \
     _(N_ASSIGN) /* assignment            */ \
     _(N_IDENT)  /* identifier expression */ \
     _(N_STRING) /* string literal        */ \
@@ -23,11 +23,11 @@
     _(N_APPLY)  /* function application  */ \
     _(N_IF)     /* if expression         */ \
     _(N_MATCH)  /* match expression      */ \
-    _(N_CASE)   /* match case            */ \
     _(N_LAMBDA) /* lambda expression     */ \
     _(N_BLOCK)  /* block expression      */ \
     _(N_DOBLK)  /* do-block expression   */ \
     _(N_DOBIND) /* monadic binding       */ \
+    _(N_VOID)   /* expression statement  */ \
     _(N_PIDENT) /* identifier pattern    */ \
     _(N_PWILD)  /* wildcard pattern      */ \
     _(N_PAPPLY) /* function pattern      */ \
@@ -37,82 +37,137 @@
     _(N_PALIAS) /* alias pattern         */ \
     _(N_PCONST) /* const/expr pattern    */
 
-#define _(name) name,
-typedef enum { NODE_TYPES } node_type;
-#undef _
+#define ENUM_MEMBER(name) name,
+typedef enum { EACH_NODE_TYPE(ENUM_MEMBER) } node_type;
+#undef ENUM_MEMBER
 
-#define NODE_FLAGS                            \
-    _(NF_REC, 1)   /* recursive `N_ASSIGN' */ \
-    _(NF_NAMED, 2) /* named `N_PLTAIL'     */
+#define EACH_NODE_FLAG(_)                                        \
+    /* _(name, node_type, value) */                              \
+    _(NF_REC, N_PAPPLY, 1)   /* recursive function definition */ \
+    _(NF_NAMED, N_PLTAIL, 1) /* named/captured list tail     */
 
-#define _(name, value) name = value,
-typedef enum { NODE_FLAGS } node_flags;
-#undef _
+#define ENUM_MEMBER(name, node_type, value) name = value,
+typedef enum { EACH_NODE_FLAG(ENUM_MEMBER) } node_flags;
+#undef ENUM_MEMBER
 
-typedef struct node {
-    node_type    type;
-    node_flags   flags;
-    struct node *first_child;
-    struct node *next_sibling;
-    struct node *parent;
+typedef struct node node;
+struct node {
+    node_type  type;
+    node_flags flags;
+    node      *first_child;
+    node      *next_sibling;
     /*
-     * For `N_IDENT', `N_STR', `N_INT', `N_DEC', `N_PIDENT'
+     * For `N_IDENT`, `N_STR`, `N_INT`, `N_DEC`, `N_PIDENT`
      *   this is the full token that was parsed into the node
-     * For `N_UNARY' and `N_BINARY' it is the `T_OP' token
-     * For `N_PAPPLY' and `N_PALIAS' it is the `T_IDENT' token
-     * For `N_PLTAIL' with the `NF_NAMED' flag it is the `T_IDENT' token
+     * For `N_UNARY` and `N_BINARY` it is the `T_OP` token
+     * For `N_PAPPLY` and `N_PALIAS` it is the `T_IDENT` token
+     * For `N_PLTAIL` with the `NF_NAMED` flag it is the `T_IDENT` token
      */
-    token token;
-} node;
+    token      token;
+};
 
-typedef enum parse_result {
-    PARSE_OK = 0,
-    PARSE_ELEX = 1,
-    PARSE_ETOK = 2,
-} parse_result;
+#define EACH_PARSE_RESULT(_) \
+    _(PARSE_OK)              \
+    _(PARSE_LEX_ERROR)       \
+    _(PARSE_EXPECTED_TOKEN)  \
+    _(PARSE_LEFTOVER_TOKENS)
 
-typedef struct Parser {
-    Stack stack;
+#define ENUM_MEMBER(name) name,
+typedef enum { EACH_PARSE_RESULT(ENUM_MEMBER) } parse_result;
+#undef ENUM_MEMBER
+
+#define EACH_ASSOC(_) \
+    _(ASSOC_LEFT)     \
+    _(ASSOC_RIGHT)
+
+#define ENUM_MEMBER(name) name,
+typedef enum { EACH_ASSOC(ENUM_MEMBER) } assoc;
+#undef ENUM_MEMBER
+
+typedef struct opdef opdef;
+
+typedef struct {
+    opdef     *operators;
+    size_t     operators_len;
+    Stack      stack;
     /*
-     * Holds the root node in case of a successful `PARSE_OK' result
+     * Holds the root node in case of a successful `PARSE_OK` result
      */
-    node *node;
+    node      *node;
     /*
-     * Holds the lexer result in case of a `PARSE_ELEX' result
+     * Holds the lexer result in case of a `PARSE_LEX_ERROR` result
      */
     lex_result lex_result;
     /*
-     * Holds the expected token type in case of a `PARSE_ETOK' result
+     * Holds the expected token type in case of a `PARSE_EXPECTED_TOKEN` result
      */
     token_type expected_token;
 } Parser;
 
-typedef enum parse_expr_flags {
+typedef enum {
     EXPR_ALL = -1,
-    /**
-     * Expressions which can occur as operands of a binary infix operation
-     */
     EXPR_BINARY = 1,
+    EXPR_UNARY = 1 << 1,
+    EXPR_APPLY = 1 << 2,
 } parse_expr_flags;
+
+typedef enum {
+    STMT_ALL = -1,
+    STMT_DOBIND = 1,
+} parse_stmt_flags;
+
+typedef enum {
+    PAT_ALL = -1,
+    PAT_APPLY = 1,
+} parse_pattern_flags;
 
 #define node_add_children(parent, ...) node_add_children_(parent, ARGC(__VA_ARGS__), __VA_ARGS__)
 
-const char *node_name(node);
-void        node_print(node, Buffer *);
-void        node_add_children_(node *parent, int n, ...);
+const char *node_type_name(node_type);
+const char *parse_result_name(parse_result);
+const char *assoc_name(assoc);
 
-void         parser_init(Parser *);
-void         parser_free(Parser *);
-parse_result parse(Parser *, token *);
-parse_result parse_expr(Parser *, token *, parse_expr_flags);
-parse_result parse_pattern(Parser *, token *);
+bool node_has_token(node n);
+void node_print(node, Buffer *);
+void node_add_children_(node *parent, int n, ...);
+
+void parser_init(Parser *);
+void parser_free(Parser *);
+void parser_reset(Parser *);
+void parser_define_operator(Parser *, const char *, size_t, int precedence, assoc);
+
+parse_result parse_program(Parser *, token *);
 parse_result parse_ident(Parser *, token *);
 parse_result parse_string(Parser *, token *);
 parse_result parse_int(Parser *, token *);
 parse_result parse_dec(Parser *, token *);
+parse_result parse_stmt(Parser *, token *, parse_stmt_flags);
 parse_result parse_assign(Parser *, token *);
+parse_result parse_dobind(Parser *, token *);
+parse_result parse_void(Parser *, token *);
+parse_result parse_expr(Parser *, token *, parse_expr_flags);
 parse_result parse_tuple_or_parens(Parser *, token *);
+parse_result parse_list(Parser *, token *);
+parse_result parse_list_or_tuple_item(Parser *, token *);
 parse_result parse_spread(Parser *, token *);
+parse_result parse_block(Parser *, token *);
+parse_result parse_doblk(Parser *, token *);
+parse_result parse_doblk_body(Parser *, token *);
+parse_result parse_if(Parser *, token *);
+parse_result parse_match(Parser *, token *);
+parse_result parse_lambda(Parser *, token *);
+parse_result parse_apply(Parser *, token *);
 parse_result parse_unary(Parser *, token *);
+parse_result parse_binary(Parser *, token *);
+parse_result parse_pattern(Parser *, token *, parse_pattern_flags);
+parse_result parse_palias(Parser *, token *);
+parse_result parse_papply(Parser *, token *);
+parse_result parse_ptuple_or_parens(Parser *, token *);
+parse_result parse_plist(Parser *, token *);
+parse_result parse_plist_item(Parser *, token *);
+parse_result parse_pltail(Parser *, token *);
+parse_result parse_pident(Parser *, token *);
+parse_result parse_pwild(Parser *, token *);
+parse_result parse_pconst(Parser *, token *);
 
 #endif // PARSER_H_

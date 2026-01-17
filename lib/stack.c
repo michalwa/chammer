@@ -4,23 +4,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "utils.h"
+
 #define STACK_DEFAULT_BLOCK_SIZE 0x400
 
-struct StackBlock {
-    char       *data;
-    StackBlock *next;
+struct stack_block {
+    stack_block *next;
+    char         data[];
 };
 
-static StackBlock *stack_block_new(size_t size) {
-    StackBlock *block = malloc(sizeof(StackBlock));
-    block->data = malloc(size);
+static stack_block *stack_block_new(size_t size) {
+    debug_assert(size > sizeof(stack_block));
+
+    stack_block *block = malloc(size);
     block->next = NULL;
     return block;
 }
 
-static void stack_block_free(StackBlock *block) {
-    free(block->data);
-    free(block);
+static inline size_t stack_block_capacity(Stack *s) {
+    return s->block_size - sizeof(stack_block);
 }
 
 void stack_init(Stack *s) {
@@ -33,25 +35,33 @@ void stack_init_block_size(Stack *s, size_t block_size) {
     s->head = stack_block_new(s->block_size);
 }
 
+void stack_free(Stack *s) {
+    stack_block *block = s->head;
+
+    while (block) {
+        stack_block *next = block->next;
+        free(block);
+        block = next;
+    }
+}
+
 void *stack_push_(Stack *s, size_t size) {
-    if (size > s->block_size) {
-        fprintf(stderr, "WARN: `stack_push' called with `size > block_size'\n");
-        return NULL;
+    size_t capacity = stack_block_capacity(s);
+    debug_assert(size <= capacity);
+
+    size_t       offset = s->cursor;
+    stack_block *block = s->head;
+
+    while (offset >= capacity) {
+        block = block->next;
+        offset -= capacity;
     }
 
-    size_t      offset = s->cursor;
-    StackBlock *block = s->head;
-
-    while (offset >= s->block_size) {
-        block = block->next;
-        offset -= s->block_size;
-    }
-
-    if (size > s->block_size - offset) {
-        block->next = stack_block_new(s->block_size);
+    if (size > capacity - offset) {
+        if (!block->next) block->next = stack_block_new(s->block_size);
         block = block->next;
 
-        s->cursor += s->block_size - offset;
+        s->cursor += capacity - offset;
         offset = 0;
     }
 
@@ -71,20 +81,11 @@ stack_ptr stack_top(Stack *s) {
 }
 
 void stack_rewind(Stack *s, stack_ptr cursor) {
-    if ((size_t)cursor > s->cursor) {
-        fprintf(stderr, "WARN: `stack_rewind' called with `stack_ptr > top'\n");
-        return;
-    }
+    debug_assert((size_t)cursor <= s->cursor);
 
     s->cursor = (size_t)cursor;
 }
 
-void stack_free(Stack *s) {
-    StackBlock *block = s->head;
-
-    while (block) {
-        StackBlock *next = block->next;
-        stack_block_free(block);
-        block = next;
-    }
+void stack_clear(Stack *s) {
+    s->cursor = 0;
 }

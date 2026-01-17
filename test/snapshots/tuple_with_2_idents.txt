@@ -1,3 +1,0 @@
-N_TUPLE 
-  N_IDENT  (T_IDENT `foo')
-  N_IDENT  (T_IDENT `bar')

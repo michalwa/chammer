@@ -1,43 +1,32 @@
-#include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "../lib/parser.h"
-#include "example.tree.h"
-
-node *node_begin(Stack *s, node *parent, int argc, ...) {
-    va_list args;
-    va_start(args, argc);
-
-    node *n = stack_push_zeroed(s, node);
-
-    if (argc-- > 0) n->type = va_arg(args, node_type);
-    if (argc-- > 0) n->token.type = va_arg(args, token_type);
-    if (argc-- > 0) {
-        n->token.str = va_arg(args, char *);
-        n->token.len = strlen(n->token.str);
-    }
-    if (argc-- > 0) n->flags = va_arg(args, node_flags);
-
-    if (parent) node_add_children(parent, n);
-
-    va_end(args);
-    return n;
-}
+#include "../lib/graphviz.h"
 
 int main(void) {
-    Stack stack;
-    stack_init(&stack);
+    Buffer input;
+    buffer_init(&input);
 
-    node *n = 0;
+    char   buffer[0x100];
+    size_t read;
+    while (read = fread(buffer, 1, 0x100, stdin)) buffer_printf(&input, "%.*s", (int)read, buffer);
 
-#define _BEGIN(...) n = node_begin(&stack, n, ARGC(__VA_ARGS__), __VA_ARGS__);
-#define _END                      \
-    if (n->parent) n = n->parent;
-    EXAMPLE_TREE
-#undef _BEGIN
-#undef _END
+    token t;
+    token_begin(&t, input.data);
 
-    node_print(*n, stdout);
-    stack_free(&stack);
+    Parser parser;
+    parser_init(&parser);
+
+    parse_result result;
+    if ((result = parse_program(&parser, &t)) != PARSE_OK)
+        panic("parse failed: %s", parse_result_name(result));
+
+    Buffer output;
+    buffer_init(&output);
+    node_print_dot(parser.node, &output);
+
+    printf("%s", output.data);
+
+    buffer_free(&output);
+    parser_free(&parser);
+    buffer_free(&input);
+
+    return 0;
 }

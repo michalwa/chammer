@@ -1,0 +1,4 @@
+N_LIST 
+  N_IDENT  (T_IDENT `foo`)
+  N_SPREAD 
+    N_IDENT  (T_IDENT `bar`)

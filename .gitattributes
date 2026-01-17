@@ -1,1 +1,4 @@
 * text=lf
+*.gen.h linguist-generated
+test/snapshots/** linguist-generated
+vendor/** linguist-vendored

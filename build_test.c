@@ -4,7 +4,6 @@
 #include <string.h>
 
 #define TEST_NAME_PREFIX "TEST("
-#define TEST_NAME_OFFSET (sizeof("TEST(") - 1)
 
 int main(int argc, const char **argv) {
     if (argc < 2) {
@@ -13,7 +12,7 @@ int main(int argc, const char **argv) {
     }
 
     FILE *output_file = fopen(argv[1], "w");
-    fprintf(output_file, "#define TESTS");
+    fprintf(output_file, "#define EACH_TEST(_)");
 
     for (int i = 2; i < argc; i++) {
         FILE *input_file = fopen(argv[i], "r");
@@ -29,12 +28,23 @@ int main(int argc, const char **argv) {
         const char *c = buffer;
 
         while (c = strstr(c, TEST_NAME_PREFIX)) {
-            c += TEST_NAME_OFFSET;
+            const char *look_behind = c;
+            c += sizeof(TEST_NAME_PREFIX) - 1;
+
+            while (look_behind-- > buffer) {
+                // If the TEST macro is preceded by any non-whitespace
+                // characters in the same line, ignore that occurence
+                if (!isspace(*look_behind)) goto next_occurence;
+                if (*look_behind == '\r' || *look_behind == '\n') break;
+            }
 
             int len = 0;
             while (isalnum(c[len]) || c[len] == '_') len++;
 
             fprintf(output_file, " \\\n    _(%.*s)", len, c);
+
+        next_occurence:
+            continue;
         }
 
         free(buffer);

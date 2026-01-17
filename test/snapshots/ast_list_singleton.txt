@@ -1,0 +1,2 @@
+N_LIST 
+  N_IDENT  (T_IDENT `foo`)
