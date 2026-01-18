@@ -18,7 +18,7 @@ SRC_LIB   = lib/*.c lib/*.h
 SRC_BIN   = src/*.c
 SRC_TEST  = test/*.c test/**/*.c test/**/*.h
 SRC_BENCH = bench/*.c bench/**/*.c
-SRC       = $(SRC_LIB) $(SRC_BIN) $(SRC_TEST)
+SRC       = $(SRC_LIB) $(SRC_BIN) $(SRC_TEST) $(SRC_BENCH)
 
 .PHONY: .release
 release: bin/hammer
