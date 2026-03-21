@@ -1,4 +1,5 @@
 #include "../lib/parser.h"
+#include "../lib/utils.h"
 #include "../vendor/ubench.h"
 
 #define OPERATOR_SET "*+-&|<>$#"
