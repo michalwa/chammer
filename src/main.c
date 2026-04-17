@@ -1,33 +1,51 @@
 #include "../lib/buffer.h"
 #include "../lib/bytecode.h"
+#include "../lib/compiler.h"
+#include "../lib/lexer.h"
+#include "../lib/parser.h"
 #include "../lib/utils.h"
 
-#define PROGRAM_BYTES \
-    MAGIC_HAMMER \
-    "\x00\x01" /* hammer version */ \
-    "\x00\x01" /* trace table length */ \
-    "?" /* placeholder trace value */ \
-    "\x00\x00\x00\x0D" /* string bytes length */ \
-    "Hello, world!" /* string bytes */ \
-    "\x01" "\x00\x00" /* trace */ \
-    "\x02" "\x00\x00\x00\x00" "\x00\x00\x00\x0D" /* push string */
+#define PROGRAM_SOURCE "\"Hello, \" + \"world!\""
 
 int main(void) {
+    token t;
+    Parser p;
+    parse_result presult;
+    Compiler c;
+    Buffer comp_buffer;
     program prog;
-    if (!program_read(&prog, (uint8_t *)PROGRAM_BYTES, sizeof(PROGRAM_BYTES) - 1))
+
+    token_begin(&t, PROGRAM_SOURCE);
+
+    parser_init(&p);
+    if ((presult = parse_program(&p, &t)) != PARSE_OK)
+        panic("parse failed: %s", parse_result_name(presult));
+
+    Buffer out;
+    buffer_init(&out);
+    node_print(*p.node, &out);
+    printf(F_BUFFER"\n", FA_BUFFER(out));
+    buffer_free(&out);
+
+    compiler_init(&c);
+    compiler_visit(&c, p.node);
+    buffer_init(&comp_buffer);
+    compiler_write_program(&c, &comp_buffer);
+    compiler_free(&c);
+    parser_free(&p);
+
+    if (!program_read(&prog, (uint8_t *)comp_buffer.data, comp_buffer.len))
         panic("could not read compiled program");
 
     printf(
-        "hammer version:    %02"PRIX16"\n"
-        "trace table len:   %02"PRIX16"\n"
-        "trace placeholder: %c\n"
-        "string bytes len:  %04"PRIX32"\n"
+        "version:           %04"PRIX16"\n"
+        "trace table len:   %04"PRIX16"\n"
+        "string bytes len:  %08"PRIX32"\n"
         "string bytes:      %.*s\n"
-        "bytecode len:      %02zX\n"
-        "bytecode:          ",
-        u16be_value(*prog.hammer_version),
+        "bytecode len:      %zX\n"
+        "bytecode:",
+        u16be_value(*prog.version),
         u16be_value(*prog.trace_table_len),
-        prog.trace_table[0]._placeholder,
         u32be_value(*prog.string_bytes_len),
         u32be_value(*prog.string_bytes_len),
         prog.string_bytes,
@@ -35,10 +53,12 @@ int main(void) {
     );
 
     for (size_t i = 0; i < prog.bytecode_len; i++) {
-        printf("%02"PRIX8" ", prog.bytecode[i]);
+        printf("%s%02"PRIX8, (i % 16) ? ((i % 8) ? " " : "  ") : "\n  ", prog.bytecode[i]);
     }
 
     printf("\n");
+
+    buffer_free(&comp_buffer);
 
     return 0;
 }

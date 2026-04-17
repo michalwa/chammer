@@ -28,6 +28,7 @@ void  buffer_init(Buffer *);
 void  buffer_init_capacity(Buffer *, size_t);
 void  buffer_free(Buffer *);
 void  buffer_putc(Buffer *, char);
+void  buffer_puts(Buffer *, const char *, size_t);
 void  buffer_printf(Buffer *, const char *format, ...);
 /*
  * Allocates `len` additional bytes in the buffer and returns a pointer to the allocated block

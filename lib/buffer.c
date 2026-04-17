@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define BUFFER_DEFAULT_CAPACITY 0x400
 
@@ -39,6 +40,13 @@ void buffer_free(Buffer *b) {
 void buffer_putc(Buffer *b, char c) {
     buffer_grow(b, b->len + 1);
     b->data[b->len++] = c;
+    b->data[b->len] = '\0';
+}
+
+void buffer_puts(Buffer *b, const char *str, size_t len) {
+    buffer_grow(b, b->len + len);
+    memcpy(b->data + b->len, str, len);
+    b->len += len;
     b->data[b->len] = '\0';
 }
 

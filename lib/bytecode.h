@@ -5,11 +5,10 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "buffer.h"
+
 typedef uint8_t u16be[2];
 typedef uint8_t u32be[4];
-
-uint16_t u16be_value(u16be bytes);
-uint32_t u32be_value(u32be bytes);
 
 typedef struct {
     // TODO: Add useful trace info
@@ -17,11 +16,12 @@ typedef struct {
 } trace_info;
 
 #define EACH_OPCODE(_) \
-    /* _(name, byte, data_type) */ \
-    _(OP_TRACE, 1, u16be) /* debug trace with an identifier */ \
-    _(OP_PUSHSTR, 2, op_pushstr) /* push string constant */
+    /* _(name, byte, data_size) */ \
+    _(OP_TRACE, 1, sizeof(u16be)) /* debug trace with an identifier */ \
+    _(OP_PUSHSTR, 2, sizeof(op_pushstr)) /* push string constant */ \
+    _(OP_ADD, 3, 0) /* builtin binary (+) operation */
 
-#define ENUM_MEMBER(name, value, data_type) name = value,
+#define ENUM_MEMBER(name, byte, data_size) name = byte,
 typedef enum { EACH_OPCODE(ENUM_MEMBER) } opcode;
 #undef ENUM_MEMBER
 
@@ -31,7 +31,7 @@ typedef struct {
 } op_pushstr;
 
 typedef struct {
-    u16be      *hammer_version;
+    u16be      *version;
     u16be      *trace_table_len;
     trace_info *trace_table;
     u32be      *string_bytes_len;
@@ -41,6 +41,16 @@ typedef struct {
 } program;
 
 #define MAGIC_HAMMER "HAMMER"
+#define BYTECODE_VERSION 0x0001
+
+uint16_t u16be_value(u16be bytes);
+uint32_t u32be_value(u32be bytes);
+
+size_t opcode_data_size(opcode);
+
+void buffer_write_u8be(Buffer *, uint8_t);
+void buffer_write_u16be(Buffer *, uint16_t);
+void buffer_write_u32be(Buffer *, uint32_t);
 
 bool program_read(program *p, uint8_t *bytes, size_t len);
 
