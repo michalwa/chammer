@@ -1,17 +1,50 @@
 #include "bytecode.h"
 #include "utils.h"
 
+#define read_be_bytes(b, t) \
+    do { \
+        t v = 0; \
+        for (size_t i = 0; i < sizeof(t); i++) { \
+            v <<= 8; \
+            v |= b[i]; \
+        } \
+        return v; \
+    } while (0)
+
 inline uint16_t u16be_value(u16be bytes) {
-    return ((uint16_t)bytes[0] << (1 << 3))
-        | (uint16_t)bytes[1];
+    read_be_bytes(bytes, uint16_t);
 }
 
 inline uint32_t u32be_value(u32be bytes) {
-    return ((uint32_t)bytes[0] << (3 << 3))
-        | ((uint32_t)bytes[1] << (2 << 3))
-        | ((uint32_t)bytes[2] << (1 << 3))
-        | (uint32_t)bytes[3];
+    read_be_bytes(bytes, uint32_t);
 }
+
+inline uint64_t u64be_value(u64be bytes) {
+    read_be_bytes(bytes, uint64_t);
+}
+
+#undef read_be_bytes
+
+#define write_be_bytes(b, v) \
+    do { \
+        char *c = buffer_alloc(b, sizeof(v)); \
+        for (intptr_t i = sizeof(v) - 1; i >= 0; i--) \
+            *c++ = (uint8_t)((v >> (i << 3)) & 0xFF); \
+    } while (0)
+
+inline void buffer_write_u16be(Buffer *b, uint16_t v) {
+    write_be_bytes(b, v);
+}
+
+inline void buffer_write_u32be(Buffer *b, uint32_t v) {
+    write_be_bytes(b, v);
+}
+
+inline void buffer_write_u64be(Buffer *b, uint64_t v) {
+    write_be_bytes(b, v);
+}
+
+#undef write_be_bytes
 
 inline size_t opcode_data_size(opcode op) {
 #define OPCODE_CASE(name, byte, data_size) \
@@ -21,25 +54,6 @@ inline size_t opcode_data_size(opcode op) {
 #undef OPCODE_CASE
 
     panic("unknown opcode: %02X", op);
-}
-
-inline void buffer_write_u8be(Buffer *b, uint8_t v) {
-    char *out = buffer_alloc(b, 1);
-    *out++ = v;
-}
-
-inline void buffer_write_u16be(Buffer *b, uint16_t v) {
-    char *out = buffer_alloc(b, 2);
-    *out++ = (uint8_t)((v >> (1 << 3)) & 0xFF);
-    *out++ = (uint8_t)(v & 0xFF);
-}
-
-inline void buffer_write_u32be(Buffer *b, uint32_t v) {
-    char *out = buffer_alloc(b, 4);
-    *out++ = (uint8_t)((v >> (3 << 3)) & 0xFF);
-    *out++ = (uint8_t)((v >> (2 << 3)) & 0xFF);
-    *out++ = (uint8_t)((v >> (1 << 3)) & 0xFF);
-    *out++ = (uint8_t)(v & 0xFF);
 }
 
 bool program_read(program *p, uint8_t *bytes, size_t len) {

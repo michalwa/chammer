@@ -9,6 +9,7 @@
 
 typedef uint8_t u16be[2];
 typedef uint8_t u32be[4];
+typedef uint8_t u64be[8];
 
 typedef struct {
     // TODO: Add useful trace info
@@ -18,8 +19,9 @@ typedef struct {
 #define EACH_OPCODE(_) \
     /* _(name, byte, data_size) */ \
     _(OP_TRACE, 1, sizeof(u16be)) /* debug trace with an identifier */ \
-    _(OP_PUSHSTR, 2, sizeof(op_pushstr)) /* push string constant */ \
-    _(OP_ADD, 3, 0) /* builtin binary (+) operation */
+    _(OP_PUSHINT, 2, sizeof(u64be)) /* push int constant */ \
+    _(OP_PUSHSTR, 3, sizeof(op_pushstr)) /* push string constant */ \
+    _(OP_ADD, 4, 0) /* builtin binary (+) operation */
 
 #define ENUM_MEMBER(name, byte, data_size) name = byte,
 typedef enum { EACH_OPCODE(ENUM_MEMBER) } opcode;
@@ -43,14 +45,15 @@ typedef struct {
 #define MAGIC_HAMMER "HAMMER"
 #define BYTECODE_VERSION 0x0001
 
-uint16_t u16be_value(u16be bytes);
-uint32_t u32be_value(u32be bytes);
+uint16_t u16be_value(u16be);
+uint32_t u32be_value(u32be);
+uint64_t u64be_value(u64be);
 
-size_t opcode_data_size(opcode);
-
-void buffer_write_u8be(Buffer *, uint8_t);
 void buffer_write_u16be(Buffer *, uint16_t);
 void buffer_write_u32be(Buffer *, uint32_t);
+void buffer_write_u64be(Buffer *, uint64_t);
+
+size_t opcode_data_size(opcode);
 
 bool program_read(program *p, uint8_t *bytes, size_t len);
 

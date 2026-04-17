@@ -5,7 +5,7 @@
 #include "../lib/parser.h"
 #include "../lib/utils.h"
 
-#define PROGRAM_SOURCE "\"Hello, \" + \"world!\""
+#define PROGRAM_SOURCE "\"Hello, \" + \"world! \" + 42"
 
 int main(void) {
     token t;

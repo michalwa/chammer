@@ -14,6 +14,15 @@ void compiler_free(Compiler *c) {
     buffer_free(&c->bytecode);
 }
 
+static void compiler_visit_int(Compiler *c, node *n) {
+    uint64_t value = 0;
+    for (size_t i = 0; i < n->token.len; i++)
+        value = (value * 10) + (n->token.str[i] - '0');
+
+    buffer_putc(&c->bytecode, OP_PUSHINT);
+    buffer_write_u64be(&c->bytecode, value);
+}
+
 static void compiler_visit_string(Compiler *c, node *n) {
     // TODO: Unescape string
     // TODO: String interning
@@ -22,7 +31,7 @@ static void compiler_visit_string(Compiler *c, node *n) {
     memcpy(data, n->token.str, len);
     size_t offset = (size_t)(data - c->string_buffer.data);
 
-    buffer_write_u8be(&c->bytecode, OP_PUSHSTR);
+    buffer_putc(&c->bytecode, OP_PUSHSTR);
     buffer_write_u32be(&c->bytecode, (uint32_t)offset);
     buffer_write_u32be(&c->bytecode, (uint32_t)len);
 }
@@ -32,7 +41,7 @@ static void compiler_visit_binary(Compiler *c, node *n) {
         compiler_visit(c, child);
 
     if (string_eq(token_string(n->token), STRING("+")))
-        buffer_write_u8be(&c->bytecode, OP_ADD);
+        buffer_putc(&c->bytecode, OP_ADD);
 
     // TODO: Other built-ins and user functions
 }
@@ -46,6 +55,7 @@ static void compiler_visit_doblk(Compiler *c, node *n) {
 
 void compiler_visit(Compiler *c, node *n) {
     switch (n->type) {
+    case N_INT: compiler_visit_int(c, n); break;
     case N_STRING: compiler_visit_string(c, n); break;
     case N_BINARY: compiler_visit_binary(c, n); break;
     case N_DOBLK: compiler_visit_doblk(c, n); break;
