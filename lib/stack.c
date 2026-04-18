@@ -104,6 +104,7 @@ stack_iter stack_iter_begin(Stack *s) {
 }
 
 bool stack_iter_next(stack_iter *i) {
+    if (i->index >= i->stack->size) return false;
     if (i->item && ++i->index >= i->stack->size) return false;
 
     if (i->index > 0 && i->index % i->stack->items_per_block == 0)

@@ -25,26 +25,40 @@ inline uint64_t u64be_value(u64be bytes) {
 
 #undef read_be_bytes
 
-#define write_be_bytes(b, v) \
+#define set_be_bytes(c, v) \
     do { \
-        char *c = buffer_alloc(b, sizeof(v)); \
         for (intptr_t i = sizeof(v) - 1; i >= 0; i--) \
             *c++ = (uint8_t)((v >> (i << 3)) & 0xFF); \
     } while (0)
 
+inline void bytecode_set_u16be(char *c, uint16_t v) {
+    set_be_bytes(c, v);
+}
+
+inline void bytecode_set_u32be(char *c, uint32_t v) {
+    set_be_bytes(c, v);
+}
+
+inline void bytecode_set_u64be(char *c, uint64_t v) {
+    set_be_bytes(c, v);
+}
+
+#undef set_be_bytes
+
 inline void bytecode_put_u16be(Buffer *b, uint16_t v) {
-    write_be_bytes(b, v);
+    char *c = buffer_alloc(b, sizeof(v));
+    bytecode_set_u16be(c, v);
 }
 
 inline void bytecode_put_u32be(Buffer *b, uint32_t v) {
-    write_be_bytes(b, v);
+    char *c = buffer_alloc(b, sizeof(v));
+    bytecode_set_u32be(c, v);
 }
 
 inline void bytecode_put_u64be(Buffer *b, uint64_t v) {
-    write_be_bytes(b, v);
+    char *c = buffer_alloc(b, sizeof(v));
+    bytecode_set_u64be(c, v);
 }
-
-#undef write_be_bytes
 
 bool program_read(program *p, uint8_t *bytes, size_t len) {
     if (len < 0x0E) return false;
@@ -85,7 +99,7 @@ void bytecode_put_pushstr(Buffer *b, uint32_t offset, uint32_t len) {
     bytecode_put_u32be(b, len);
 }
 
-void bytecode_put_jump(Buffer *b) {
-    buffer_putc(b, OP_JUMP);
+void bytecode_put_call(Buffer *b) {
+    buffer_putc(b, OP_CALL);
     bytecode_put_u32be(b, 0xFFFFFFFF); // placeholder address to be mapped later
 }
