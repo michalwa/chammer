@@ -43,11 +43,8 @@ void buffer_putc(Buffer *b, char c) {
     b->data[b->len] = '\0';
 }
 
-void buffer_puts(Buffer *b, const char *str, size_t len) {
-    buffer_grow(b, b->len + len);
-    memcpy(b->data + b->len, str, len);
-    b->len += len;
-    b->data[b->len] = '\0';
+inline void buffer_puts(Buffer *b, const char *str, size_t len) {
+    memcpy(buffer_alloc(b, len), str, len);
 }
 
 void buffer_printf(Buffer *b, const char *format, ...) {

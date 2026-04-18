@@ -5,8 +5,8 @@
 void buffer_print_c_string_literal(Buffer *b, const char *str) {
     buffer_putc(b, '"');
 
-    do {
-        switch (*str) {
+    for (const char *c = str; *c; c++) {
+        switch (*c) {
         case '\0': buffer_printf(b, "\\0"); break;
         case '\a': buffer_printf(b, "\\a"); break;
         case '\b': buffer_printf(b, "\\b"); break;
@@ -18,12 +18,12 @@ void buffer_print_c_string_literal(Buffer *b, const char *str) {
         case '\\': buffer_printf(b, "\\\\"); break;
         case '\"': buffer_printf(b, "\\\""); break;
         default:
-            if (isprint(*str))
-                buffer_printf(b, "%c", *str);
+            if (isprint(*c))
+                buffer_printf(b, "%c", *c);
             else
-                buffer_printf(b, "\\%03o", *str);
+                buffer_printf(b, "\\%03o", *c);
         }
-    } while (*(++str));
+    }
 
     buffer_putc(b, '"');
 }

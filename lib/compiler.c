@@ -12,26 +12,42 @@ typedef struct {
     size_t proc_index;
 } frame;
 
+typedef struct {
+    size_t proc_index;
+    size_t addr_offset;
+    size_t target_proc_index;
+} jump;
+
 static void proc_init(Proc *p) {
     buffer_init(&p->bytecode);
+}
+
+static inline void compiler_begin_proc(Compiler *c) {
+    proc_init((Proc *)stack_push(&c->procs));
+    frame *f = (frame *)stack_push(&c->frames);
+    f->proc_index = c->procs.size - 1;
+}
+
+static inline void compiler_end_proc(Compiler *c) {
+    stack_pop(&c->frames);
+}
+
+static inline Proc *compiler_current_proc(Compiler *c) {
+    frame *current_frame = (frame *)stack_top(&c->frames);
+    return (Proc *)stack_get(&c->procs, current_frame->proc_index);
 }
 
 static void proc_free(Proc *p) {
     buffer_free(&p->bytecode);
 }
 
-static void compiler_push_frame(Compiler *c) {
-    proc_init((Proc *)stack_push(&c->procs));
-    frame *f = (frame *)stack_push(&c->frames);
-    f->proc_index = c->procs.size - 1;
-}
-
 void compiler_init(Compiler *c) {
     buffer_init(&c->string_buffer);
     stack_init(&c->procs, Proc);
     stack_init(&c->frames, frame);
+    stack_init(&c->jumps, jump);
 
-    compiler_push_frame(c);
+    compiler_begin_proc(c);
 }
 
 void compiler_free(Compiler *c) {
@@ -42,12 +58,7 @@ void compiler_free(Compiler *c) {
 
     stack_free(&c->procs);
     stack_free(&c->frames);
-}
-
-static inline Proc *compiler_current_proc(Compiler *c) {
-    debug_assert(c->frames.size > 0);
-    frame *current_frame = (frame *)stack_top(&c->frames);
-    return (Proc *)stack_get(&c->procs, current_frame->proc_index);
+    stack_free(&c->jumps);
 }
 
 static void compiler_visit_int(Compiler *c, node *n) {
@@ -61,12 +72,10 @@ static void compiler_visit_int(Compiler *c, node *n) {
 }
 
 static void compiler_visit_string(Compiler *c, node *n) {
-    // TODO: Unescape string
     // TODO: String interning
-    size_t len = n->token.len;
-    char *data = buffer_alloc(&c->string_buffer, len);
-    memcpy(data, n->token.str, len);
-    size_t offset = (size_t)(data - c->string_buffer.data);
+
+    size_t offset, len;
+    compile_string(token_string(n->token), &c->string_buffer, &offset, &len);
 
     Proc *proc = compiler_current_proc(c);
     buffer_putc(&proc->bytecode, OP_PUSHSTR);
@@ -111,4 +120,34 @@ void compiler_write_program(Compiler *c, Buffer *b) {
     buffer_write_u32be(b, (uint32_t)c->string_buffer.len);
     buffer_puts(b, c->string_buffer.data, c->string_buffer.len);
     // buffer_puts(b, c->bytecode.data, c->bytecode.len);
+}
+
+void compile_string(string str, Buffer *out, size_t *offset, size_t *len) {
+    debug_assert(str.len >= 2);
+
+    if (offset) *offset = out->len;
+
+    bool escape = false;
+    for (size_t i = 1; i < str.len - 1; i++) { // ignore quotes
+        if (str.data[i] == '\\' && !escape) {
+            escape = true;
+            continue;
+        }
+
+        if (escape) {
+            switch (str.data[i]) {
+            case 'n': buffer_putc(out, '\n'); break;
+            case 'r': buffer_putc(out, '\r'); break;
+            // TODO: Add other escapes
+            default:
+                buffer_putc(out, str.data[i]);
+            }
+
+            escape = false;
+        } else {
+            buffer_putc(out, str.data[i]);
+        }
+    }
+
+    if (len) *len = out->len - *offset;
 }

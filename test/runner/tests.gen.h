@@ -3,6 +3,7 @@
     _(buffer_printf) \
     _(buffer_alloc) \
     _(buffer_read_file) \
+    _(compile_string) \
     _(lexer_full_example) \
     _(lexer_empty) \
     _(lexer_empty_string_after_keyword) \
