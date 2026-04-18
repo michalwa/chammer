@@ -4,14 +4,50 @@
 #include "compiler.h"
 #include "utils.h"
 
+typedef struct {
+    Buffer bytecode;
+} Proc;
+
+typedef struct {
+    size_t proc_index;
+} frame;
+
+static void proc_init(Proc *p) {
+    buffer_init(&p->bytecode);
+}
+
+static void proc_free(Proc *p) {
+    buffer_free(&p->bytecode);
+}
+
+static void compiler_push_frame(Compiler *c) {
+    proc_init((Proc *)stack_push(&c->procs));
+    frame *f = (frame *)stack_push(&c->frames);
+    f->proc_index = c->procs.size - 1;
+}
+
 void compiler_init(Compiler *c) {
     buffer_init(&c->string_buffer);
-    buffer_init(&c->bytecode);
+    stack_init(&c->procs, Proc);
+    stack_init(&c->frames, frame);
+
+    compiler_push_frame(c);
 }
 
 void compiler_free(Compiler *c) {
     buffer_free(&c->string_buffer);
-    buffer_free(&c->bytecode);
+
+    for (stack_iter i = stack_iter_begin(&c->procs); stack_iter_next(&i);)
+        proc_free((Proc *)i.item);
+
+    stack_free(&c->procs);
+    stack_free(&c->frames);
+}
+
+static inline Proc *compiler_current_proc(Compiler *c) {
+    debug_assert(c->frames.size > 0);
+    frame *current_frame = (frame *)stack_top(&c->frames);
+    return (Proc *)stack_get(&c->procs, current_frame->proc_index);
 }
 
 static void compiler_visit_int(Compiler *c, node *n) {
@@ -19,8 +55,9 @@ static void compiler_visit_int(Compiler *c, node *n) {
     for (size_t i = 0; i < n->token.len; i++)
         value = (value * 10) + (n->token.str[i] - '0');
 
-    buffer_putc(&c->bytecode, OP_PUSHINT);
-    buffer_write_u64be(&c->bytecode, value);
+    Proc *proc = compiler_current_proc(c);
+    buffer_putc(&proc->bytecode, OP_PUSHINT);
+    buffer_write_u64be(&proc->bytecode, value);
 }
 
 static void compiler_visit_string(Compiler *c, node *n) {
@@ -31,17 +68,20 @@ static void compiler_visit_string(Compiler *c, node *n) {
     memcpy(data, n->token.str, len);
     size_t offset = (size_t)(data - c->string_buffer.data);
 
-    buffer_putc(&c->bytecode, OP_PUSHSTR);
-    buffer_write_u32be(&c->bytecode, (uint32_t)offset);
-    buffer_write_u32be(&c->bytecode, (uint32_t)len);
+    Proc *proc = compiler_current_proc(c);
+    buffer_putc(&proc->bytecode, OP_PUSHSTR);
+    buffer_write_u32be(&proc->bytecode, (uint32_t)offset);
+    buffer_write_u32be(&proc->bytecode, (uint32_t)len);
 }
 
 static void compiler_visit_binary(Compiler *c, node *n) {
     for (node *child = n->first_child; child; child = child->next_sibling)
         compiler_visit(c, child);
 
+    Proc *proc = compiler_current_proc(c);
+
     if (string_eq(token_string(n->token), STRING("+")))
-        buffer_putc(&c->bytecode, OP_ADD);
+        buffer_putc(&proc->bytecode, OP_ADD);
 
     // TODO: Other built-ins and user functions
 }
@@ -70,5 +110,5 @@ void compiler_write_program(Compiler *c, Buffer *b) {
     buffer_write_u16be(b, 0); // trace table length
     buffer_write_u32be(b, (uint32_t)c->string_buffer.len);
     buffer_puts(b, c->string_buffer.data, c->string_buffer.len);
-    buffer_puts(b, c->bytecode.data, c->bytecode.len);
+    // buffer_puts(b, c->bytecode.data, c->bytecode.len);
 }

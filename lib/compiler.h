@@ -1,12 +1,13 @@
 #ifndef COMPILER_H_
 #define COMPILER_H_
 
-#include "stack.h"
 #include "ast.h"
+#include "stack.h"
 
 typedef struct {
     Buffer string_buffer;
-    Buffer bytecode;
+    Stack  procs;
+    Stack  frames;
 } Compiler;
 
 void compiler_init(Compiler *);

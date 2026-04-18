@@ -94,6 +94,25 @@ void stack_clear(Stack *s) {
     s->size = 0;
 }
 
+stack_iter stack_iter_begin(Stack *s) {
+    return (stack_iter){
+        .stack = s,
+        .block = s->head,
+        .index = 0,
+        .item = NULL,
+    };
+}
+
+bool stack_iter_next(stack_iter *i) {
+    if (i->item && ++i->index >= i->stack->size) return false;
+
+    if (i->index > 0 && i->index % i->stack->items_per_block == 0)
+        i->block = i->block->next;
+
+    i->item = i->block->data + (i->index % i->stack->items_per_block) * i->stack->item_size;
+    return true;
+}
+
 size_t stack_count_blocks(Stack *s) {
     size_t n = 0;
     for (stack_block *block = s->head; block; block = block->next)
