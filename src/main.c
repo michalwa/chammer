@@ -24,7 +24,7 @@ int main(void) {
     Buffer out;
     buffer_init(&out);
     node_print(*p.node, &out);
-    printf(F_BUFFER"\n", FA_BUFFER(out));
+    printf(F_BUFFER"\n\n", FA_BUFFER(out));
     buffer_free(&out);
 
     compiler_init(&c);

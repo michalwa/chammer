@@ -67,8 +67,7 @@ static void compiler_visit_int(Compiler *c, node *n) {
         value = (value * 10) + (n->token.str[i] - '0');
 
     Proc *proc = compiler_current_proc(c);
-    buffer_putc(&proc->bytecode, OP_PUSHINT);
-    buffer_write_u64be(&proc->bytecode, value);
+    bytecode_put_pushint(&proc->bytecode, value);
 }
 
 static void compiler_visit_string(Compiler *c, node *n) {
@@ -78,9 +77,7 @@ static void compiler_visit_string(Compiler *c, node *n) {
     compile_string(token_string(n->token), &c->string_buffer, &offset, &len);
 
     Proc *proc = compiler_current_proc(c);
-    buffer_putc(&proc->bytecode, OP_PUSHSTR);
-    buffer_write_u32be(&proc->bytecode, (uint32_t)offset);
-    buffer_write_u32be(&proc->bytecode, (uint32_t)len);
+    bytecode_put_pushstr(&proc->bytecode, offset, len);
 }
 
 static void compiler_visit_binary(Compiler *c, node *n) {
@@ -115,11 +112,13 @@ void compiler_visit(Compiler *c, node *n) {
 
 void compiler_write_program(Compiler *c, Buffer *b) {
     buffer_puts(b, MAGIC_HAMMER, sizeof(MAGIC_HAMMER) - 1);
-    buffer_write_u16be(b, BYTECODE_VERSION);
-    buffer_write_u16be(b, 0); // trace table length
-    buffer_write_u32be(b, (uint32_t)c->string_buffer.len);
+    bytecode_put_u16be(b, BYTECODE_VERSION);
+    bytecode_put_u16be(b, 0); // trace table length
+    bytecode_put_u32be(b, (uint32_t)c->string_buffer.len);
     buffer_puts(b, c->string_buffer.data, c->string_buffer.len);
-    // buffer_puts(b, c->bytecode.data, c->bytecode.len);
+
+    for (stack_iter i = stack_iter_begin(&c->procs); stack_iter_next(&i);)
+        buffer_puts(b, ((Proc *)i.item)->bytecode.data, ((Proc *)i.item)->bytecode.len);
 }
 
 void compile_string(string str, Buffer *out, size_t *offset, size_t *len) {

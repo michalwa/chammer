@@ -32,29 +32,19 @@ inline uint64_t u64be_value(u64be bytes) {
             *c++ = (uint8_t)((v >> (i << 3)) & 0xFF); \
     } while (0)
 
-inline void buffer_write_u16be(Buffer *b, uint16_t v) {
+inline void bytecode_put_u16be(Buffer *b, uint16_t v) {
     write_be_bytes(b, v);
 }
 
-inline void buffer_write_u32be(Buffer *b, uint32_t v) {
+inline void bytecode_put_u32be(Buffer *b, uint32_t v) {
     write_be_bytes(b, v);
 }
 
-inline void buffer_write_u64be(Buffer *b, uint64_t v) {
+inline void bytecode_put_u64be(Buffer *b, uint64_t v) {
     write_be_bytes(b, v);
 }
 
 #undef write_be_bytes
-
-inline size_t opcode_data_size(opcode op) {
-#define OPCODE_CASE(name, byte, data_size) \
-    case name: return data_size;
-
-    switch (op) { EACH_OPCODE(OPCODE_CASE) }
-#undef OPCODE_CASE
-
-    panic("unknown opcode: %02X", op);
-}
 
 bool program_read(program *p, uint8_t *bytes, size_t len) {
     if (len < 0x0E) return false;
@@ -77,4 +67,25 @@ bool program_read(program *p, uint8_t *bytes, size_t len) {
     p->bytecode_len = (size_t)(end - p->bytecode);
 
     return true;
+}
+
+void bytecode_put_trace(Buffer *b, uint16_t id) {
+    buffer_putc(b, OP_TRACE);
+    bytecode_put_u16be(b, id);
+}
+
+void bytecode_put_pushint(Buffer *b, uint64_t value) {
+    buffer_putc(b, OP_PUSHINT);
+    bytecode_put_u64be(b, value);
+}
+
+void bytecode_put_pushstr(Buffer *b, uint32_t offset, uint32_t len) {
+    buffer_putc(b, OP_PUSHSTR);
+    bytecode_put_u32be(b, offset);
+    bytecode_put_u32be(b, len);
+}
+
+void bytecode_put_jump(Buffer *b) {
+    buffer_putc(b, OP_JUMP);
+    bytecode_put_u32be(b, 0xFFFFFFFF); // placeholder address to be mapped later
 }

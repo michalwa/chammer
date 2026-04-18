@@ -17,19 +17,21 @@ typedef struct {
 } trace_info;
 
 #define EACH_OPCODE(_) \
-    /* _(name, byte, data_size) */ \
-    _(OP_TRACE, 1, sizeof(u16be)) /* debug trace with an identifier */ \
-    _(OP_PUSHINT, 2, sizeof(u64be)) /* push int constant */ \
-    _(OP_PUSHSTR, 3, sizeof(op_pushstr)) /* push string constant */ \
-    _(OP_ADD, 4, 0) /* builtin binary (+) operation */
+    _(OP_TRACE, 1) /* debug trace with an identifier */ \
+    _(OP_PUSHINT, 2) /* push int constant */ \
+    _(OP_PUSHSTR, 3) /* push string constant */ \
+    _(OP_ADD, 4) /* builtin binary (+) operation */ \
+    _(OP_JUMP, 5) /* jump to instruction */
 
-#define ENUM_MEMBER(name, byte, data_size) name = byte,
+#define ENUM_MEMBER(name, byte) name = byte,
 typedef enum { EACH_OPCODE(ENUM_MEMBER) } opcode;
 #undef ENUM_MEMBER
 
+typedef void *op_void;
+
 typedef struct {
-    u32be offset;
-    u32be len;
+    uint32_t offset;
+    uint32_t len;
 } op_pushstr;
 
 typedef struct {
@@ -49,11 +51,14 @@ uint16_t u16be_value(u16be);
 uint32_t u32be_value(u32be);
 uint64_t u64be_value(u64be);
 
-void buffer_write_u16be(Buffer *, uint16_t);
-void buffer_write_u32be(Buffer *, uint32_t);
-void buffer_write_u64be(Buffer *, uint64_t);
+void bytecode_put_u16be(Buffer *, uint16_t);
+void bytecode_put_u32be(Buffer *, uint32_t);
+void bytecode_put_u64be(Buffer *, uint64_t);
 
-size_t opcode_data_size(opcode);
+void bytecode_put_trace(Buffer *, uint16_t);
+void bytecode_put_pushint(Buffer *, uint64_t value);
+void bytecode_put_pushstr(Buffer *, uint32_t offset, uint32_t len);
+void bytecode_put_jump(Buffer *b);
 
 bool program_read(program *p, uint8_t *bytes, size_t len);
 
