@@ -24,6 +24,26 @@ bool node_has_token(node n) {
     }
 }
 
+bool node_is_expr(node n) {
+    switch (n.type) {
+    case N_IDENT:
+    case N_STRING:
+    case N_INT:
+    case N_DEC:
+    case N_TUPLE:
+    case N_LIST:
+    case N_UNARY:
+    case N_BINARY:
+    case N_APPLY:
+    case N_IF:
+    case N_MATCH:
+    case N_LAMBDA:
+    case N_BLOCK:
+    case N_DOBLK: return true;
+    default: return false;
+    }
+}
+
 static void node_print_flags(node n, Buffer *b) {
     const char *prefix = "";
 

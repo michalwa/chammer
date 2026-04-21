@@ -91,6 +91,16 @@ void bytecode_put_jump(Buffer *b, opcode op, size_t *addr_offset) {
     bytecode_put_u32be(b, BYTECODE_ADDR_PLACEHOLDER);
 }
 
+void bytecode_put_load(Buffer *b, uint8_t i) {
+    buffer_putc(b, OP_LOAD);
+    buffer_putc(b, i);
+}
+
+void bytecode_put_store(Buffer *b, uint8_t i) {
+    buffer_putc(b, OP_STORE);
+    buffer_putc(b, i);
+}
+
 void bytecode_put_pushint(Buffer *b, uint64_t value) {
     buffer_putc(b, OP_PUSHINT);
     bytecode_put_u64be(b, value);

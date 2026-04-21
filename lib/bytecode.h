@@ -26,6 +26,8 @@ typedef struct {
     _(OP_JUMPIF, 0x02)  /* pop a value and jump to instruction if true */ \
     _(OP_CALL, 0x03)    /* push frame and jump to instruction */          \
     _(OP_RETURN, 0x04)  /* return from OP_CALL */                         \
+    _(OP_LOAD, 0x10) /* load local */ \
+    _(OP_STORE, 0x11) /* store local */ \
     _(OP_PUSHINT, 0x20) /* push int constant */                           \
     _(OP_PUSHSTR, 0x21) /* push string constant */                        \
     _(OP_ADD, 0x30)     /* builtin binary (+) operation */                \
@@ -69,6 +71,8 @@ void bytecode_put_u32be(Buffer *, uint32_t);
 void bytecode_put_u64be(Buffer *, uint64_t);
 
 void bytecode_put_jump(Buffer *b, opcode op, size_t *addr_offset);
+void bytecode_put_load(Buffer *, uint8_t);
+void bytecode_put_store(Buffer *, uint8_t);
 void bytecode_put_pushint(Buffer *, uint64_t value);
 void bytecode_put_pushstr(Buffer *, uint32_t offset, uint32_t len);
 void bytecode_put_trace(Buffer *, uint16_t);

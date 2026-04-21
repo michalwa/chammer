@@ -9,6 +9,9 @@ typedef struct {
     size_t      len;
 } string;
 
+#define F_STRING "%.*s"
+#define FA_STRING(str) (int)(str).len, (str).data
+
 #define STRING(str) (string){ .data = str, .len = sizeof(str) - 1 }
 
 bool   string_eq(string a, string b);
