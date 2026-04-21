@@ -5,7 +5,7 @@
 #include "../lib/parser.h"
 #include "../lib/utils.h"
 
-#define PROGRAM_SOURCE "if 1 then if 2 then 3 else 4 else 5"
+#define PROGRAM_SOURCE "if foo then \"foo\" else \"bar\" + 42"
 
 int main(void) {
     token t;

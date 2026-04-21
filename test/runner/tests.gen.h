@@ -18,5 +18,6 @@
     _(snapshot_diff_empty_lines) \
     _(snapshot_diff_line_endings) \
     _(stack) \
+    _(string_pool) \
     _(buffer_print_c_string_literal) \
     _(vector)

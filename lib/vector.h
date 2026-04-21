@@ -13,6 +13,14 @@ typedef struct {
     size_t capacity_items;
 } Vector;
 
+/*
+ * Usage: `for (EACH_IN_VECTOR(v, t, i)) { ... }`
+ */
+#define EACH_IN_VECTOR(v, t, i) \
+    t *i = (t *)(v).data; \
+    (size_t)(i - (t *)(v).data) < (v).len; \
+    i++
+
 #define vector_init(v, t) vector_init_(v, sizeof(t))
 #define vector_init_capacity(v, t, c) vector_init_capacity_(v, sizeof(t), c)
 

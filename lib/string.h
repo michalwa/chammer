@@ -12,5 +12,6 @@ typedef struct {
 #define STRING(str) (string){ .data = str, .len = sizeof(str) - 1 }
 
 bool string_eq(string a, string b);
+string string_from_cstr(const char *str);
 
 #endif // STRING_H_

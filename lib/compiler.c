@@ -78,6 +78,7 @@ static inline void put_jump(Compiler *c, opcode op, block_id block) {
 
 void compiler_init(Compiler *c) {
     buffer_init(&c->string_buffer);
+    string_pool_init(&c->strings);
     vector_init(&c->blocks, Block);
     vector_init(&c->frames, frame);
     vector_init(&c->jumps, jump);
@@ -88,9 +89,9 @@ void compiler_init(Compiler *c) {
 
 void compiler_free(Compiler *c) {
     buffer_free(&c->string_buffer);
+    string_pool_free(&c->strings);
 
-    for (size_t i = 0; i < c->blocks.len; i++)
-        block_free((Block *)vector_get(&c->blocks, i));
+    for (EACH_IN_VECTOR(c->blocks, Block, block)) block_free(block);
 
     vector_free(&c->blocks);
     vector_free(&c->frames);
@@ -113,23 +114,26 @@ static void compiler_visit_int(Compiler *c, node *n) {
 static void compiler_visit_string(Compiler *c, node *n) {
     // TODO: String interning
 
-    size_t offset, len;
-    compile_string(token_string(n->token), &c->string_buffer, &offset, &len);
+    compile_string(token_string(n->token), &c->string_buffer);
+    symbol s = string_pool_intern(&c->strings, buffer_string(&c->string_buffer));
+    string_pool_entry *e = (string_pool_entry *)vector_get(&c->strings.entries, s);
+    buffer_clear(&c->string_buffer);
 
     Block *b;
     get_current(c, &b, NULL);
-    bytecode_put_pushstr(&b->bytecode, offset, len);
+    bytecode_put_pushstr(&b->bytecode, e->offset, e->len);
 }
 
 static void compiler_visit_ident(Compiler *c, node *n) {
     // TODO: Scope/name resolution
 
-    size_t offset = c->string_buffer.len;
-    buffer_puts(&c->string_buffer, token_string(n->token));
+    symbol s = string_pool_intern(&c->strings, token_string(n->token));
+    string_pool_entry *e = (string_pool_entry *)vector_get(&c->strings.entries, s);
+
     uint16_t trace_id = c->traces.len;
     trace *t = (trace *)vector_push(&c->traces);
-    t->string_offset = offset;
-    t->string_len = n->token.len;
+    t->string_offset = e->offset;
+    t->string_len = e->len;
 
     Block *b;
     get_current(c, &b, NULL);
@@ -206,39 +210,32 @@ void compiler_write_program(Compiler *c, Buffer *b) {
 
     bytecode_put_u16be(b, (uint16_t)c->traces.len);
 
-    for (size_t i = 0; i < c->traces.len; i++) {
-        trace *t = (trace *)vector_get(&c->traces, i);
+    for (EACH_IN_VECTOR(c->traces, trace, t)) {
         bytecode_put_u32be(b, t->string_offset);
         bytecode_put_u32be(b, t->string_len);
     }
 
-    bytecode_put_u32be(b, (uint32_t)c->string_buffer.len);
-    buffer_puts(b, buffer_string(&c->string_buffer));
+    bytecode_put_u32be(b, (uint32_t)c->strings.buffer.len);
+    buffer_puts(b, buffer_string(&c->strings.buffer));
 
     size_t block_offset = 0;
-    for (size_t i = 0; i < c->blocks.len; i++) {
-        Block *block = (Block *)vector_get(&c->blocks, i);
+    for (EACH_IN_VECTOR(c->blocks, Block, block)) {
         block->offset = block_offset;
         block_offset += block->bytecode.len;
     }
 
-    for (size_t i = 0; i < c->jumps.len; i++) {
-        jump *j = (jump *)vector_get(&c->jumps, i);
+    for (EACH_IN_VECTOR(c->jumps, jump, j)) {
         Block *from_block = (Block *)vector_get(&c->blocks, j->from_block);
         Block *to_block = (Block *)vector_get(&c->blocks, j->to_block);
         bytecode_set_u32be(from_block->bytecode.data + j->addr_offset, to_block->offset);
     }
 
-    for (size_t i = 0; i < c->blocks.len; i++) {
-        Block *block = (Block *)vector_get(&c->blocks, i);
+    for (EACH_IN_VECTOR(c->blocks, Block, block))
         buffer_puts(b, buffer_string(&block->bytecode));
-    }
 }
 
-void compile_string(string str, Buffer *out, size_t *offset, size_t *len) {
+void compile_string(string str, Buffer *out) {
     debug_assert(str.len >= 2);
-
-    if (offset) *offset = out->len;
 
     bool escape = false;
     for (size_t i = 1; i < str.len - 1; i++) { // ignore quotes
@@ -261,6 +258,4 @@ void compile_string(string str, Buffer *out, size_t *offset, size_t *len) {
             buffer_putc(out, str.data[i]);
         }
     }
-
-    if (len) *len = out->len - *offset;
 }

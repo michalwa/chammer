@@ -4,6 +4,7 @@
 #include <string.h> // strcmp
 
 #include "../../lib/buffer.h" // buffer_printf
+#include "../../lib/string.h"
 
 #define RED(str)   "\033[0;31m" str "\033[0m"
 #define GREEN(str) "\033[0;32m" str "\033[0m"
@@ -57,6 +58,21 @@
         }                                                                             \
     } while (0)
 
+#define ASSERT_STRING_EQ(a, b)                                                         \
+    do {                                                                              \
+        string a_ = (a);                                                         \
+        string b_ = (b);                                                         \
+        if (!string_eq(a_, b_)) {                                                    \
+            test_printf("Assertion failed: string_eq(" #a ", " #b ")\n   left = "); \
+            buffer_print_string_literal(output_, a_);                               \
+            test_printf("\n  right = ");                                              \
+            buffer_print_string_literal(output_, b_);                               \
+            test_printf("\n%s:%d\n", __FILE__, __LINE__);                             \
+            return TEST_FAIL;                                                         \
+        }                                                                             \
+    } while (0)
+
 void buffer_print_c_string_literal(Buffer *, const char *);
+void buffer_print_string_literal(Buffer *, string);
 
 #endif // TEST_H_

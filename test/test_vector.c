@@ -23,6 +23,10 @@ TEST(vector) {
     }
     ASSERT_INT_EQ(sum, 6);
 
+    sum = 0;
+    for (EACH_IN_VECTOR(v, uint32_t, i)) sum += *i;
+    ASSERT_INT_EQ(sum, 6);
+
     vector_free(&v);
     return TEST_OK;
 }
