@@ -3,13 +3,14 @@
 
 #include "ast.h"
 #include "stack.h"
+#include "vector.h"
 
 typedef struct {
     Buffer string_buffer;
-    Stack  blocks;
-    Stack  frames;
-    Stack  jumps;
-    Stack  traces;
+    Vector blocks;
+    Vector frames;
+    Vector jumps;
+    Vector traces;
 } Compiler;
 
 void compiler_init(Compiler *);

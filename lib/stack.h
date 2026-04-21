@@ -20,7 +20,8 @@
 typedef struct stack_block stack_block;
 
 /**
- * A growable, homogenous LIFO container, pinned in memory
+ * Like a Vector, but pinned in memory so as not to invalidate pointers.
+ * Less efficient than a Vector if pinning is not needed.
  */
 typedef struct {
     size_t       item_size;
@@ -28,13 +29,6 @@ typedef struct {
     size_t       size;
     stack_block *head;
 } Stack;
-
-typedef struct {
-    Stack       *stack;
-    stack_block *block;
-    size_t       index;
-    void        *item;
-} stack_iter;
 
 void      stack_init_(Stack *, size_t item_size);
 void      stack_init_block_size_(Stack *, size_t item_size, size_t items_per_block);
@@ -46,8 +40,6 @@ void     *stack_get(Stack *, size_t index);
 void     *stack_top(Stack *);
 void      stack_truncate(Stack *, size_t size);
 void      stack_clear(Stack *);
-stack_iter stack_iter_begin(Stack *);
-bool       stack_iter_next(stack_iter *);
 size_t    stack_count_blocks(Stack *);
 
 #endif // STACK_H_

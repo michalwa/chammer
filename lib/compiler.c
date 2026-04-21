@@ -41,12 +41,12 @@ static void block_free(Block *b) {
 }
 
 static inline block_id push_block(Compiler *c) {
-    block_init((Block *)stack_push(&c->blocks));
-    return c->blocks.size - 1;
+    block_init((Block *)vector_push(&c->blocks));
+    return c->blocks.len - 1;
 }
 
 static inline block_id begin_block(Compiler *c) {
-    frame *f = (frame *)stack_push(&c->frames);
+    frame *f = (frame *)vector_push(&c->frames);
     f->block = push_block(c);
     return f->block;
 }
@@ -56,13 +56,13 @@ static inline block_id begin_block(Compiler *c) {
  *       may have changed since the last call to `begin_block`
  */
 static inline void end_block(Compiler *c) {
-    stack_pop(&c->frames);
+    vector_pop(&c->frames);
 }
 
 static inline void get_current(Compiler *c, Block **b, frame **f) {
-    frame *current_frame = (frame *)stack_top(&c->frames);
+    frame *current_frame = (frame *)vector_last(&c->frames);
     if (f) *f = current_frame;
-    if (b) *b = (Block *)stack_get(&c->blocks, current_frame->block);
+    if (b) *b = (Block *)vector_get(&c->blocks, current_frame->block);
 }
 
 static inline void put_jump(Compiler *c, opcode op, block_id block) {
@@ -70,7 +70,7 @@ static inline void put_jump(Compiler *c, opcode op, block_id block) {
     frame *f;
     get_current(c, &b, &f);
 
-    jump *j = (jump *)stack_push(&c->jumps);
+    jump *j = (jump *)vector_push(&c->jumps);
     j->from_block = f->block;
     j->to_block = block;
     bytecode_put_jump(&b->bytecode, op, &j->addr_offset);
@@ -78,10 +78,10 @@ static inline void put_jump(Compiler *c, opcode op, block_id block) {
 
 void compiler_init(Compiler *c) {
     buffer_init(&c->string_buffer);
-    stack_init(&c->blocks, Block);
-    stack_init(&c->frames, frame);
-    stack_init(&c->jumps, jump);
-    stack_init(&c->traces, trace);
+    vector_init(&c->blocks, Block);
+    vector_init(&c->frames, frame);
+    vector_init(&c->jumps, jump);
+    vector_init(&c->traces, trace);
 
     begin_block(c);
 }
@@ -89,13 +89,13 @@ void compiler_init(Compiler *c) {
 void compiler_free(Compiler *c) {
     buffer_free(&c->string_buffer);
 
-    for (stack_iter i = stack_iter_begin(&c->blocks); stack_iter_next(&i);)
-        block_free((Block *)i.item);
+    for (size_t i = 0; i < c->blocks.len; i++)
+        block_free((Block *)vector_get(&c->blocks, i));
 
-    stack_free(&c->blocks);
-    stack_free(&c->frames);
-    stack_free(&c->jumps);
-    stack_free(&c->traces);
+    vector_free(&c->blocks);
+    vector_free(&c->frames);
+    vector_free(&c->jumps);
+    vector_free(&c->traces);
 }
 
 static void compiler_visit(Compiler *c, node *n);
@@ -126,8 +126,8 @@ static void compiler_visit_ident(Compiler *c, node *n) {
 
     size_t offset = c->string_buffer.len;
     buffer_puts(&c->string_buffer, token_string(n->token));
-    uint16_t trace_id = c->traces.size;
-    trace *t = (trace *)stack_push(&c->traces);
+    uint16_t trace_id = c->traces.len;
+    trace *t = (trace *)vector_push(&c->traces);
     t->string_offset = offset;
     t->string_len = n->token.len;
 
@@ -204,10 +204,10 @@ void compiler_write_program(Compiler *c, Buffer *b) {
     buffer_puts(b, STRING(MAGIC_HAMMER));
     bytecode_put_u16be(b, BYTECODE_VERSION);
 
-    bytecode_put_u16be(b, (uint16_t)c->traces.size);
+    bytecode_put_u16be(b, (uint16_t)c->traces.len);
 
-    for (stack_iter i = stack_iter_begin(&c->traces); stack_iter_next(&i);) {
-        trace *t = (trace *)i.item;
+    for (size_t i = 0; i < c->traces.len; i++) {
+        trace *t = (trace *)vector_get(&c->traces, i);
         bytecode_put_u32be(b, t->string_offset);
         bytecode_put_u32be(b, t->string_len);
     }
@@ -216,21 +216,21 @@ void compiler_write_program(Compiler *c, Buffer *b) {
     buffer_puts(b, buffer_string(&c->string_buffer));
 
     size_t block_offset = 0;
-    for (stack_iter i = stack_iter_begin(&c->blocks); stack_iter_next(&i);) {
-        Block *block = (Block *)i.item;
+    for (size_t i = 0; i < c->blocks.len; i++) {
+        Block *block = (Block *)vector_get(&c->blocks, i);
         block->offset = block_offset;
         block_offset += block->bytecode.len;
     }
 
-    for (stack_iter i = stack_iter_begin(&c->jumps); stack_iter_next(&i);) {
-        jump *j = (jump *)i.item;
-        Block *from_block = (Block *)stack_get(&c->blocks, j->from_block);
-        Block *to_block = (Block *)stack_get(&c->blocks, j->to_block);
+    for (size_t i = 0; i < c->jumps.len; i++) {
+        jump *j = (jump *)vector_get(&c->jumps, i);
+        Block *from_block = (Block *)vector_get(&c->blocks, j->from_block);
+        Block *to_block = (Block *)vector_get(&c->blocks, j->to_block);
         bytecode_set_u32be(from_block->bytecode.data + j->addr_offset, to_block->offset);
     }
 
-    for (stack_iter i = stack_iter_begin(&c->blocks); stack_iter_next(&i);) {
-        Block *block = (Block *)i.item;
+    for (size_t i = 0; i < c->blocks.len; i++) {
+        Block *block = (Block *)vector_get(&c->blocks, i);
         buffer_puts(b, buffer_string(&block->bytecode));
     }
 }
