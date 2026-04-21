@@ -26,8 +26,8 @@ typedef struct {
     _(OP_JUMPIF, 0x02)  /* pop a value and jump to instruction if true */ \
     _(OP_CALL, 0x03)    /* push frame and jump to instruction */          \
     _(OP_RETURN, 0x04)  /* return from OP_CALL */                         \
-    _(OP_LOAD, 0x10) /* load local */ \
-    _(OP_STORE, 0x11) /* store local */ \
+    _(OP_LOAD, 0x10)    /* load local */                                  \
+    _(OP_STORE, 0x11)   /* store local */                                 \
     _(OP_PUSHINT, 0x20) /* push int constant */                           \
     _(OP_PUSHSTR, 0x21) /* push string constant */                        \
     _(OP_ADD, 0x30)     /* builtin binary (+) operation */                \

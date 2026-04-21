@@ -9,11 +9,10 @@
 typedef struct {
     Buffer     string_buffer;
     StringPool strings;
+    StringPool idents;
     Vector     blocks;
-    Vector     frames;
     Vector     jumps;
     Vector     traces;
-    StringPool idents;
 } Compiler;
 
 void compiler_init(Compiler *);

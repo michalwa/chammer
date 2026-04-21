@@ -15,10 +15,12 @@ typedef struct {
 
 typedef size_t block_id;
 
-typedef struct {
+typedef struct Frame Frame;
+struct Frame {
+    Frame   *prev;
     block_id block;
     Vector   locals;
-} Frame;
+};
 
 /*
  * A reference to an instruction address stored in the bytecode that needs to
@@ -42,7 +44,8 @@ static inline void block_free(Block *b) {
     buffer_free(&b->bytecode);
 }
 
-static inline void frame_init(Frame *f, block_id block) {
+static inline void frame_init(Frame *f, Frame *prev, block_id block) {
+    f->prev = prev;
     f->block = block;
     vector_init(&f->locals, symbol);
 }
@@ -51,40 +54,41 @@ static inline void frame_free(Frame *f) {
     vector_free(&f->locals);
 }
 
+void compiler_init(Compiler *c) {
+    buffer_init(&c->string_buffer);
+    string_pool_init(&c->strings);
+    string_pool_init(&c->idents);
+    vector_init(&c->blocks, Block);
+    vector_init(&c->jumps, jump);
+    vector_init(&c->traces, trace);
+}
+
+void compiler_free(Compiler *c) {
+    for (EACH_IN_VECTOR(c->blocks, Block, block)) block_free(block);
+
+    buffer_free(&c->string_buffer);
+    string_pool_free(&c->strings);
+    string_pool_free(&c->idents);
+    vector_free(&c->blocks);
+    vector_free(&c->jumps);
+    vector_free(&c->traces);
+}
+
 static inline block_id push_block(Compiler *c) {
     block_init((Block *)vector_push(&c->blocks));
     return c->blocks.len - 1;
 }
 
-static inline block_id begin_block(Compiler *c) {
-    Frame *f = (Frame *)vector_push(&c->frames);
-    frame_init(f, push_block(c));
-    return f->block;
+static inline Block *get_block(Compiler *c, Frame *f) {
+    return (Block *)vector_get(&c->blocks, f->block);
 }
 
-/*
- * NOTE: Intentionally not returning the current frame's `block_id` because it
- *       may have changed since the last call to `begin_block`
- */
-static inline void end_block(Compiler *c) {
-    frame_free((Frame *)vector_last(&c->frames));
-    vector_pop(&c->frames);
-}
-
-static void get_current(Compiler *c, Block **b, Frame **f) {
-    Frame *current_frame = (Frame *)vector_last(&c->frames);
-    if (f) *f = current_frame;
-    if (b) *b = (Block *)vector_get(&c->blocks, current_frame->block);
-}
-
-static void put_jump(Compiler *c, opcode op, block_id block) {
-    Block *b;
-    Frame *f;
-    get_current(c, &b, &f);
-
+static void put_jump(Compiler *c, Frame *f, opcode op, block_id block) {
     jump *j = (jump *)vector_push(&c->jumps);
     j->from_block = f->block;
     j->to_block = block;
+
+    Block *b = get_block(c, f);
     bytecode_put_jump(&b->bytecode, op, &j->addr_offset);
 }
 
@@ -103,10 +107,7 @@ static bool get_strict_local(Frame *f, symbol name, uint8_t *id) {
     return false;
 }
 
-static uint8_t get_or_insert_local(Compiler *c, symbol name) {
-    Frame *f;
-    get_current(c, NULL, &f);
-
+static uint8_t get_or_insert_local(Frame *f, symbol name) {
     uint8_t id;
     if (get_strict_local(f, name, &id)) return id;
 
@@ -114,166 +115,134 @@ static uint8_t get_or_insert_local(Compiler *c, symbol name) {
     return (uint8_t)(f->locals.len - 1);
 }
 
-void compiler_init(Compiler *c) {
-    buffer_init(&c->string_buffer);
-    string_pool_init(&c->strings);
-    vector_init(&c->blocks, Block);
-    vector_init(&c->frames, Frame);
-    vector_init(&c->jumps, jump);
-    vector_init(&c->traces, trace);
-    string_pool_init(&c->idents);
+static void visit(Compiler *c, Frame *f, node *n);
+static void visit_pattern(Compiler *c, Frame *f, node *lhs, node *rhs, node *cont);
 
-    begin_block(c);
-}
-
-void compiler_free(Compiler *c) {
-    buffer_free(&c->string_buffer);
-    string_pool_free(&c->strings);
-
-    for (EACH_IN_VECTOR(c->blocks, Block, block)) block_free(block);
-    for (EACH_IN_VECTOR(c->frames, Frame, frame)) frame_free(frame);
-
-    vector_free(&c->blocks);
-    vector_free(&c->frames);
-    vector_free(&c->jumps);
-    vector_free(&c->traces);
-    string_pool_free(&c->idents);
-}
-
-static void visit(Compiler *c, node *n);
-static void visit_pattern(Compiler *c, node *lhs, node *rhs, node *cont);
-
-static void visit_int(Compiler *c, node *n) {
+static void visit_int(Compiler *c, Frame *f, node *n) {
     uint64_t value = 0;
     for (size_t i = 0; i < n->token.len; i++) value = (value * 10) + (n->token.str[i] - '0');
 
-    Block *b;
-    get_current(c, &b, NULL);
+    Block *b = get_block(c, f);
     bytecode_put_pushint(&b->bytecode, value);
 }
 
-static void visit_string(Compiler *c, node *n) {
+static void visit_string(Compiler *c, Frame *f, node *n) {
     compile_string(token_string(n->token), &c->string_buffer);
     symbol             s = string_pool_intern(&c->strings, buffer_string(&c->string_buffer));
     string_pool_entry *e = (string_pool_entry *)vector_get(&c->strings.entries, s);
     buffer_clear(&c->string_buffer);
 
-    Block *b;
-    get_current(c, &b, NULL);
+    Block *b = get_block(c, f);
     bytecode_put_pushstr(&b->bytecode, e->offset, e->len);
 }
 
-static void visit_ident(Compiler *c, node *n) {
-    Block *b;
-    Frame *f;
-    get_current(c, &b, &f);
-
+static void visit_ident(Compiler *c, Frame *f, node *n) {
     string name = token_string(n->token);
     symbol s = string_pool_intern(&c->idents, name);
 
     uint8_t id;
-    if (!get_strict_local(f, s, &id))
-        panic("unresolved symbol: "F_STRING, FA_STRING(name));
+    if (!get_strict_local(f, s, &id)) panic("unresolved symbol: " F_STRING, FA_STRING(name));
 
+    Block *b = get_block(c, f);
     bytecode_put_load(&b->bytecode, id);
 }
 
-static void visit_binary(Compiler *c, node *n) {
-    for (node *child = n->first_child; child; child = child->next_sibling) visit(c, child);
+static void visit_binary(Compiler *c, Frame *f, node *n) {
+    for (node *child = n->first_child; child; child = child->next_sibling) visit(c, f, child);
 
-    Block *b;
-    get_current(c, &b, NULL);
+    Block *b = get_block(c, f);
 
     if (string_eq(token_string(n->token), STRING("+"))) buffer_putc(&b->bytecode, OP_ADD);
 
     // TODO: Other built-ins and user functions
 }
 
-static void visit_if(Compiler *c, node *n) {
+static void visit_if(Compiler *c, Frame *f, node *n) {
+    Frame then_frame;
+
     node *cond = n->first_child;
     node *then = cond->next_sibling;
     node *elze = then->next_sibling;
 
-    Frame *f;
-    get_current(c, NULL, &f);
-
     // prepare a continuation block so that the `elze` block falls through to it
     block_id cont_block = push_block(c);
 
-    block_id then_block = begin_block(c);
-    visit(c, then);
-    put_jump(c, OP_JUMP, cont_block);
-    end_block(c);
+    block_id then_block = push_block(c);
+    frame_init(&then_frame, f, then_block);
+    visit(c, &then_frame, then);
+    frame_free(&then_frame);
+    put_jump(c, f, OP_JUMP, cont_block);
 
-    visit(c, cond);
-    put_jump(c, OP_JUMPIF, then_block);
-    visit(c, elze);
+    visit(c, f, cond);
+    put_jump(c, f, OP_JUMPIF, then_block);
+    visit(c, f, elze);
 
     f->block = cont_block; // resume in continuation block
 }
 
-static void visit_doblk(Compiler *c, node *n) {
+static void visit_doblk(Compiler *c, Frame *f, node *n) {
     if (node_is_expr(*n->first_child)) {
-        visit(c, n->first_child);
+        visit(c, f, n->first_child);
         return;
     }
 
     node *lhs, *rhs;
     node *stmt = n->first_child;
-    node cont = {
-        .type = N_DOBLK,
-        .first_child = stmt->next_sibling,
+    node  cont = {
+         .type = N_DOBLK,
+         .first_child = stmt->next_sibling,
     };
 
     switch (stmt->type) {
     case N_ASSIGN:
         lhs = stmt->first_child;
         rhs = lhs->next_sibling;
-        visit_pattern(c, lhs, rhs, &cont);
+        visit_pattern(c, f, lhs, rhs, &cont);
         break;
     default: panic("unsupported node: %s", node_type_name(stmt->type));
     }
 }
 
-static void visit(Compiler *c, node *n) {
+static void visit(Compiler *c, Frame *f, node *n) {
     switch (n->type) {
-    case N_INT: visit_int(c, n); break;
-    case N_STRING: visit_string(c, n); break;
-    case N_IDENT: visit_ident(c, n); break;
-    case N_BINARY: visit_binary(c, n); break;
-    case N_IF: visit_if(c, n); break;
-    case N_DOBLK: visit_doblk(c, n); break;
+    case N_INT: visit_int(c, f, n); break;
+    case N_STRING: visit_string(c, f, n); break;
+    case N_IDENT: visit_ident(c, f, n); break;
+    case N_BINARY: visit_binary(c, f, n); break;
+    case N_IF: visit_if(c, f, n); break;
+    case N_DOBLK: visit_doblk(c, f, n); break;
     default: panic("unsupported node: %s", node_type_name(n->type));
     }
 }
 
-static void visit_pident(Compiler *c, node *lhs, node *rhs, node *cont) {
-    visit(c, rhs);
+static void visit_pident(Compiler *c, Frame *f, node *lhs, node *rhs, node *cont) {
+    visit(c, f, rhs);
 
-    Block *b;
-    get_current(c, &b, NULL);
+    symbol  s = string_pool_intern(&c->idents, token_string(lhs->token));
+    uint8_t i = get_or_insert_local(f, s);
 
-    symbol s = string_pool_intern(&c->idents, token_string(lhs->token));
-    uint8_t i = get_or_insert_local(c, s);
+    Block *b = get_block(c, f);
     bytecode_put_store(&b->bytecode, i);
 
-    visit(c, cont);
+    visit(c, f, cont);
 }
 
-static void visit_pattern(Compiler *c, node *lhs, node *rhs, node *cont) {
+static void visit_pattern(Compiler *c, Frame *f, node *lhs, node *rhs, node *cont) {
     switch (lhs->type) {
-    case N_PIDENT:
-        visit_pident(c, lhs, rhs, cont);
-        break;
+    case N_PIDENT: visit_pident(c, f, lhs, rhs, cont); break;
     default: panic("unsupported node: %s", node_type_name(lhs->type));
     }
 }
 
 void compiler_visit_program(Compiler *c, node *n) {
-    visit(c, n);
+    Frame f;
+    frame_init(&f, NULL, push_block(c));
 
-    Block *b;
-    get_current(c, &b, NULL);
+    visit(c, &f, n);
+
+    Block *b = get_block(c, &f);
+    frame_free(&f);
+
     buffer_putc(&b->bytecode, (char)OP_HALT);
 }
 
