@@ -51,10 +51,12 @@ static inline block_id begin_block(Compiler *c) {
     return f->block;
 }
 
-static inline block_id end_block(Compiler *c) {
-    block_id b = ((frame *)stack_top(&c->frames))->block;
+/*
+ * NOTE: Intentionally not returning the current frame's `block_id` because it
+ *       may have changed since the last call to `begin_block`
+ */
+static inline void end_block(Compiler *c) {
     stack_pop(&c->frames);
-    return b;
 }
 
 static inline void get_current(Compiler *c, Block **b, frame **f) {
