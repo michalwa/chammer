@@ -43,8 +43,8 @@ void buffer_putc(Buffer *b, char c) {
     b->data[b->len] = '\0';
 }
 
-inline void buffer_puts(Buffer *b, const char *str, size_t len) {
-    memcpy(buffer_alloc(b, len), str, len);
+inline void buffer_puts(Buffer *b, string str) {
+    memcpy(buffer_alloc(b, str.len), str.data, str.len);
 }
 
 void buffer_printf(Buffer *b, const char *format, ...) {
@@ -88,4 +88,8 @@ void buffer_read_file(Buffer *b, FILE *f) {
     size_t actual_size = fread(data, 1, size, f);
     b->len -= size - actual_size;
     b->data[b->len] = '\0';
+}
+
+inline string buffer_string(Buffer *b) {
+    return (string){ .data = b->data, .len = b->len };
 }

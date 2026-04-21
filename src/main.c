@@ -5,7 +5,7 @@
 #include "../lib/parser.h"
 #include "../lib/utils.h"
 
-#define PROGRAM_SOURCE "\"Hello, \" + \"world! \" + 42"
+#define PROGRAM_SOURCE "if 1 then if 2 then 3 else 4 else 5"
 
 int main(void) {
     token t;
@@ -27,9 +27,9 @@ int main(void) {
     printf(F_BUFFER"\n\n", FA_BUFFER(out));
     buffer_free(&out);
 
-    compiler_init(&c);
-    compiler_visit(&c, p.node);
     buffer_init(&comp_buffer);
+    compiler_init(&c);
+    compiler_visit_program(&c, p.node);
     compiler_write_program(&c, &comp_buffer);
     compiler_free(&c);
     parser_free(&p);
@@ -37,20 +37,27 @@ int main(void) {
     if (!program_read(&prog, (uint8_t *)comp_buffer.data, comp_buffer.len))
         panic("could not read compiled program");
 
+    printf("version:           %04"PRIX16"\n", u16be_value(*prog.version));
+
+    uint16_t traces_len = u16be_value(*prog.traces_len);
+
+    printf("traces len:        %04"PRIX16"\n", traces_len);
+    printf("traces:\n");
+
+    for (uint32_t i = 0; i < traces_len; i++) {
+        uint32_t string_offset = u32be_value(prog.traces[i].string_offset);
+        uint32_t string_len = u32be_value(prog.traces[i].string_len);
+        printf("  %04X %.*s\n", i, string_len, prog.string_bytes + string_offset);
+    }
+
+    printf("string bytes len:  %08"PRIX32"\n", u32be_value(*prog.string_bytes_len));
     printf(
-        "version:           %04"PRIX16"\n"
-        "trace table len:   %04"PRIX16"\n"
-        "string bytes len:  %08"PRIX32"\n"
-        "string bytes:      %.*s\n"
-        "bytecode len:      %zX\n"
-        "bytecode:",
-        u16be_value(*prog.version),
-        u16be_value(*prog.trace_table_len),
+        "string bytes:      %.*s\n",
         u32be_value(*prog.string_bytes_len),
-        u32be_value(*prog.string_bytes_len),
-        prog.string_bytes,
-        prog.bytecode_len
+        prog.string_bytes
     );
+    printf("bytecode len:      %zX\n", prog.bytecode_len);
+    printf("bytecode:");
 
     for (size_t i = 0; i < prog.bytecode_len; i++) {
         printf("%s%02"PRIX8, (i % 16) ? ((i % 8) ? " " : "  ") : "\n  ", prog.bytecode[i]);

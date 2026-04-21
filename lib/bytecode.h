@@ -12,17 +12,25 @@ typedef uint8_t u32be[4];
 typedef uint8_t u64be[8];
 
 typedef struct {
-    // TODO: Add useful trace info
-    char _placeholder;
-} trace_info;
+    uint32_t string_offset;
+    uint32_t string_len;
+} trace;
+
+typedef struct {
+    u32be string_offset;
+    u32be string_len;
+} trace_bytes;
 
 #define EACH_OPCODE(_) \
-    _(OP_TRACE, 1) /* debug trace with an identifier */ \
-    _(OP_PUSHINT, 2) /* push int constant */ \
-    _(OP_PUSHSTR, 3) /* push string constant */ \
-    _(OP_ADD, 4) /* builtin binary (+) operation */ \
-    _(OP_CALL, 5) /* push frame and jump to instruction */ \
-    _(OP_RETURN, 6) /* return from OP_CALL */
+    _(OP_JUMP,    0x01) /* jump to instruction if true */ \
+    _(OP_JUMPIF,  0x02) /* pop a value and jump to instruction if true */ \
+    _(OP_CALL,    0x03) /* push frame and jump to instruction */ \
+    _(OP_RETURN,  0x04) /* return from OP_CALL */ \
+    _(OP_PUSHINT, 0x20) /* push int constant */ \
+    _(OP_PUSHSTR, 0x21) /* push string constant */ \
+    _(OP_ADD,     0x30) /* builtin binary (+) operation */ \
+    _(OP_TRACE,   0x77) /* debug trace with an identifier */ \
+    _(OP_HALT,    0xFF) /* stop execution */
 
 #define ENUM_MEMBER(name, byte) name = byte,
 typedef enum { EACH_OPCODE(ENUM_MEMBER) } opcode;
@@ -36,13 +44,13 @@ typedef struct {
 } op_pushstr;
 
 typedef struct {
-    u16be      *version;
-    u16be      *trace_table_len;
-    trace_info *trace_table;
-    u32be      *string_bytes_len;
-    char       *string_bytes;
-    uint8_t    *bytecode;
-    size_t      bytecode_len;
+    u16be       *version;
+    u16be       *traces_len;
+    trace_bytes *traces;
+    u32be       *string_bytes_len;
+    char        *string_bytes;
+    uint8_t     *bytecode;
+    size_t       bytecode_len;
 } program;
 
 #define MAGIC_HAMMER "HAMMER"
@@ -60,10 +68,10 @@ void bytecode_put_u16be(Buffer *, uint16_t);
 void bytecode_put_u32be(Buffer *, uint32_t);
 void bytecode_put_u64be(Buffer *, uint64_t);
 
-void bytecode_put_trace(Buffer *, uint16_t);
+void bytecode_put_jump(Buffer *b, opcode op, size_t *addr_offset);
 void bytecode_put_pushint(Buffer *, uint64_t value);
 void bytecode_put_pushstr(Buffer *, uint32_t offset, uint32_t len);
-void bytecode_put_call(Buffer *b);
+void bytecode_put_trace(Buffer *, uint16_t);
 
 bool program_read(program *p, uint8_t *bytes, size_t len);
 

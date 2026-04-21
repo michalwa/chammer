@@ -1,6 +1,8 @@
 #include "bytecode.h"
 #include "utils.h"
 
+#define BYTECODE_ADDR_PLACEHOLDER 0xFFFFFFFF
+
 #define read_be_bytes(b, t) \
     do { \
         t v = 0; \
@@ -67,10 +69,10 @@ bool program_read(program *p, uint8_t *bytes, size_t len) {
     uint8_t *end = bytes + len;
 
     p->version = (u16be *)(bytes + sizeof(MAGIC_HAMMER) - 1);
-    p->trace_table_len = (u16be *)((uint8_t *)p->version + sizeof(*p->version));
-    p->trace_table = (trace_info *)((uint8_t *)p->trace_table_len + sizeof(*p->trace_table_len));
+    p->traces_len = (u16be *)((uint8_t *)p->version + sizeof(*p->version));
+    p->traces = (trace_bytes *)((uint8_t *)p->traces_len + sizeof(*p->traces_len));
 
-    p->string_bytes_len = (u32be *)(p->trace_table + u16be_value(*p->trace_table_len));
+    p->string_bytes_len = (u32be *)(p->traces + u16be_value(*p->traces_len));
     if ((uint8_t *)p->string_bytes_len >= end) return false;
 
     p->string_bytes = (char *)p->string_bytes_len + sizeof(*p->string_bytes_len);
@@ -83,9 +85,10 @@ bool program_read(program *p, uint8_t *bytes, size_t len) {
     return true;
 }
 
-void bytecode_put_trace(Buffer *b, uint16_t id) {
-    buffer_putc(b, OP_TRACE);
-    bytecode_put_u16be(b, id);
+void bytecode_put_jump(Buffer *b, opcode op, size_t *addr_offset) {
+    buffer_putc(b, op);
+    if (addr_offset) *addr_offset = b->len;
+    bytecode_put_u32be(b, BYTECODE_ADDR_PLACEHOLDER);
 }
 
 void bytecode_put_pushint(Buffer *b, uint64_t value) {
@@ -99,7 +102,7 @@ void bytecode_put_pushstr(Buffer *b, uint32_t offset, uint32_t len) {
     bytecode_put_u32be(b, len);
 }
 
-void bytecode_put_call(Buffer *b) {
-    buffer_putc(b, OP_CALL);
-    bytecode_put_u32be(b, 0xFFFFFFFF); // placeholder address to be mapped later
+void bytecode_put_trace(Buffer *b, uint16_t id) {
+    buffer_putc(b, (char)OP_TRACE);
+    bytecode_put_u16be(b, id);
 }
