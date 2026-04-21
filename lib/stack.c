@@ -45,8 +45,7 @@ void *stack_push(Stack *s) {
     stack_block *block = s->head;
 
     while (offset >= s->items_per_block) {
-        if (!block->next)
-            block->next = stack_block_new(s->item_size * s->items_per_block);
+        if (!block->next) block->next = stack_block_new(s->item_size * s->items_per_block);
 
         block = block->next;
         offset -= s->items_per_block;
@@ -96,7 +95,6 @@ void stack_clear(Stack *s) {
 
 size_t stack_count_blocks(Stack *s) {
     size_t n = 0;
-    for (stack_block *block = s->head; block; block = block->next)
-        n++;
+    for (stack_block *block = s->head; block; block = block->next) n++;
     return n;
 }

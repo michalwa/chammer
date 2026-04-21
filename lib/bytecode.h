@@ -21,16 +21,16 @@ typedef struct {
     u32be string_len;
 } trace_bytes;
 
-#define EACH_OPCODE(_) \
-    _(OP_JUMP,    0x01) /* jump to instruction if true */ \
-    _(OP_JUMPIF,  0x02) /* pop a value and jump to instruction if true */ \
-    _(OP_CALL,    0x03) /* push frame and jump to instruction */ \
-    _(OP_RETURN,  0x04) /* return from OP_CALL */ \
-    _(OP_PUSHINT, 0x20) /* push int constant */ \
-    _(OP_PUSHSTR, 0x21) /* push string constant */ \
-    _(OP_ADD,     0x30) /* builtin binary (+) operation */ \
-    _(OP_TRACE,   0x77) /* debug trace with an identifier */ \
-    _(OP_HALT,    0xFF) /* stop execution */
+#define EACH_OPCODE(_)                                                    \
+    _(OP_JUMP, 0x01)    /* jump to instruction if true */                 \
+    _(OP_JUMPIF, 0x02)  /* pop a value and jump to instruction if true */ \
+    _(OP_CALL, 0x03)    /* push frame and jump to instruction */          \
+    _(OP_RETURN, 0x04)  /* return from OP_CALL */                         \
+    _(OP_PUSHINT, 0x20) /* push int constant */                           \
+    _(OP_PUSHSTR, 0x21) /* push string constant */                        \
+    _(OP_ADD, 0x30)     /* builtin binary (+) operation */                \
+    _(OP_TRACE, 0x77)   /* debug trace with an identifier */              \
+    _(OP_HALT, 0xFF)    /* stop execution */
 
 #define ENUM_MEMBER(name, byte) name = byte,
 typedef enum { EACH_OPCODE(ENUM_MEMBER) } opcode;
@@ -53,7 +53,7 @@ typedef struct {
     size_t       bytecode_len;
 } program;
 
-#define MAGIC_HAMMER "HAMMER"
+#define MAGIC_HAMMER     "HAMMER"
 #define BYTECODE_VERSION 0x0001
 
 uint16_t u16be_value(u16be);

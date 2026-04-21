@@ -58,18 +58,18 @@
         }                                                                             \
     } while (0)
 
-#define ASSERT_STRING_EQ(a, b)                                                         \
-    do {                                                                              \
-        string a_ = (a);                                                         \
-        string b_ = (b);                                                         \
-        if (!string_eq(a_, b_)) {                                                    \
+#define ASSERT_STRING_EQ(a, b)                                                      \
+    do {                                                                            \
+        string a_ = (a);                                                            \
+        string b_ = (b);                                                            \
+        if (!string_eq(a_, b_)) {                                                   \
             test_printf("Assertion failed: string_eq(" #a ", " #b ")\n   left = "); \
             buffer_print_string_literal(output_, a_);                               \
-            test_printf("\n  right = ");                                              \
+            test_printf("\n  right = ");                                            \
             buffer_print_string_literal(output_, b_);                               \
-            test_printf("\n%s:%d\n", __FILE__, __LINE__);                             \
-            return TEST_FAIL;                                                         \
-        }                                                                             \
+            test_printf("\n%s:%d\n", __FILE__, __LINE__);                           \
+            return TEST_FAIL;                                                       \
+        }                                                                           \
     } while (0)
 
 void buffer_print_c_string_literal(Buffer *, const char *);

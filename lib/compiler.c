@@ -1,7 +1,8 @@
+#include "compiler.h"
+
 #include <string.h>
 
 #include "bytecode.h"
-#include "compiler.h"
 #include "utils.h"
 
 /*
@@ -28,7 +29,7 @@ typedef struct {
     /*
      * byte offset of instruction address relative to start of `from_pid` proc
      */
-    size_t addr_offset;
+    size_t   addr_offset;
 } jump;
 
 static void block_init(Block *b) {
@@ -103,8 +104,7 @@ static void compiler_visit(Compiler *c, node *n);
 
 static void compiler_visit_int(Compiler *c, node *n) {
     uint64_t value = 0;
-    for (size_t i = 0; i < n->token.len; i++)
-        value = (value * 10) + (n->token.str[i] - '0');
+    for (size_t i = 0; i < n->token.len; i++) value = (value * 10) + (n->token.str[i] - '0');
 
     Block *b;
     get_current(c, &b, NULL);
@@ -115,7 +115,7 @@ static void compiler_visit_string(Compiler *c, node *n) {
     // TODO: String interning
 
     compile_string(token_string(n->token), &c->string_buffer);
-    symbol s = string_pool_intern(&c->strings, buffer_string(&c->string_buffer));
+    symbol             s = string_pool_intern(&c->strings, buffer_string(&c->string_buffer));
     string_pool_entry *e = (string_pool_entry *)vector_get(&c->strings.entries, s);
     buffer_clear(&c->string_buffer);
 
@@ -127,11 +127,11 @@ static void compiler_visit_string(Compiler *c, node *n) {
 static void compiler_visit_ident(Compiler *c, node *n) {
     // TODO: Scope/name resolution
 
-    symbol s = string_pool_intern(&c->strings, token_string(n->token));
+    symbol             s = string_pool_intern(&c->strings, token_string(n->token));
     string_pool_entry *e = (string_pool_entry *)vector_get(&c->strings.entries, s);
 
     uint16_t trace_id = c->traces.len;
-    trace *t = (trace *)vector_push(&c->traces);
+    trace   *t = (trace *)vector_push(&c->traces);
     t->string_offset = e->offset;
     t->string_len = e->len;
 
@@ -141,14 +141,12 @@ static void compiler_visit_ident(Compiler *c, node *n) {
 }
 
 static void compiler_visit_binary(Compiler *c, node *n) {
-    for (node *child = n->first_child; child; child = child->next_sibling)
-        compiler_visit(c, child);
+    for (node *child = n->first_child; child; child = child->next_sibling) compiler_visit(c, child);
 
     Block *b;
     get_current(c, &b, NULL);
 
-    if (string_eq(token_string(n->token), STRING("+")))
-        buffer_putc(&b->bytecode, OP_ADD);
+    if (string_eq(token_string(n->token), STRING("+"))) buffer_putc(&b->bytecode, OP_ADD);
 
     // TODO: Other built-ins and user functions
 }
@@ -191,8 +189,7 @@ static void compiler_visit(Compiler *c, node *n) {
     case N_BINARY: compiler_visit_binary(c, n); break;
     case N_IF: compiler_visit_if(c, n); break;
     case N_DOBLK: compiler_visit_doblk(c, n); break;
-    default:
-        panic("unsupported node: %s", node_type_name(n->type));
+    default: panic("unsupported node: %s", node_type_name(n->type));
     }
 }
 
@@ -230,8 +227,7 @@ void compiler_write_program(Compiler *c, Buffer *b) {
         bytecode_set_u32be(from_block->bytecode.data + j->addr_offset, to_block->offset);
     }
 
-    for (EACH_IN_VECTOR(c->blocks, Block, block))
-        buffer_puts(b, buffer_string(&block->bytecode));
+    for (EACH_IN_VECTOR(c->blocks, Block, block)) buffer_puts(b, buffer_string(&block->bytecode));
 }
 
 void compile_string(string str, Buffer *out) {
@@ -249,8 +245,7 @@ void compile_string(string str, Buffer *out) {
             case 'n': buffer_putc(out, '\n'); break;
             case 'r': buffer_putc(out, '\r'); break;
             // TODO: Add other escapes
-            default:
-                buffer_putc(out, str.data[i]);
+            default: buffer_putc(out, str.data[i]);
             }
 
             escape = false;

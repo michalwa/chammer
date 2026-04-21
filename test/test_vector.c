@@ -1,5 +1,5 @@
-#include "lib/test.h"
 #include "../lib/vector.h"
+#include "lib/test.h"
 
 TEST(vector) {
     Vector v;
@@ -18,9 +18,7 @@ TEST(vector) {
     ASSERT_INT_EQ(v.capacity_items, 4);
 
     uint32_t sum = 0;
-    for (size_t i = 0; i < v.len; i++) {
-        sum += *(uint32_t *)vector_get(&v, i);
-    }
+    for (size_t i = 0; i < v.len; i++) sum += *(uint32_t *)vector_get(&v, i);
     ASSERT_INT_EQ(sum, 6);
 
     sum = 0;

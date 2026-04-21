@@ -9,10 +9,7 @@ static uint64_t string_hash(string str) {
 }
 
 static inline string entry_string(StringPool *sp, string_pool_entry e) {
-    return (string){
-        .data = sp->buffer.data + e.offset,
-        .len = e.len
-    };
+    return (string){ .data = sp->buffer.data + e.offset, .len = e.len };
 }
 
 void string_pool_init(StringPool *sp) {
@@ -31,11 +28,10 @@ symbol string_pool_intern(StringPool *sp, string str) {
     for (size_t i = 0; i < sp->entries.len; i++) {
         string_pool_entry *e = (string_pool_entry *)vector_get(&sp->entries, i);
 
-        if (hash == e->hash && string_eq(str, entry_string(sp, *e)))
-            return i;
+        if (hash == e->hash && string_eq(str, entry_string(sp, *e))) return i;
     }
 
-    symbol id = sp->entries.len;
+    symbol             id = sp->entries.len;
     string_pool_entry *new_entry = (string_pool_entry *)vector_push(&sp->entries);
     new_entry->len = str.len;
     new_entry->hash = hash;

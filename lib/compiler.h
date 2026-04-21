@@ -3,8 +3,8 @@
 
 #include "ast.h"
 #include "buffer.h"
-#include "vector.h"
 #include "string_pool.h"
+#include "vector.h"
 
 typedef struct {
     Buffer     string_buffer;

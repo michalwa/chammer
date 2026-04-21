@@ -1,16 +1,17 @@
 #include "bytecode.h"
+
 #include "utils.h"
 
 #define BYTECODE_ADDR_PLACEHOLDER 0xFFFFFFFF
 
-#define read_be_bytes(b, t) \
-    do { \
-        t v = 0; \
+#define read_be_bytes(b, t)                      \
+    do {                                         \
+        t v = 0;                                 \
         for (size_t i = 0; i < sizeof(t); i++) { \
-            v <<= 8; \
-            v |= b[i]; \
-        } \
-        return v; \
+            v <<= 8;                             \
+            v |= b[i];                           \
+        }                                        \
+        return v;                                \
     } while (0)
 
 inline uint16_t u16be_value(u16be bytes) {
@@ -27,10 +28,9 @@ inline uint64_t u64be_value(u64be bytes) {
 
 #undef read_be_bytes
 
-#define set_be_bytes(c, v) \
-    do { \
-        for (intptr_t i = sizeof(v) - 1; i >= 0; i--) \
-            *c++ = (uint8_t)((v >> (i << 3)) & 0xFF); \
+#define set_be_bytes(c, v)                                                                      \
+    do {                                                                                        \
+        for (intptr_t i = sizeof(v) - 1; i >= 0; i--) *c++ = (uint8_t)((v >> (i << 3)) & 0xFF); \
     } while (0)
 
 inline void bytecode_set_u16be(char *c, uint16_t v) {

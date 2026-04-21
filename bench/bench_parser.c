@@ -29,7 +29,7 @@ UBENCH_F_SETUP(parse_binary) {
     srand(0);
 
     for (int i = 0; i < 10000; i++) {
-        char operator= OPERATOR_SET[rand() % (sizeof(OPERATOR_SET) - 1)];
+        char operator = OPERATOR_SET[rand() % (sizeof(OPERATOR_SET) - 1)];
         char operand = 'a' + (rand() % ('z' - 'a'));
         buffer_printf(buffer, " %c %c", operator, operand);
     }
