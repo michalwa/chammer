@@ -3,9 +3,18 @@
 #include <inttypes.h>
 #include <string.h>
 
+// https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function#FNV_hash_parameters
+#define FNV_OFFSET_BASIS 0xCBF29CE484222325
+#define FNV_PRIME 0x100000001B3
+
 static uint64_t string_hash(string str) {
-    // TODO
-    return (str.len > 0) ? (uint64_t)str.data[0] : 0;
+    // https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function#FNV-1_hash
+    uint64_t hash = FNV_OFFSET_BASIS;
+
+    for (size_t i = 0; i < str.len; i++)
+        hash = (hash * FNV_PRIME) ^ str.data[i];
+
+    return hash;
 }
 
 static inline string entry_string(StringPool *sp, string_pool_entry e) {
