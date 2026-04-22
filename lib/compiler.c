@@ -15,11 +15,10 @@ typedef struct {
 
 typedef size_t block_id;
 
-typedef struct Frame Frame;
-struct Frame {
-    Frame   *prev;
-    block_id block;
-    Vector   locals;
+typedef struct Scope Scope;
+struct Scope {
+    Scope *outer;
+    Vector locals;
 };
 
 /*
@@ -35,23 +34,13 @@ typedef struct {
     size_t   addr_offset;
 } jump;
 
-static inline void block_init(Block *b) {
+static void block_init(Block *b) {
     buffer_init(&b->bytecode);
     b->offset = 0; // offset is only calcuated in `compiler_write_program`
 }
 
-static inline void block_free(Block *b) {
+static void block_free(Block *b) {
     buffer_free(&b->bytecode);
-}
-
-static inline void frame_init(Frame *f, Frame *prev, block_id block) {
-    f->prev = prev;
-    f->block = block;
-    vector_init(&f->locals, symbol);
-}
-
-static inline void frame_free(Frame *f) {
-    vector_free(&f->locals);
 }
 
 void compiler_init(Compiler *c) {
@@ -74,30 +63,21 @@ void compiler_free(Compiler *c) {
     vector_free(&c->traces);
 }
 
-static inline block_id push_block(Compiler *c) {
-    block_init((Block *)vector_push(&c->blocks));
-    return c->blocks.len - 1;
+static void scope_init(Scope *s, Scope *outer) {
+    s->outer = outer;
+    vector_init(&s->locals, symbol);
 }
 
-static inline Block *get_block(Compiler *c, Frame *f) {
-    return (Block *)vector_get(&c->blocks, f->block);
-}
-
-static void put_jump(Compiler *c, Frame *f, opcode op, block_id block) {
-    jump *j = (jump *)vector_push(&c->jumps);
-    j->from_block = f->block;
-    j->to_block = block;
-
-    Block *b = get_block(c, f);
-    bytecode_put_jump(&b->bytecode, op, &j->addr_offset);
+static void scope_free(Scope *s) {
+    vector_free(&s->locals);
 }
 
 /*
  * Resolves the name to a local ID without searching previous frames
  */
-static bool get_strict_local(Frame *f, symbol name, uint8_t *id) {
-    for (uint8_t i = 0; i < (uint8_t)f->locals.len; i++) {
-        symbol *local = (symbol *)vector_get(&f->locals, i);
+static bool get_strict_local(Scope *s, symbol name, uint8_t *id) {
+    for (uint8_t i = 0; i < (uint8_t)s->locals.len; i++) {
+        symbol *local = (symbol *)vector_get(&s->locals, i);
         if (name == *local) {
             *id = i;
             return true;
@@ -107,59 +87,75 @@ static bool get_strict_local(Frame *f, symbol name, uint8_t *id) {
     return false;
 }
 
-static uint8_t get_or_insert_local(Frame *f, symbol name) {
+static uint8_t get_or_insert_local(Scope *s, symbol name) {
     uint8_t id;
-    if (get_strict_local(f, name, &id)) return id;
+    if (get_strict_local(s, name, &id)) return id;
 
-    *(symbol *)vector_push(&f->locals) = name;
-    return (uint8_t)(f->locals.len - 1);
+    *(symbol *)vector_push(&s->locals) = name;
+    return (uint8_t)(s->locals.len - 1);
 }
 
-static void visit(Compiler *c, Frame *f, node *n);
-static void visit_pattern(Compiler *c, Frame *f, node *lhs, node *rhs, node *cont);
+static inline block_id push_block(Compiler *c) {
+    block_init((Block *)vector_push(&c->blocks));
+    return c->blocks.len - 1;
+}
 
-static void visit_int(Compiler *c, Frame *f, node *n) {
+static inline Block *get_block(Compiler *c, block_id bid) {
+    return (Block *)vector_get(&c->blocks, bid);
+}
+
+static void put_jump(Compiler *c, opcode op, block_id from_block, block_id to_block) {
+    jump *j = (jump *)vector_push(&c->jumps);
+    j->from_block = from_block;
+    j->to_block = to_block;
+
+    Block *b = get_block(c, from_block);
+    bytecode_put_jump(&b->bytecode, op, &j->addr_offset);
+}
+
+static void visit(Compiler *, Scope *, block_id *, node *n);
+static void visit_pattern(Compiler *, Scope *, block_id *, node *lhs, node *rhs, node *cont);
+
+static void visit_int(Compiler *c, block_id bid, node *n) {
     uint64_t value = 0;
     for (size_t i = 0; i < n->token.len; i++) value = (value * 10) + (n->token.str[i] - '0');
 
-    Block *b = get_block(c, f);
+    Block *b = get_block(c, bid);
     bytecode_put_pushint(&b->bytecode, value);
 }
 
-static void visit_string(Compiler *c, Frame *f, node *n) {
+static void visit_string(Compiler *c, block_id bid, node *n) {
     compile_string(token_string(n->token), &c->string_buffer);
     symbol             s = string_pool_intern(&c->strings, buffer_string(&c->string_buffer));
     string_pool_entry *e = (string_pool_entry *)vector_get(&c->strings.entries, s);
     buffer_clear(&c->string_buffer);
 
-    Block *b = get_block(c, f);
+    Block *b = get_block(c, bid);
     bytecode_put_pushstr(&b->bytecode, e->offset, e->len);
 }
 
-static void visit_ident(Compiler *c, Frame *f, node *n) {
+static void visit_ident(Compiler *c, Scope *scope, block_id bid, node *n) {
     string name = token_string(n->token);
-    symbol s = string_pool_intern(&c->idents, name);
+    symbol sym = string_pool_intern(&c->idents, name);
 
     uint8_t id;
-    if (!get_strict_local(f, s, &id)) panic("unresolved symbol: " F_STRING, FA_STRING(name));
+    if (!get_strict_local(scope, sym, &id)) panic("unresolved symbol: " F_STRING, FA_STRING(name));
 
-    Block *b = get_block(c, f);
+    Block *b = get_block(c, bid);
     bytecode_put_load(&b->bytecode, id);
 }
 
-static void visit_binary(Compiler *c, Frame *f, node *n) {
-    for (node *child = n->first_child; child; child = child->next_sibling) visit(c, f, child);
+static void visit_binary(Compiler *c, Scope *scope, block_id *bid, node *n) {
+    for (node *child = n->first_child; child; child = child->next_sibling) visit(c, scope, bid, child);
 
-    Block *b = get_block(c, f);
+    Block *b = get_block(c, *bid);
 
     if (string_eq(token_string(n->token), STRING("+"))) buffer_putc(&b->bytecode, OP_ADD);
 
     // TODO: Other built-ins and user functions
 }
 
-static void visit_if(Compiler *c, Frame *f, node *n) {
-    Frame then_frame;
-
+static void visit_if(Compiler *c, Scope *scope, block_id *bid, node *n) {
     node *cond = n->first_child;
     node *then = cond->next_sibling;
     node *elze = then->next_sibling;
@@ -168,81 +164,81 @@ static void visit_if(Compiler *c, Frame *f, node *n) {
     block_id cont_block = push_block(c);
 
     block_id then_block = push_block(c);
-    frame_init(&then_frame, f, then_block);
-    visit(c, &then_frame, then);
-    frame_free(&then_frame);
-    put_jump(c, f, OP_JUMP, cont_block);
+    visit(c, scope, &then_block, then);
+    put_jump(c, OP_JUMP, *bid, cont_block);
 
-    visit(c, f, cond);
-    put_jump(c, f, OP_JUMPIF, then_block);
-    visit(c, f, elze);
+    visit(c, scope, bid, cond);
+    put_jump(c, OP_JUMPIF, *bid, then_block);
+    visit(c, scope, bid, elze);
 
-    f->block = cont_block; // resume in continuation block
+    *bid = cont_block; // resume in continuation block
 }
 
-static void visit_doblk(Compiler *c, Frame *f, node *n) {
+static void visit_doblk(Compiler *c, Scope *scope, block_id *bid, node *n) {
     if (node_is_expr(*n->first_child)) {
-        visit(c, f, n->first_child);
+        visit(c, scope, bid, n->first_child);
         return;
     }
 
     node *lhs, *rhs;
     node *stmt = n->first_child;
-    node  cont = {
-         .type = N_DOBLK,
-         .first_child = stmt->next_sibling,
+
+    node cont = {
+        .type = N_DOBLK,
+        .first_child = stmt->next_sibling,
     };
 
     switch (stmt->type) {
     case N_ASSIGN:
         lhs = stmt->first_child;
         rhs = lhs->next_sibling;
-        visit_pattern(c, f, lhs, rhs, &cont);
+        visit_pattern(c, scope, bid, lhs, rhs, &cont);
         break;
     default: panic("unsupported node: %s", node_type_name(stmt->type));
     }
 }
 
-static void visit(Compiler *c, Frame *f, node *n) {
+static void visit(Compiler *c, Scope *scope, block_id *bid, node *n) {
     switch (n->type) {
-    case N_INT: visit_int(c, f, n); break;
-    case N_STRING: visit_string(c, f, n); break;
-    case N_IDENT: visit_ident(c, f, n); break;
-    case N_BINARY: visit_binary(c, f, n); break;
-    case N_IF: visit_if(c, f, n); break;
-    case N_DOBLK: visit_doblk(c, f, n); break;
+    case N_INT: visit_int(c, *bid, n); break;
+    case N_STRING: visit_string(c, *bid, n); break;
+    case N_IDENT: visit_ident(c, scope, *bid, n); break;
+    case N_BINARY: visit_binary(c, scope, bid, n); break;
+    case N_IF: visit_if(c, scope, bid, n); break;
+    case N_DOBLK: visit_doblk(c, scope, bid, n); break;
     default: panic("unsupported node: %s", node_type_name(n->type));
     }
 }
 
-static void visit_pident(Compiler *c, Frame *f, node *lhs, node *rhs, node *cont) {
-    visit(c, f, rhs);
+static void visit_pident(Compiler *c, Scope *scope, block_id *bid, node *lhs, node *rhs, node *cont) {
+    visit(c, scope, bid, rhs);
 
-    symbol  s = string_pool_intern(&c->idents, token_string(lhs->token));
-    uint8_t i = get_or_insert_local(f, s);
+    symbol  sym = string_pool_intern(&c->idents, token_string(lhs->token));
+    uint8_t i = get_or_insert_local(scope, sym);
 
-    Block *b = get_block(c, f);
+    Block *b = get_block(c, *bid);
     bytecode_put_store(&b->bytecode, i);
 
-    visit(c, f, cont);
+    visit(c, scope, bid, cont);
 }
 
-static void visit_pattern(Compiler *c, Frame *f, node *lhs, node *rhs, node *cont) {
+static void visit_pattern(Compiler *c, Scope *scope, block_id *bid, node *lhs, node *rhs, node *cont) {
     switch (lhs->type) {
-    case N_PIDENT: visit_pident(c, f, lhs, rhs, cont); break;
+    case N_PIDENT: visit_pident(c, scope, bid, lhs, rhs, cont); break;
     default: panic("unsupported node: %s", node_type_name(lhs->type));
     }
 }
 
 void compiler_visit_program(Compiler *c, node *n) {
-    Frame f;
-    frame_init(&f, NULL, push_block(c));
+    Scope scope;
+    scope_init(&scope, NULL);
 
-    visit(c, &f, n);
+    block_id bid = push_block(c);
 
-    Block *b = get_block(c, &f);
-    frame_free(&f);
+    visit(c, &scope, &bid, n);
+    scope_free(&scope);
 
+    Block *b = get_block(c, bid);
     buffer_putc(&b->bytecode, (char)OP_HALT);
 }
 
