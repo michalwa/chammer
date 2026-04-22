@@ -38,18 +38,6 @@ int main(void) {
         panic("could not read compiled program");
 
     printf("version:           %04" PRIX16 "\n", u16be_value(*prog.version));
-
-    uint16_t traces_len = u16be_value(*prog.traces_len);
-
-    printf("traces len:        %04" PRIX16 "\n", traces_len);
-    printf("traces:\n");
-
-    for (uint32_t i = 0; i < traces_len; i++) {
-        uint32_t string_offset = u32be_value(prog.traces[i].string_offset);
-        uint32_t string_len = u32be_value(prog.traces[i].string_len);
-        printf("  %04X %.*s\n", i, string_len, prog.string_bytes + string_offset);
-    }
-
     printf("string bytes len:  %08" PRIX32 "\n", u32be_value(*prog.string_bytes_len));
     printf("string bytes:      %.*s\n", u32be_value(*prog.string_bytes_len), prog.string_bytes);
     printf("bytecode len:      %zX\n", prog.bytecode_len);

@@ -69,10 +69,7 @@ bool program_read(program *p, uint8_t *bytes, size_t len) {
     uint8_t *end = bytes + len;
 
     p->version = (u16be *)(bytes + sizeof(MAGIC_HAMMER) - 1);
-    p->traces_len = (u16be *)((uint8_t *)p->version + sizeof(*p->version));
-    p->traces = (trace_bytes *)((uint8_t *)p->traces_len + sizeof(*p->traces_len));
-
-    p->string_bytes_len = (u32be *)(p->traces + u16be_value(*p->traces_len));
+    p->string_bytes_len = (u32be *)((uint8_t *)p->version + sizeof(*p->version));
     if ((uint8_t *)p->string_bytes_len >= end) return false;
 
     p->string_bytes = (char *)p->string_bytes_len + sizeof(*p->string_bytes_len);
@@ -110,9 +107,4 @@ void bytecode_put_pushstr(Buffer *b, uint32_t offset, uint32_t len) {
     buffer_putc(b, OP_PUSHSTR);
     bytecode_put_u32be(b, offset);
     bytecode_put_u32be(b, len);
-}
-
-void bytecode_put_trace(Buffer *b, uint16_t id) {
-    buffer_putc(b, (char)OP_TRACE);
-    bytecode_put_u16be(b, id);
 }

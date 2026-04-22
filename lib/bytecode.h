@@ -11,16 +11,6 @@ typedef uint8_t u16be[2];
 typedef uint8_t u32be[4];
 typedef uint8_t u64be[8];
 
-typedef struct {
-    uint32_t string_offset;
-    uint32_t string_len;
-} trace;
-
-typedef struct {
-    u32be string_offset;
-    u32be string_len;
-} trace_bytes;
-
 #define EACH_OPCODE(_)                                                    \
     _(OP_JUMP, 0x01)    /* jump to instruction if true */                 \
     _(OP_JUMPIF, 0x02)  /* pop a value and jump to instruction if true */ \
@@ -31,7 +21,6 @@ typedef struct {
     _(OP_PUSHINT, 0x20) /* push int constant */                           \
     _(OP_PUSHSTR, 0x21) /* push string constant */                        \
     _(OP_ADD, 0x30)     /* builtin binary (+) operation */                \
-    _(OP_TRACE, 0x77)   /* debug trace with an identifier */              \
     _(OP_HALT, 0xFF)    /* stop execution */
 
 #define ENUM_MEMBER(name, byte) name = byte,
@@ -47,8 +36,6 @@ typedef struct {
 
 typedef struct {
     u16be       *version;
-    u16be       *traces_len;
-    trace_bytes *traces;
     u32be       *string_bytes_len;
     char        *string_bytes;
     uint8_t     *bytecode;
@@ -75,7 +62,6 @@ void bytecode_put_load(Buffer *, uint8_t);
 void bytecode_put_store(Buffer *, uint8_t);
 void bytecode_put_pushint(Buffer *, uint64_t value);
 void bytecode_put_pushstr(Buffer *, uint32_t offset, uint32_t len);
-void bytecode_put_trace(Buffer *, uint16_t);
 
 bool program_read(program *p, uint8_t *bytes, size_t len);
 

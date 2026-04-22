@@ -49,7 +49,6 @@ void compiler_init(Compiler *c) {
     string_pool_init(&c->idents);
     vector_init(&c->blocks, Block);
     vector_init(&c->jumps, jump);
-    vector_init(&c->traces, trace);
 }
 
 void compiler_free(Compiler *c) {
@@ -60,7 +59,6 @@ void compiler_free(Compiler *c) {
     string_pool_free(&c->idents);
     vector_free(&c->blocks);
     vector_free(&c->jumps);
-    vector_free(&c->traces);
 }
 
 static void scope_init(Scope *s, Scope *outer) {
@@ -245,13 +243,6 @@ void compiler_visit_program(Compiler *c, node *n) {
 void compiler_write_program(Compiler *c, Buffer *b) {
     buffer_puts(b, STRING(MAGIC_HAMMER));
     bytecode_put_u16be(b, BYTECODE_VERSION);
-
-    bytecode_put_u16be(b, (uint16_t)c->traces.len);
-
-    for (EACH_IN_VECTOR(c->traces, trace, t)) {
-        bytecode_put_u32be(b, t->string_offset);
-        bytecode_put_u32be(b, t->string_len);
-    }
 
     bytecode_put_u32be(b, (uint32_t)c->strings.buffer.len);
     buffer_puts(b, buffer_string(&c->strings.buffer));
