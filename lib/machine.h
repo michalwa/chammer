@@ -15,9 +15,9 @@ typedef struct {
 } Machine;
 
 #define EACH_VM_VALUE_TYPE(_) \
-    _(V_INT) \
-    _(V_FLOAT) \
-    _(V_STRING) \
+    _(V_INT)                  \
+    _(V_FLOAT)                \
+    _(V_STRING)               \
     _(V_BOOL)
 
 #define ENUM_MEMBER(name) name,
@@ -27,6 +27,7 @@ typedef enum { EACH_VM_VALUE_TYPE(ENUM_MEMBER) } vm_value_type;
 typedef struct {
     vm_value_type type;
     union {
+        // TODO: make this `int64_t` obviously
         uint64_t int_value;
         double   float_value;
         bool     bool_value;

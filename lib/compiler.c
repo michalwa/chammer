@@ -111,6 +111,15 @@ static void put_jump(Compiler *c, opcode op, block_id from_block, block_id to_bl
     bytecode_put_jump(&b->bytecode, op, &j->addr_offset);
 }
 
+static void put_call(Compiler *c, block_id from_block, block_id to_block, Scope *to_block_scope) {
+    jump *j = (jump *)vector_push(&c->jumps);
+    j->from_block = from_block;
+    j->to_block = to_block;
+
+    Block *b = get_block(c, from_block);
+    bytecode_put_call(&b->bytecode, (uint8_t)to_block_scope->locals.len, &j->addr_offset);
+}
+
 static void visit(Compiler *, Scope *, block_id *, node *n);
 static void visit_pattern(Compiler *, Scope *, block_id *, node *lhs, node *rhs, node *cont);
 
@@ -144,7 +153,8 @@ static void visit_ident(Compiler *c, Scope *scope, block_id bid, node *n) {
 }
 
 static void visit_binary(Compiler *c, Scope *scope, block_id *bid, node *n) {
-    for (node *child = n->first_child; child; child = child->next_sibling) visit(c, scope, bid, child);
+    for (node *child = n->first_child; child; child = child->next_sibling)
+        visit(c, scope, bid, child);
 
     Block *b = get_block(c, *bid);
 
@@ -208,7 +218,9 @@ static void visit(Compiler *c, Scope *scope, block_id *bid, node *n) {
     }
 }
 
-static void visit_pident(Compiler *c, Scope *scope, block_id *bid, node *lhs, node *rhs, node *cont) {
+static void visit_pident(
+    Compiler *c, Scope *scope, block_id *bid, node *lhs, node *rhs, node *cont
+) {
     visit(c, scope, bid, rhs);
 
     symbol  sym = string_pool_intern(&c->idents, token_string(lhs->token));
@@ -220,7 +232,9 @@ static void visit_pident(Compiler *c, Scope *scope, block_id *bid, node *lhs, no
     visit(c, scope, bid, cont);
 }
 
-static void visit_pattern(Compiler *c, Scope *scope, block_id *bid, node *lhs, node *rhs, node *cont) {
+static void visit_pattern(
+    Compiler *c, Scope *scope, block_id *bid, node *lhs, node *rhs, node *cont
+) {
     switch (lhs->type) {
     case N_PIDENT: visit_pident(c, scope, bid, lhs, rhs, cont); break;
     default: panic("unsupported node: %s", node_type_name(lhs->type));
@@ -231,13 +245,16 @@ void compiler_visit_program(Compiler *c, node *n) {
     Scope scope;
     scope_init(&scope, NULL);
 
+    block_id prelude_bid = push_block(c);
     block_id bid = push_block(c);
 
     visit(c, &scope, &bid, n);
-    scope_free(&scope);
 
-    Block *b = get_block(c, bid);
-    buffer_putc(&b->bytecode, (char)OP_HALT);
+    Block *last_block = get_block(c, bid);
+    buffer_putc(&last_block->bytecode, (char)OP_HALT);
+
+    put_call(c, prelude_bid, bid, &scope);
+    scope_free(&scope);
 }
 
 void compiler_write_program(Compiler *c, Buffer *b) {

@@ -29,24 +29,77 @@ static uint64_t read_u64be(Machine *m) {
     return value;
 }
 
+static inline uint8_t *fnstack_top(Machine *m) {
+    return (uint8_t *)(m->fnstack.data + m->fnstack.len);
+}
+
+static inline size_t local_offset(uint8_t i) {
+    return sizeof(uint32_t) + (i + 1) * sizeof(vm_value);
+}
+
+static void push_frame(Machine *m, uint8_t locals) {
+    buffer_alloc(&m->fnstack, (size_t)locals * sizeof(vm_value) + sizeof(uint32_t));
+    uint32_t return_addr = (uint32_t)(m->ip - m->program);
+    *(uint32_t *)(fnstack_top(m) - sizeof(uint32_t)) = return_addr;
+}
+
+static inline void push_operand(Machine *m, vm_value v) {
+    *(vm_value *)stack_push(&m->opstack) = v;
+}
+
+static vm_value pop_operand(Machine *m) {
+    vm_value v = *(vm_value *)stack_top(&m->opstack);
+    stack_pop(&m->opstack);
+    return v;
+}
+
+static void load_local(Machine *m, uint8_t i) {
+    vm_value *local = (vm_value *)(fnstack_top(m) - local_offset(i));
+    push_operand(m, *local);
+}
+
+static void store_local(Machine *m, uint8_t i) {
+    vm_value *local = (vm_value *)(fnstack_top(m) - local_offset(i));
+    *local = pop_operand(m);
+}
+
 bool machine_step(Machine *m) {
-    vm_value *v;
+    vm_value v1, v2;
 
     switch (*m->ip) {
     case OP_JUMP:
         m->ip++;
         m->ip = m->program + read_u32be(m);
         break;
+    case OP_CALL:
+        m->ip++;
+        push_frame(m, *m->ip++);
+        m->ip = m->program + read_u32be(m);
+        break;
+    case OP_LOAD:
+        m->ip++;
+        load_local(m, *m->ip++);
+        break;
+    case OP_STORE:
+        m->ip++;
+        store_local(m, *m->ip++);
+        break;
     case OP_PUSHINT:
         m->ip++;
-        v = (vm_value *)stack_push(&m->opstack);
-        v->type = V_INT;
-        v->value.int_value = read_u64be(m);
+        v1.type = V_INT;
+        v1.value.int_value = read_u64be(m);
+        push_operand(m, v1);
         break;
-    case OP_HALT:
-        return false;
-    default:
-        panic("unsupported opcode: %02X", *m->ip);
+    case OP_ADD:
+        m->ip++;
+        v1 = pop_operand(m);
+        v2 = pop_operand(m);
+        v1.type = V_INT;
+        v1.value.int_value += v2.value.int_value;
+        push_operand(m, v1);
+        break;
+    case OP_HALT: return false;
+    default: panic("unsupported opcode: %02X", *m->ip);
     }
 
     return true;

@@ -35,11 +35,11 @@ typedef struct {
 } op_pushstr;
 
 typedef struct {
-    u16be       *version;
-    u32be       *string_bytes_len;
-    char        *string_bytes;
-    uint8_t     *bytecode;
-    size_t       bytecode_len;
+    u16be   *version;
+    u32be   *string_bytes_len;
+    char    *string_bytes;
+    uint8_t *bytecode;
+    size_t   bytecode_len;
 } program;
 
 #define MAGIC_HAMMER     "HAMMER"
@@ -58,8 +58,9 @@ void bytecode_put_u32be(Buffer *, uint32_t);
 void bytecode_put_u64be(Buffer *, uint64_t);
 
 void bytecode_put_jump(Buffer *b, opcode op, size_t *addr_offset);
-void bytecode_put_load(Buffer *, uint8_t);
-void bytecode_put_store(Buffer *, uint8_t);
+void bytecode_put_call(Buffer *b, uint8_t locals, size_t *addr_offset);
+void bytecode_put_load(Buffer *, uint8_t local);
+void bytecode_put_store(Buffer *, uint8_t local);
 void bytecode_put_pushint(Buffer *, uint64_t value);
 void bytecode_put_pushstr(Buffer *, uint32_t offset, uint32_t len);
 

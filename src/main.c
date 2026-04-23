@@ -54,6 +54,16 @@ int main(void) {
 
     while (machine_step(&vm));
 
+    printf("\nbytecode executed\nstack:\n");
+
+    for (stack_iter i = stack_iter_begin(&vm.opstack); stack_iter_next(&i);) {
+        vm_value *v = (vm_value *)i.item;
+        switch (v->type) {
+        case V_INT: printf("  %" PRIu64 "\n", v->value.int_value); break;
+        default: printf("  (value)\n"); break;
+        }
+    }
+
     machine_free(&vm);
     buffer_free(&comp_buffer);
 
