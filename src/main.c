@@ -6,7 +6,7 @@
 #include "../lib/parser.h"
 #include "../lib/utils.h"
 
-#define PROGRAM_SOURCE "let (x, y) = 1; x + y"
+#define PROGRAM_SOURCE "let x = 1; let f = \\y -> x + y; f 2"
 
 int main(void) {
     token        t;

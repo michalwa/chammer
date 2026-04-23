@@ -19,6 +19,7 @@ typedef struct Scope Scope;
 struct Scope {
     Scope *outer;
     Vector locals;
+    Vector captures;
 };
 
 /*
@@ -64,20 +65,22 @@ void compiler_free(Compiler *c) {
 static void scope_init(Scope *s, Scope *outer) {
     s->outer = outer;
     vector_init(&s->locals, symbol);
+    vector_init(&s->captures, symbol);
 }
 
 static void scope_free(Scope *s) {
     vector_free(&s->locals);
+    vector_free(&s->captures);
 }
 
 /*
  * Resolves the name to a local ID without searching previous frames
  */
-static bool get_strict_local(Scope *s, symbol name, uint8_t *id) {
+static bool scope_get_local(Scope *s, symbol name, uint8_t *id) {
     for (uint8_t i = 0; i < (uint8_t)s->locals.len; i++) {
         symbol *sym = (symbol *)vector_get(&s->locals, i);
         if (*sym == name) {
-            *id = i;
+            if (id) *id = i;
             return true;
         }
     }
@@ -85,12 +88,36 @@ static bool get_strict_local(Scope *s, symbol name, uint8_t *id) {
     return false;
 }
 
-static uint8_t get_or_insert_local(Scope *s, symbol name) {
-    uint8_t id;
-    if (get_strict_local(s, name, &id)) return id;
-
+static uint8_t scope_put_local(Scope *s, symbol name) {
     *(symbol *)vector_push(&s->locals) = name;
     return (uint8_t)(s->locals.len - 1);
+}
+
+static inline uint8_t scope_get_or_put_local(Scope *s, symbol name) {
+    uint8_t id;
+    if (scope_get_local(s, name, &id)) return id;
+    return scope_put_local(s, name);
+}
+
+static void scope_put_capture(Scope *s, symbol name) {
+    for (size_t i = 0; i < s->captures.len; i++) {
+        symbol *sym = (symbol *)vector_get(&s->captures, i);
+        if (*sym == name) return;
+    }
+
+    *(symbol *)vector_push(&s->captures) = name;
+}
+
+static bool scope_resolve_symbol(Scope *s, symbol name, uint8_t *id) {
+    if (scope_get_local(s, name, id)) return true;
+
+    if (s->outer && scope_resolve_symbol(s->outer, name, NULL)) {
+        scope_put_capture(s, name);
+        *id = scope_put_local(s, name);
+        return true;
+    }
+
+    return false;
 }
 
 static inline block_id push_block(Compiler *c) {
@@ -99,6 +126,7 @@ static inline block_id push_block(Compiler *c) {
 }
 
 static inline Block *get_block(Compiler *c, block_id bid) {
+    debug_assert(bid != (block_id)-1);
     return (Block *)vector_get(&c->blocks, bid);
 }
 
@@ -118,6 +146,15 @@ static void put_call(Compiler *c, block_id from_block, block_id to_block, Scope 
 
     Block *b = get_block(c, from_block);
     bytecode_put_call(&b->bytecode, (uint8_t)to_block_scope->locals.len, &j->addr_offset);
+}
+
+static void put_makecls(Compiler *c, block_id bid, uint8_t captures, uint8_t args, block_id body) {
+    jump *j = (jump *)vector_push(&c->jumps);
+    j->from_block = bid;
+    j->to_block = body;
+
+    Block *b = get_block(c, bid);
+    bytecode_put_makecls(&b->bytecode, captures, args, &j->addr_offset);
 }
 
 static void visit(Compiler *, Scope *, block_id *, node *);
@@ -146,7 +183,8 @@ static void visit_ident(Compiler *c, Scope *scope, block_id bid, node *n) {
     symbol sym = string_pool_intern(&c->idents, name);
 
     uint8_t id;
-    if (!get_strict_local(scope, sym, &id)) panic("unresolved symbol: " F_STRING, FA_STRING(name));
+    if (!scope_resolve_symbol(scope, sym, &id))
+        panic("unresolved symbol: " F_STRING, FA_STRING(name));
 
     Block *b = get_block(c, bid);
     bytecode_put_load(&b->bytecode, id);
@@ -186,7 +224,7 @@ static void visit_doblk(Compiler *c, Scope *scope, block_id *bid, node *n) {
     block_id fail_bid = (block_id)-1;
 
     for (node *child = n->first_child; child; child = child->next_sibling) {
-        if (node_is_expr(*child)) {
+        if (!child->next_sibling) {
             visit(c, scope, bid, child);
             break;
         }
@@ -210,7 +248,69 @@ static void visit_doblk(Compiler *c, Scope *scope, block_id *bid, node *n) {
 }
 
 static void visit_lambda(Compiler *c, Scope *scope, block_id bid, node *n) {
-    // TODO
+    Scope inner_scope;
+    scope_init(&inner_scope, scope);
+
+    block_id prelude_bid = push_block(c);
+    block_id body_start_bid = push_block(c);
+    block_id body_bid = body_start_bid;
+
+    block_id fail_bid = (block_id)-1;
+
+    uint8_t args = 0;
+    for (node *child = n->first_child; child; child = child->next_sibling) {
+        if (!child->next_sibling) {
+            visit(c, &inner_scope, &body_bid, child);
+            break;
+        }
+
+        visit_pattern(c, &inner_scope, &body_bid, child, &fail_bid);
+        args++;
+    }
+
+    if (fail_bid != (block_id)-1) {
+        Block *fail = get_block(c, fail_bid);
+        buffer_putc(&fail->bytecode, (char)OP_HALT); // TODO: raise error
+    }
+
+    Block *prelude = get_block(c, prelude_bid);
+
+    for (size_t i = 0; i < inner_scope.captures.len; i++) {
+        uint8_t inner_local, outer_local;
+
+        symbol *capture = (symbol *)vector_get(&inner_scope.captures, i);
+
+        if (!scope_get_local(&inner_scope, *capture, &inner_local))
+            panic("unused capture: " F_STRING, FA_STRING(string_pool_get(&c->idents, *capture)));
+
+        bytecode_put_store(&prelude->bytecode, inner_local);
+
+        if (!scope_get_local(scope, *capture, &outer_local))
+            panic(
+                "unresolved capture: " F_STRING, FA_STRING(string_pool_get(&c->idents, *capture))
+            );
+
+        Block *b = get_block(c, bid);
+        bytecode_put_load(&b->bytecode, outer_local);
+    }
+
+    put_makecls(c, bid, inner_scope.captures.len, args, prelude_bid);
+    scope_free(&inner_scope);
+}
+
+static void visit_apply(Compiler *c, Scope *scope, block_id *bid, node *n) {
+    int items = 0;
+    for (node *child = n->first_child; child; child = child->next_sibling) items++;
+
+    for (int i = items - 1; i >= 0; i--) {
+        node *nth = n->first_child;
+        for (int j = 0; j < i; j++) nth = nth->next_sibling;
+
+        visit(c, scope, bid, nth);
+    }
+
+    Block *b = get_block(c, *bid);
+    bytecode_put_callcls(&b->bytecode, (uint8_t)(items - 1));
 }
 
 static void visit(Compiler *c, Scope *scope, block_id *bid, node *n) {
@@ -222,13 +322,14 @@ static void visit(Compiler *c, Scope *scope, block_id *bid, node *n) {
     case N_IF: visit_if(c, scope, bid, n); break;
     case N_DOBLK: visit_doblk(c, scope, bid, n); break;
     case N_LAMBDA: visit_lambda(c, scope, *bid, n); break;
+    case N_APPLY: visit_apply(c, scope, bid, n); break;
     default: panic("unsupported node: %s", node_type_name(n->type));
     }
 }
 
 static void visit_pident(Compiler *c, Scope *scope, block_id bid, node *lhs) {
     symbol  sym = string_pool_intern(&c->idents, token_string(lhs->token));
-    uint8_t i = get_or_insert_local(scope, sym);
+    uint8_t i = scope_get_or_put_local(scope, sym);
 
     Block *b = get_block(c, bid);
     bytecode_put_store(&b->bytecode, i);
