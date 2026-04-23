@@ -251,12 +251,15 @@ static void visit_lambda(Compiler *c, Scope *scope, block_id bid, node *n) {
     Scope inner_scope;
     scope_init(&inner_scope, scope);
 
+    // The lambda prelude is responsible for storing captures as locals
     block_id prelude_bid = push_block(c);
+    // The first block of the lambda body
     block_id body_start_bid = push_block(c);
     block_id body_bid = body_start_bid;
-
+    // Block for handling arg pattern match failures
     block_id fail_bid = (block_id)-1;
 
+    // Pattern match args and evaluate body
     uint8_t args = 0;
     for (node *child = n->first_child; child; child = child->next_sibling) {
         if (!child->next_sibling) {
@@ -268,6 +271,7 @@ static void visit_lambda(Compiler *c, Scope *scope, block_id bid, node *n) {
         args++;
     }
 
+    // Populate the fail block if needed
     if (fail_bid != (block_id)-1) {
         Block *fail = get_block(c, fail_bid);
         buffer_putc(&fail->bytecode, (char)OP_HALT); // TODO: raise error
@@ -275,15 +279,22 @@ static void visit_lambda(Compiler *c, Scope *scope, block_id bid, node *n) {
 
     Block *prelude = get_block(c, prelude_bid);
 
-    for (size_t i = 0; i < inner_scope.captures.len; i++) {
-        uint8_t inner_local, outer_local;
-
+    // Store captures as locals (in reverse order, because they are pushed onto
+    // the stack in the original order)
+    for (int i = inner_scope.captures.len - 1; i >= 0; i--) {
         symbol *capture = (symbol *)vector_get(&inner_scope.captures, i);
+        uint8_t inner_local;
 
         if (!scope_get_local(&inner_scope, *capture, &inner_local))
             panic("unused capture: " F_STRING, FA_STRING(string_pool_get(&c->idents, *capture)));
 
         bytecode_put_store(&prelude->bytecode, inner_local);
+    }
+
+    // Load captures from outer locals
+    for (size_t i = 0; i < inner_scope.captures.len; i++) {
+        symbol *capture = (symbol *)vector_get(&inner_scope.captures, i);
+        uint8_t outer_local;
 
         if (!scope_get_local(scope, *capture, &outer_local))
             panic(
@@ -294,6 +305,7 @@ static void visit_lambda(Compiler *c, Scope *scope, block_id bid, node *n) {
         bytecode_put_load(&b->bytecode, outer_local);
     }
 
+    // Make the closure
     put_makecls(c, bid, inner_scope.captures.len, args, prelude_bid);
     scope_free(&inner_scope);
 }
