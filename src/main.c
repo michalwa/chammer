@@ -2,6 +2,7 @@
 #include "../lib/bytecode.h"
 #include "../lib/compiler.h"
 #include "../lib/lexer.h"
+#include "../lib/machine.h"
 #include "../lib/parser.h"
 #include "../lib/utils.h"
 
@@ -48,6 +49,12 @@ int main(void) {
 
     printf("\n");
 
+    Machine vm;
+    machine_init(&vm, prog.bytecode, prog.bytecode_len);
+
+    while (machine_step(&vm));
+
+    machine_free(&vm);
     buffer_free(&comp_buffer);
 
     return 0;
