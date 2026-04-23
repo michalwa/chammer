@@ -158,7 +158,9 @@ static void put_makecls(Compiler *c, block_id bid, uint8_t captures, uint8_t arg
 }
 
 static void visit_expr(Compiler *, Scope *, block_id *, node *);
-static void visit_pattern(Compiler *, Scope *, block_id *bid, node *lhs, block_id *fail_bid);
+static void visit_pattern(
+    Compiler *, Scope *, block_id *bid, node *lhs, node *rhs, block_id *fail_bid
+);
 
 static void visit_ident(Compiler *c, Scope *scope, block_id bid, node *n) {
     string name = token_string(n->token);
@@ -235,7 +237,10 @@ static void visit_if(Compiler *c, Scope *scope, block_id *bid, node *n) {
     *bid = cont_block; // resume in continuation block
 }
 
-static void visit_lambda(Compiler *c, Scope *scope, block_id bid, node *n) {
+/*
+ * Universal implementation for N_LAMBDA and N_PAPPLY
+ */
+static void visit_function(Compiler *c, Scope *scope, block_id bid, node *first_arg, node *body) {
     Scope inner_scope;
     scope_init(&inner_scope, scope);
 
@@ -247,19 +252,14 @@ static void visit_lambda(Compiler *c, Scope *scope, block_id bid, node *n) {
     // Block for handling arg pattern match failures
     block_id fail_bid = (block_id)-1;
 
-    // Pattern match args and evaluate body
     uint8_t args = 0;
-    for (node *child = n->first_child; child; child = child->next_sibling) {
-        if (!child->next_sibling) {
-            visit_expr(c, &inner_scope, &body_bid, child);
-            break;
-        }
-
-        visit_pattern(c, &inner_scope, &body_bid, child, &fail_bid);
+    for (node *arg = first_arg; arg && arg != body; arg = arg->next_sibling) {
+        visit_pattern(c, &inner_scope, &body_bid, arg, NULL, &fail_bid);
         args++;
     }
 
-    // Populate the fail block if needed
+    visit_expr(c, &inner_scope, &body_bid, body);
+
     if (fail_bid != (block_id)-1) {
         Block *fail = get_block(c, fail_bid);
         buffer_putc(&fail->bytecode, (char)OP_HALT); // TODO: raise error
@@ -298,6 +298,13 @@ static void visit_lambda(Compiler *c, Scope *scope, block_id bid, node *n) {
     scope_free(&inner_scope);
 }
 
+static void visit_lambda(Compiler *c, Scope *scope, block_id bid, node *n) {
+    node *body = n->first_child;
+    while (body->next_sibling) body = body->next_sibling;
+
+    visit_function(c, scope, bid, n->first_child, body);
+}
+
 static void visit_doblk(Compiler *c, Scope *scope, block_id *bid, node *n) {
     block_id fail_bid = (block_id)-1;
 
@@ -312,8 +319,7 @@ static void visit_doblk(Compiler *c, Scope *scope, block_id *bid, node *n) {
         switch (child->type) {
         case N_ASSIGN:
             lhs = child->first_child;
-            visit_expr(c, scope, bid, lhs->next_sibling);
-            visit_pattern(c, scope, bid, lhs, &fail_bid);
+            visit_pattern(c, scope, bid, lhs, lhs->next_sibling, &fail_bid);
             break;
         default: panic("unsupported node: %s", node_type_name(child->type));
         }
@@ -347,6 +353,16 @@ static void visit_pident(Compiler *c, Scope *scope, block_id bid, node *lhs) {
     bytecode_put_store(&b->bytecode, i);
 }
 
+static void visit_papply(Compiler *c, Scope *scope, block_id bid, node *lhs, node *rhs) {
+    symbol  sym = string_pool_intern(&c->idents, token_string(lhs->token));
+    uint8_t i = scope_get_or_put_local(scope, sym);
+
+    visit_function(c, scope, bid, lhs->first_child, rhs);
+
+    Block *b = get_block(c, bid);
+    bytecode_put_store(&b->bytecode, i);
+}
+
 static void visit_ptuple(Compiler *c, Scope *scope, block_id *bid, node *lhs, block_id *fail_bid) {
     uint8_t len = 0;
     for (node *child = lhs->first_child; child; child = child->next_sibling) len++;
@@ -364,21 +380,33 @@ static void visit_ptuple(Compiler *c, Scope *scope, block_id *bid, node *lhs, bl
             buffer_putc(&b->bytecode, OP_DUP);
         }
         bytecode_put_tupleget(&b->bytecode, index);
-        visit_pattern(c, scope, bid, child, fail_bid);
+        visit_pattern(c, scope, bid, child, NULL, fail_bid);
         index++;
     }
 }
 
 /*
- * For a pattern match `lhs = rhs`, expects `rhs` to be on the stack.
- * `bid` is the current block and may be changed, in case of a fallible pattern,
- * to the success block. `fail` is then used as the fail block, unless `-1` is
- * passed in, in which case a new fail block is pushed.
+ * For a pattern match `lhs = rhs`:
+ *   `lhs` is the pattern,
+ *   `rhs` is either the scrutinee/value or `NULL`, in which case the value is
+ *     expected on top of the stack,
+ *   `bid` is the current block and may be changed,
+ *   `fail_bid` can point to a block that will be jumped to in case of failure,
+ *     or `-1` in which case a new block will be pushed for this purpose.
  */
-static void visit_pattern(Compiler *c, Scope *scope, block_id *bid, node *lhs, block_id *fail_bid) {
+static void visit_pattern(
+    Compiler *c, Scope *scope, block_id *bid, node *lhs, node *rhs, block_id *fail_bid
+) {
     switch (lhs->type) {
-    case N_PIDENT: visit_pident(c, scope, *bid, lhs); break;
-    case N_PTUPLE: visit_ptuple(c, scope, bid, lhs, fail_bid); break;
+    case N_PIDENT:
+        if (rhs) visit_expr(c, scope, bid, rhs);
+        visit_pident(c, scope, *bid, lhs);
+        break;
+    case N_PAPPLY: visit_papply(c, scope, *bid, lhs, rhs); break;
+    case N_PTUPLE:
+        if (rhs) visit_expr(c, scope, bid, rhs);
+        visit_ptuple(c, scope, bid, lhs, fail_bid);
+        break;
     default: panic("unsupported node: %s", node_type_name(lhs->type));
     }
 }
