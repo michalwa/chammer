@@ -115,3 +115,26 @@ void bytecode_put_pushstr(Buffer *b, uint32_t offset, uint32_t len) {
     bytecode_put_u32be(b, offset);
     bytecode_put_u32be(b, len);
 }
+
+void bytecode_put_makecls(Buffer *b, uint8_t captures, uint8_t args, size_t *addr_offset) {
+    buffer_putc(b, OP_MAKECLS);
+    buffer_putc(b, captures);
+    buffer_putc(b, args);
+    if (addr_offset) *addr_offset = b->len;
+    bytecode_put_u32be(b, BYTECODE_ADDR_PLACEHOLDER);
+}
+
+void bytecode_put_callcls(Buffer *b, uint8_t args) {
+    buffer_putc(b, OP_CALLCLS);
+    buffer_putc(b, args);
+}
+
+void bytecode_put_istuple(Buffer *b, uint8_t len) {
+    buffer_putc(b, OP_ISTUPLE);
+    buffer_putc(b, len);
+}
+
+void bytecode_put_tupleget(Buffer *b, uint8_t index) {
+    buffer_putc(b, OP_TUPLEGET);
+    buffer_putc(b, index);
+}

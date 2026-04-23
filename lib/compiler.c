@@ -75,8 +75,8 @@ static void scope_free(Scope *s) {
  */
 static bool get_strict_local(Scope *s, symbol name, uint8_t *id) {
     for (uint8_t i = 0; i < (uint8_t)s->locals.len; i++) {
-        symbol *local = (symbol *)vector_get(&s->locals, i);
-        if (name == *local) {
+        symbol *sym = (symbol *)vector_get(&s->locals, i);
+        if (*sym == name) {
             *id = i;
             return true;
         }
@@ -120,8 +120,8 @@ static void put_call(Compiler *c, block_id from_block, block_id to_block, Scope 
     bytecode_put_call(&b->bytecode, (uint8_t)to_block_scope->locals.len, &j->addr_offset);
 }
 
-static void visit(Compiler *, Scope *, block_id *, node *n);
-static void visit_pattern(Compiler *, Scope *, block_id *, node *lhs, node *rhs, node *cont);
+static void visit(Compiler *, Scope *, block_id *, node *);
+static void visit_pattern(Compiler *, Scope *, block_id *bid, node *lhs, block_id *fail_bid);
 
 static void visit_int(Compiler *c, block_id bid, node *n) {
     uint64_t value = 0;
@@ -168,42 +168,49 @@ static void visit_if(Compiler *c, Scope *scope, block_id *bid, node *n) {
     node *then = cond->next_sibling;
     node *elze = then->next_sibling;
 
-    // prepare a continuation block so that the `elze` block falls through to it
+    // prepare a continuation block so that the `then` block falls through to it
     block_id cont_block = push_block(c);
 
-    block_id then_block = push_block(c);
-    visit(c, scope, &then_block, then);
+    block_id elze_block = push_block(c);
+    visit(c, scope, &elze_block, elze);
     put_jump(c, OP_JUMP, *bid, cont_block);
 
     visit(c, scope, bid, cond);
-    put_jump(c, OP_JUMPIF, *bid, then_block);
-    visit(c, scope, bid, elze);
+    put_jump(c, OP_JUMPIFN, *bid, elze_block);
+    visit(c, scope, bid, then);
 
     *bid = cont_block; // resume in continuation block
 }
 
 static void visit_doblk(Compiler *c, Scope *scope, block_id *bid, node *n) {
-    if (node_is_expr(*n->first_child)) {
-        visit(c, scope, bid, n->first_child);
-        return;
+    block_id fail_bid = (block_id)-1;
+
+    for (node *child = n->first_child; child; child = child->next_sibling) {
+        if (node_is_expr(*child)) {
+            visit(c, scope, bid, child);
+            break;
+        }
+
+        node *lhs;
+
+        switch (child->type) {
+        case N_ASSIGN:
+            lhs = child->first_child;
+            visit(c, scope, bid, lhs->next_sibling);
+            visit_pattern(c, scope, bid, lhs, &fail_bid);
+            break;
+        default: panic("unsupported node: %s", node_type_name(child->type));
+        }
     }
 
-    node *lhs, *rhs;
-    node *stmt = n->first_child;
-
-    node cont = {
-        .type = N_DOBLK,
-        .first_child = stmt->next_sibling,
-    };
-
-    switch (stmt->type) {
-    case N_ASSIGN:
-        lhs = stmt->first_child;
-        rhs = lhs->next_sibling;
-        visit_pattern(c, scope, bid, lhs, rhs, &cont);
-        break;
-    default: panic("unsupported node: %s", node_type_name(stmt->type));
+    if (fail_bid != (block_id)-1) {
+        Block *b = get_block(c, fail_bid);
+        buffer_putc(&b->bytecode, (char)OP_HALT); // TODO: raise error
     }
+}
+
+static void visit_lambda(Compiler *c, Scope *scope, block_id bid, node *n) {
+    // TODO
 }
 
 static void visit(Compiler *c, Scope *scope, block_id *bid, node *n) {
@@ -214,29 +221,51 @@ static void visit(Compiler *c, Scope *scope, block_id *bid, node *n) {
     case N_BINARY: visit_binary(c, scope, bid, n); break;
     case N_IF: visit_if(c, scope, bid, n); break;
     case N_DOBLK: visit_doblk(c, scope, bid, n); break;
+    case N_LAMBDA: visit_lambda(c, scope, *bid, n); break;
     default: panic("unsupported node: %s", node_type_name(n->type));
     }
 }
 
-static void visit_pident(
-    Compiler *c, Scope *scope, block_id *bid, node *lhs, node *rhs, node *cont
-) {
-    visit(c, scope, bid, rhs);
-
+static void visit_pident(Compiler *c, Scope *scope, block_id bid, node *lhs) {
     symbol  sym = string_pool_intern(&c->idents, token_string(lhs->token));
     uint8_t i = get_or_insert_local(scope, sym);
 
-    Block *b = get_block(c, *bid);
+    Block *b = get_block(c, bid);
     bytecode_put_store(&b->bytecode, i);
-
-    visit(c, scope, bid, cont);
 }
 
-static void visit_pattern(
-    Compiler *c, Scope *scope, block_id *bid, node *lhs, node *rhs, node *cont
-) {
+static void visit_ptuple(Compiler *c, Scope *scope, block_id *bid, node *lhs, block_id *fail_bid) {
+    uint8_t len = 0;
+    for (node *child = lhs->first_child; child; child = child->next_sibling) len++;
+
+    if (*fail_bid == (block_id)-1) *fail_bid = push_block(c);
+
+    Block *b = get_block(c, *bid);
+    bytecode_put_istuple(&b->bytecode, len);
+    put_jump(c, OP_JUMPIFN, *bid, *fail_bid);
+
+    uint8_t index = 0;
+    for (node *child = lhs->first_child; child; child = child->next_sibling) {
+        if (child->next_sibling) {
+            b = get_block(c, *bid);
+            buffer_putc(&b->bytecode, OP_DUP);
+        }
+        bytecode_put_tupleget(&b->bytecode, index);
+        visit_pattern(c, scope, bid, child, fail_bid);
+        index++;
+    }
+}
+
+/*
+ * For a pattern match `lhs = rhs`, expects `rhs` to be on the stack.
+ * `bid` is the current block and may be changed, in case of a fallible pattern,
+ * to the success block. `fail` is then used as the fail block, unless `-1` is
+ * passed in, in which case a new fail block is pushed.
+ */
+static void visit_pattern(Compiler *c, Scope *scope, block_id *bid, node *lhs, block_id *fail_bid) {
     switch (lhs->type) {
-    case N_PIDENT: visit_pident(c, scope, bid, lhs, rhs, cont); break;
+    case N_PIDENT: visit_pident(c, scope, *bid, lhs); break;
+    case N_PTUPLE: visit_ptuple(c, scope, bid, lhs, fail_bid); break;
     default: panic("unsupported node: %s", node_type_name(lhs->type));
     }
 }

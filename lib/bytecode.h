@@ -11,17 +11,22 @@ typedef uint8_t u16be[2];
 typedef uint8_t u32be[4];
 typedef uint8_t u64be[8];
 
-#define EACH_OPCODE(_)                                                    \
-    _(OP_JUMP, 0x01)    /* jump to instruction if true */                 \
-    _(OP_JUMPIF, 0x02)  /* pop a value and jump to instruction if true */ \
-    _(OP_CALL, 0x03)    /* push frame and jump to instruction */          \
-    _(OP_RETURN, 0x04)  /* return from OP_CALL */                         \
-    _(OP_LOAD, 0x10)    /* load local */                                  \
-    _(OP_STORE, 0x11)   /* store local */                                 \
-    _(OP_PUSHINT, 0x20) /* push int constant */                           \
-    _(OP_PUSHSTR, 0x21) /* push string constant */                        \
-    _(OP_ADD, 0x30)     /* builtin binary (+) operation */                \
-    _(OP_HALT, 0xFF)    /* stop execution */
+#define EACH_OPCODE(_)   \
+    _(OP_JUMP, 0x01)     \
+    _(OP_JUMPIFN, 0x02)  \
+    _(OP_CALL, 0x03)     \
+    _(OP_RETURN, 0x04)   \
+    _(OP_LOAD, 0x10)     \
+    _(OP_STORE, 0x11)    \
+    _(OP_DUP, 0x12)      \
+    _(OP_PUSHINT, 0x20)  \
+    _(OP_PUSHSTR, 0x21)  \
+    _(OP_MAKECLS, 0x30)  \
+    _(OP_CALLCLS, 0x31)  \
+    _(OP_ADD, 0x40)      \
+    _(OP_ISTUPLE, 0x50)  \
+    _(OP_TUPLEGET, 0x51) \
+    _(OP_HALT, 0xFF)
 
 #define ENUM_MEMBER(name, byte) name = byte,
 typedef enum { EACH_OPCODE(ENUM_MEMBER) } opcode;
@@ -63,6 +68,10 @@ void bytecode_put_load(Buffer *, uint8_t local);
 void bytecode_put_store(Buffer *, uint8_t local);
 void bytecode_put_pushint(Buffer *, uint64_t value);
 void bytecode_put_pushstr(Buffer *, uint32_t offset, uint32_t len);
+void bytecode_put_makecls(Buffer *, uint8_t captures, uint8_t args, size_t *addr_offset);
+void bytecode_put_callcls(Buffer *, uint8_t args);
+void bytecode_put_istuple(Buffer *, uint8_t len);
+void bytecode_put_tupleget(Buffer *, uint8_t index);
 
 bool program_read(program *p, uint8_t *bytes, size_t len);
 

@@ -6,7 +6,7 @@
 #include "../lib/parser.h"
 #include "../lib/utils.h"
 
-#define PROGRAM_SOURCE "let x = 1; let y = 2; x + y"
+#define PROGRAM_SOURCE "let (x, y) = 1; x + y"
 
 int main(void) {
     token        t;
@@ -49,22 +49,23 @@ int main(void) {
 
     printf("\n");
 
-    Machine vm;
-    machine_init(&vm, prog.bytecode, prog.bytecode_len);
+    // Machine vm;
+    // machine_init(&vm, prog.bytecode, prog.bytecode_len);
 
-    while (machine_step(&vm));
+    // while (machine_step(&vm));
 
-    printf("\nbytecode executed\nstack:\n");
+    // printf("\nbytecode executed\nstack:\n");
 
-    for (stack_iter i = stack_iter_begin(&vm.opstack); stack_iter_next(&i);) {
-        vm_value *v = (vm_value *)i.item;
-        switch (v->type) {
-        case V_INT: printf("  %" PRIu64 "\n", v->value.int_value); break;
-        default: printf("  (value)\n"); break;
-        }
-    }
+    // for (stack_iter i = stack_iter_begin(&vm.opstack); stack_iter_next(&i);) {
+    //     vm_value *v = (vm_value *)i.item;
+    //     switch (v->type) {
+    //     case V_INT: printf("  %" PRIu64 "\n", v->value.int_value); break;
+    //     default: printf("  (value)\n"); break;
+    //     }
+    // }
 
-    machine_free(&vm);
+    // machine_free(&vm);
+
     buffer_free(&comp_buffer);
 
     return 0;
