@@ -157,26 +157,8 @@ static void put_makecls(Compiler *c, block_id bid, uint8_t captures, uint8_t arg
     bytecode_put_makecls(&b->bytecode, captures, args, &j->addr_offset);
 }
 
-static void visit(Compiler *, Scope *, block_id *, node *);
+static void visit_expr(Compiler *, Scope *, block_id *, node *);
 static void visit_pattern(Compiler *, Scope *, block_id *bid, node *lhs, block_id *fail_bid);
-
-static void visit_int(Compiler *c, block_id bid, node *n) {
-    uint64_t value = 0;
-    for (size_t i = 0; i < n->token.len; i++) value = (value * 10) + (n->token.str[i] - '0');
-
-    Block *b = get_block(c, bid);
-    bytecode_put_pushint(&b->bytecode, value);
-}
-
-static void visit_string(Compiler *c, block_id bid, node *n) {
-    compile_string(token_string(n->token), &c->string_buffer);
-    symbol             s = string_pool_intern(&c->strings, buffer_string(&c->string_buffer));
-    string_pool_entry *e = (string_pool_entry *)vector_get(&c->strings.entries, s);
-    buffer_clear(&c->string_buffer);
-
-    Block *b = get_block(c, bid);
-    bytecode_put_pushstr(&b->bytecode, e->offset, e->len);
-}
 
 static void visit_ident(Compiler *c, Scope *scope, block_id bid, node *n) {
     string name = token_string(n->token);
@@ -190,15 +172,48 @@ static void visit_ident(Compiler *c, Scope *scope, block_id bid, node *n) {
     bytecode_put_load(&b->bytecode, id);
 }
 
+static void visit_string(Compiler *c, block_id bid, node *n) {
+    compile_string(token_string(n->token), &c->string_buffer);
+    symbol             s = string_pool_intern(&c->strings, buffer_string(&c->string_buffer));
+    string_pool_entry *e = (string_pool_entry *)vector_get(&c->strings.entries, s);
+    buffer_clear(&c->string_buffer);
+
+    Block *b = get_block(c, bid);
+    bytecode_put_pushstr(&b->bytecode, e->offset, e->len);
+}
+
+static void visit_int(Compiler *c, block_id bid, node *n) {
+    uint64_t value = 0;
+    for (size_t i = 0; i < n->token.len; i++) value = (value * 10) + (n->token.str[i] - '0');
+
+    Block *b = get_block(c, bid);
+    bytecode_put_pushint(&b->bytecode, value);
+}
+
 static void visit_binary(Compiler *c, Scope *scope, block_id *bid, node *n) {
     for (node *child = n->first_child; child; child = child->next_sibling)
-        visit(c, scope, bid, child);
+        visit_expr(c, scope, bid, child);
 
     Block *b = get_block(c, *bid);
 
     if (string_eq(token_string(n->token), STRING("+"))) buffer_putc(&b->bytecode, OP_ADD);
 
     // TODO: Other built-ins and user functions
+}
+
+static void visit_apply(Compiler *c, Scope *scope, block_id *bid, node *n) {
+    int items = 0;
+    for (node *child = n->first_child; child; child = child->next_sibling) items++;
+
+    for (int i = items - 1; i >= 0; i--) {
+        node *nth = n->first_child;
+        for (int j = 0; j < i; j++) nth = nth->next_sibling;
+
+        visit_expr(c, scope, bid, nth);
+    }
+
+    Block *b = get_block(c, *bid);
+    bytecode_put_callcls(&b->bytecode, (uint8_t)(items - 1));
 }
 
 static void visit_if(Compiler *c, Scope *scope, block_id *bid, node *n) {
@@ -210,41 +225,14 @@ static void visit_if(Compiler *c, Scope *scope, block_id *bid, node *n) {
     block_id cont_block = push_block(c);
 
     block_id elze_block = push_block(c);
-    visit(c, scope, &elze_block, elze);
+    visit_expr(c, scope, &elze_block, elze);
     put_jump(c, OP_JUMP, *bid, cont_block);
 
-    visit(c, scope, bid, cond);
+    visit_expr(c, scope, bid, cond);
     put_jump(c, OP_JUMPIFN, *bid, elze_block);
-    visit(c, scope, bid, then);
+    visit_expr(c, scope, bid, then);
 
     *bid = cont_block; // resume in continuation block
-}
-
-static void visit_doblk(Compiler *c, Scope *scope, block_id *bid, node *n) {
-    block_id fail_bid = (block_id)-1;
-
-    for (node *child = n->first_child; child; child = child->next_sibling) {
-        if (!child->next_sibling) {
-            visit(c, scope, bid, child);
-            break;
-        }
-
-        node *lhs;
-
-        switch (child->type) {
-        case N_ASSIGN:
-            lhs = child->first_child;
-            visit(c, scope, bid, lhs->next_sibling);
-            visit_pattern(c, scope, bid, lhs, &fail_bid);
-            break;
-        default: panic("unsupported node: %s", node_type_name(child->type));
-        }
-    }
-
-    if (fail_bid != (block_id)-1) {
-        Block *b = get_block(c, fail_bid);
-        buffer_putc(&b->bytecode, (char)OP_HALT); // TODO: raise error
-    }
 }
 
 static void visit_lambda(Compiler *c, Scope *scope, block_id bid, node *n) {
@@ -263,7 +251,7 @@ static void visit_lambda(Compiler *c, Scope *scope, block_id bid, node *n) {
     uint8_t args = 0;
     for (node *child = n->first_child; child; child = child->next_sibling) {
         if (!child->next_sibling) {
-            visit(c, &inner_scope, &body_bid, child);
+            visit_expr(c, &inner_scope, &body_bid, child);
             break;
         }
 
@@ -310,31 +298,43 @@ static void visit_lambda(Compiler *c, Scope *scope, block_id bid, node *n) {
     scope_free(&inner_scope);
 }
 
-static void visit_apply(Compiler *c, Scope *scope, block_id *bid, node *n) {
-    int items = 0;
-    for (node *child = n->first_child; child; child = child->next_sibling) items++;
+static void visit_doblk(Compiler *c, Scope *scope, block_id *bid, node *n) {
+    block_id fail_bid = (block_id)-1;
 
-    for (int i = items - 1; i >= 0; i--) {
-        node *nth = n->first_child;
-        for (int j = 0; j < i; j++) nth = nth->next_sibling;
+    for (node *child = n->first_child; child; child = child->next_sibling) {
+        if (!child->next_sibling) {
+            visit_expr(c, scope, bid, child);
+            break;
+        }
 
-        visit(c, scope, bid, nth);
+        node *lhs;
+
+        switch (child->type) {
+        case N_ASSIGN:
+            lhs = child->first_child;
+            visit_expr(c, scope, bid, lhs->next_sibling);
+            visit_pattern(c, scope, bid, lhs, &fail_bid);
+            break;
+        default: panic("unsupported node: %s", node_type_name(child->type));
+        }
     }
 
-    Block *b = get_block(c, *bid);
-    bytecode_put_callcls(&b->bytecode, (uint8_t)(items - 1));
+    if (fail_bid != (block_id)-1) {
+        Block *b = get_block(c, fail_bid);
+        buffer_putc(&b->bytecode, (char)OP_HALT); // TODO: raise error
+    }
 }
 
-static void visit(Compiler *c, Scope *scope, block_id *bid, node *n) {
+static void visit_expr(Compiler *c, Scope *scope, block_id *bid, node *n) {
     switch (n->type) {
-    case N_INT: visit_int(c, *bid, n); break;
-    case N_STRING: visit_string(c, *bid, n); break;
     case N_IDENT: visit_ident(c, scope, *bid, n); break;
+    case N_STRING: visit_string(c, *bid, n); break;
+    case N_INT: visit_int(c, *bid, n); break;
     case N_BINARY: visit_binary(c, scope, bid, n); break;
-    case N_IF: visit_if(c, scope, bid, n); break;
-    case N_DOBLK: visit_doblk(c, scope, bid, n); break;
-    case N_LAMBDA: visit_lambda(c, scope, *bid, n); break;
     case N_APPLY: visit_apply(c, scope, bid, n); break;
+    case N_IF: visit_if(c, scope, bid, n); break;
+    case N_LAMBDA: visit_lambda(c, scope, *bid, n); break;
+    case N_DOBLK: visit_doblk(c, scope, bid, n); break;
     default: panic("unsupported node: %s", node_type_name(n->type));
     }
 }
@@ -390,7 +390,7 @@ void compiler_visit_program(Compiler *c, node *n) {
     block_id prelude_bid = push_block(c);
     block_id bid = push_block(c);
 
-    visit(c, &scope, &bid, n);
+    visit_expr(c, &scope, &bid, n);
 
     Block *last_block = get_block(c, bid);
     buffer_putc(&last_block->bytecode, (char)OP_HALT);
