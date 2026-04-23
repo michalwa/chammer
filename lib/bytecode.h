@@ -50,6 +50,8 @@ typedef struct {
 #define MAGIC_HAMMER     "HAMMER"
 #define BYTECODE_VERSION 0x0001
 
+const char *op_name(opcode);
+
 uint16_t u16be_value(u16be);
 uint32_t u32be_value(u32be);
 uint64_t u64be_value(u64be);
@@ -74,5 +76,7 @@ void bytecode_put_istuple(Buffer *, uint8_t len);
 void bytecode_put_tupleget(Buffer *, uint8_t index);
 
 bool program_read(program *p, uint8_t *bytes, size_t len);
+
+void bytecode_debug_print(const uint8_t *bytecode, size_t bytecode_len, Buffer *output);
 
 #endif // BYTECODE_H_

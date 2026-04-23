@@ -26,7 +26,7 @@ int main(void) {
     buffer_init(&out);
     node_print(*p.node, &out);
     printf(F_BUFFER "\n\n", FA_BUFFER(out));
-    buffer_free(&out);
+    buffer_clear(&out);
 
     buffer_init(&comp_buffer);
     compiler_init(&c);
@@ -47,7 +47,10 @@ int main(void) {
     for (size_t i = 0; i < prog.bytecode_len; i++)
         printf("%s%02" PRIX8, (i % 16) ? ((i % 8) ? " " : "  ") : "\n  ", prog.bytecode[i]);
 
-    printf("\n");
+    printf("\n\n");
+
+    bytecode_debug_print(prog.bytecode, prog.bytecode_len, &out);
+    printf(F_BUFFER, FA_BUFFER(out));
 
     // Machine vm;
     // machine_init(&vm, prog.bytecode, prog.bytecode_len);
@@ -67,6 +70,7 @@ int main(void) {
     // machine_free(&vm);
 
     buffer_free(&comp_buffer);
+    buffer_free(&out);
 
     return 0;
 }

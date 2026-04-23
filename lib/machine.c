@@ -99,7 +99,7 @@ bool machine_step(Machine *m) {
         push_operand(m, v1);
         break;
     case OP_HALT: return false;
-    default: panic("unsupported opcode: %02X", *m->ip);
+    default: panic("unsupported opcode: %02" PRIX8, *m->ip);
     }
 
     return true;

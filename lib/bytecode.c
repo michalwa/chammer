@@ -4,6 +4,10 @@
 
 #define BYTECODE_ADDR_PLACEHOLDER 0xFFFFFFFF
 
+const char *opcode_name(opcode op) {
+    RETURN_ENUM_NAME_V(opcode, op, EACH_OPCODE);
+}
+
 #define read_be_bytes(b, t)                      \
     do {                                         \
         t v = 0;                                 \
@@ -62,26 +66,6 @@ inline void bytecode_put_u64be(Buffer *b, uint64_t v) {
     bytecode_set_u64be(c, v);
 }
 
-bool program_read(program *p, uint8_t *bytes, size_t len) {
-    if (len < 0x0E) return false;
-    if (memcmp(bytes, MAGIC_HAMMER, sizeof(MAGIC_HAMMER) - 1) != 0) return false;
-
-    uint8_t *end = bytes + len;
-
-    p->version = (u16be *)(bytes + sizeof(MAGIC_HAMMER) - 1);
-    p->string_bytes_len = (u32be *)((uint8_t *)p->version + sizeof(*p->version));
-    if ((uint8_t *)p->string_bytes_len >= end) return false;
-
-    p->string_bytes = (char *)p->string_bytes_len + sizeof(*p->string_bytes_len);
-
-    p->bytecode = (uint8_t *)(p->string_bytes + u32be_value(*p->string_bytes_len));
-    if ((uint8_t *)p->bytecode >= end) return false;
-
-    p->bytecode_len = (size_t)(end - p->bytecode);
-
-    return true;
-}
-
 void bytecode_put_jump(Buffer *b, opcode op, size_t *addr_offset) {
     buffer_putc(b, op);
     if (addr_offset) *addr_offset = b->len;
@@ -137,4 +121,77 @@ void bytecode_put_istuple(Buffer *b, uint8_t len) {
 void bytecode_put_tupleget(Buffer *b, uint8_t index) {
     buffer_putc(b, OP_TUPLEGET);
     buffer_putc(b, index);
+}
+
+bool program_read(program *p, uint8_t *bytes, size_t len) {
+    if (len < 0x0E) return false;
+    if (memcmp(bytes, MAGIC_HAMMER, sizeof(MAGIC_HAMMER) - 1) != 0) return false;
+
+    uint8_t *end = bytes + len;
+
+    p->version = (u16be *)(bytes + sizeof(MAGIC_HAMMER) - 1);
+    p->string_bytes_len = (u32be *)((uint8_t *)p->version + sizeof(*p->version));
+    if ((uint8_t *)p->string_bytes_len >= end) return false;
+
+    p->string_bytes = (char *)p->string_bytes_len + sizeof(*p->string_bytes_len);
+
+    p->bytecode = (uint8_t *)(p->string_bytes + u32be_value(*p->string_bytes_len));
+    if ((uint8_t *)p->bytecode >= end) return false;
+
+    p->bytecode_len = (size_t)(end - p->bytecode);
+
+    return true;
+}
+
+static void debug_print_u8(const uint8_t *bytecode, size_t *offset, Buffer *output) {
+    buffer_printf(output, " %" PRIu8, bytecode[(*offset)++]);
+}
+
+static void debug_print_u32(const uint8_t *bytecode, size_t *offset, Buffer *output) {
+    buffer_printf(output, " %" PRIu32, u32be_value(*(u32be *)&bytecode[*offset]));
+    *offset += sizeof(u32be);
+}
+
+static void debug_print_u32_addr(const uint8_t *bytecode, size_t *offset, Buffer *output) {
+    buffer_printf(output, " %08" PRIX32, u32be_value(*(u32be *)&bytecode[*offset]));
+    *offset += sizeof(u32be);
+}
+
+static void debug_print_u64(const uint8_t *bytecode, size_t *offset, Buffer *output) {
+    buffer_printf(output, " %" PRIu64, u64be_value(*(u64be *)&bytecode[*offset]));
+    *offset += sizeof(u64be);
+}
+
+void bytecode_debug_print(const uint8_t *bytecode, size_t bytecode_len, Buffer *output) {
+    for (size_t offset = 0; offset < bytecode_len;) {
+        uint8_t op = bytecode[offset];
+        buffer_printf(output, "%08" PRIX32 "  %s", (uint32_t)offset, opcode_name(op));
+        offset++;
+
+        switch (op) {
+        case OP_JUMP:
+        case OP_JUMPIFN: debug_print_u32_addr(bytecode, &offset, output); break;
+        case OP_CALL:
+            debug_print_u8(bytecode, &offset, output);
+            debug_print_u32_addr(bytecode, &offset, output);
+            break;
+        case OP_LOAD:
+        case OP_STORE:
+        case OP_CALLCLS:
+        case OP_ISTUPLE:
+        case OP_TUPLEGET: debug_print_u8(bytecode, &offset, output); break;
+        case OP_PUSHINT: debug_print_u64(bytecode, &offset, output); break;
+        case OP_PUSHSTR:
+            debug_print_u32(bytecode, &offset, output);
+            debug_print_u32(bytecode, &offset, output);
+            break;
+        case OP_MAKECLS:
+            debug_print_u8(bytecode, &offset, output);
+            debug_print_u8(bytecode, &offset, output);
+            debug_print_u32_addr(bytecode, &offset, output);
+            break;
+        }
+
+        buffer_putc(output, '\n');
+    }
 }
