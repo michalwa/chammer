@@ -7,12 +7,11 @@
 #include "../lib/utils.h"
 
 // clang-format off
-#define PROGRAM_SOURCE "let xs = []; [...xs, ...xs, ...xs]"
-// #define PROGRAM_SOURCE \
-//     "let rec map f xs = match xs\n" \
-//     "  case [] then []\n" \
-//     "  case [x, ...rest] then [f x, ...map f xs];\n" \
-//     "map (\\x -> x + 1) [1, 2, 3]\n"
+#define PROGRAM_SOURCE \
+    "let rec map f xs = match xs\n" \
+    "  case [] then []\n" \
+    "  case [x, ...rest] then [f x, ...map f xs];\n" \
+    "map (\\x -> x + 1) [1, 2, 3]\n"
 // clang-format on
 
 int main(void) {

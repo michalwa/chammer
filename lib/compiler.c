@@ -385,7 +385,12 @@ static void visit_match(Compiler *c, Scope *scope, block_id *bid, node *n) {
 /*
  * Universal implementation for N_LAMBDA and N_PAPPLY
  */
-static void visit_function(Compiler *c, Scope *scope, block_id bid, node *first_arg, node *body) {
+static void visit_function(
+    Compiler *c, Scope *scope, block_id bid, node *first_arg, node *body,
+    symbol *self /* for recursive functions */
+) {
+    Block *b;
+
     Scope inner_scope;
     scope_init(&inner_scope, scope);
 
@@ -394,13 +399,24 @@ static void visit_function(Compiler *c, Scope *scope, block_id bid, node *first_
     block_id fail_bid = BLOCK_NULL;
 
     uint8_t args = 0;
+
+    if (self) {
+        uint8_t self_local = scope_put_local(&inner_scope, *self);
+
+        b = get_block(c, body_bid);
+        buffer_putc(&b->bytecode, OP_DUP);
+        bytecode_put_callcls(&b->bytecode, 1);
+        bytecode_put_store(&b->bytecode, self_local);
+        args++;
+    }
+
     for (node *arg = first_arg; arg && arg != body; arg = arg->next_sibling) {
         visit_pattern(c, &inner_scope, &body_bid, arg, NULL, &fail_bid);
         args++;
     }
 
     visit_expr(c, &inner_scope, &body_bid, body);
-    Block *b = get_block(c, body_bid);
+    b = get_block(c, body_bid);
     buffer_putc(&b->bytecode, OP_RETURN);
 
     if (fail_bid != BLOCK_NULL) {
@@ -413,13 +429,19 @@ static void visit_function(Compiler *c, Scope *scope, block_id bid, node *first_
     put_makecls(c, bid, inner_scope.captures.len, args, prelude_bid);
 
     scope_free(&inner_scope);
+
+    if (self) {
+        b = get_block(c, bid);
+        buffer_putc(&b->bytecode, OP_DUP);
+        bytecode_put_callcls(&b->bytecode, 1);
+    }
 }
 
 static void visit_lambda(Compiler *c, Scope *scope, block_id bid, node *n) {
     node *body = n->first_child;
     while (body->next_sibling) body = body->next_sibling;
 
-    visit_function(c, scope, bid, n->first_child, body);
+    visit_function(c, scope, bid, n->first_child, body, NULL);
 }
 
 static void visit_doblk(Compiler *c, Scope *scope, block_id *bid, node *n) {
@@ -477,7 +499,7 @@ static void visit_papply(Compiler *c, Scope *scope, block_id bid, node *lhs, nod
     symbol  sym = string_pool_intern(&c->idents, token_string(lhs->token));
     uint8_t i = scope_get_or_put_local(scope, sym);
 
-    visit_function(c, scope, bid, lhs->first_child, rhs);
+    visit_function(c, scope, bid, lhs->first_child, rhs, &sym);
 
     Block *b = get_block(c, bid);
     bytecode_put_store(&b->bytecode, i);
