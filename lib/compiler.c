@@ -113,7 +113,7 @@ static void scope_put_capture(Scope *s, symbol name) {
 static bool scope_resolve_symbol(Scope *s, symbol name, uint8_t *id) {
     if (scope_get_local(s, name, id)) return true;
 
-    if (s->outer && scope_resolve_symbol(s->outer, name, NULL)) {
+    if (!s->outer || scope_resolve_symbol(s->outer, name, NULL)) {
         scope_put_capture(s, name);
         uint8_t local_id = scope_put_local(s, name);
         if (id) *id = local_id;
@@ -216,6 +216,29 @@ static void put_load_captures(Compiler *c, block_id bid, Scope *inner_scope, Sco
         }
 
         bytecode_put_load(&b->bytecode, outer_local);
+    }
+}
+
+static void put_load_externs(Compiler *c, block_id bid, Scope *scope) {
+    Block *b = get_block(c, bid);
+
+    for (size_t i = 0; i < scope->captures.len; i++) {
+        symbol *sym = (symbol *)vector_get(&scope->captures, i);
+        string  name = string_pool_get(&c->idents, *sym);
+        uint8_t local;
+
+        if (!scope_get_local(scope, *sym, &local)) {
+            scope_debug_print(c, scope, stderr);
+            panic("missing local for extern: " F_STRING, FA_STRING(name));
+        }
+
+        symbol             name_sym = string_pool_intern(&c->strings, name);
+        string_pool_entry *name_entry =
+            (string_pool_entry *)vector_get(&c->strings.entries, name_sym);
+
+        bytecode_put_pushstr(&b->bytecode, name_entry->offset, name_entry->len);
+        buffer_putc(&b->bytecode, (char)OP_LOADEXT);
+        bytecode_put_store(&b->bytecode, local);
     }
 }
 
@@ -639,11 +662,19 @@ static void visit_pattern(
 }
 
 void compiler_visit_program(Compiler *c, node *n) {
+    Scope global_scope;
+    scope_init(&global_scope, NULL);
+
+    block_id prelude_bid = push_block(c);
     block_id bid = push_block(c);
-    visit_expr(c, NULL, &bid, n);
+    visit_expr(c, &global_scope, &bid, n);
 
     Block *last_block = get_block(c, bid);
     buffer_putc(&last_block->bytecode, (char)OP_HALT);
+
+    put_load_externs(c, prelude_bid, &global_scope);
+
+    scope_free(&global_scope);
 }
 
 void compiler_write_program(Compiler *c, Buffer *b) {

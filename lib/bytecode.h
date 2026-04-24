@@ -36,6 +36,7 @@ typedef uint8_t u64be[8];
     _(OP_ISCONS, 0x55)   /* check if top value on the stack is a `cons` (list) (don't pop) */      \
     _(OP_UNCONS, 0x56)   /* pop top `cons` and push `tail` and `head` separately */                \
     _(OP_CONCAT, 0x57)   /* pop 2 lists off the stack and push a concatenation */                  \
+    _(OP_LOADEXT, 0x80)  /* pop string off the stack and load an external symbol with that name */ \
     _(OP_HALT, 0xFF)     /* stop execution */
 
 #define ENUM_MEMBER(name, byte) name = byte,
