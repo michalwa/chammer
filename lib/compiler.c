@@ -115,11 +115,34 @@ static bool scope_resolve_symbol(Scope *s, symbol name, uint8_t *id) {
 
     if (s->outer && scope_resolve_symbol(s->outer, name, NULL)) {
         scope_put_capture(s, name);
-        if (id) *id = scope_put_local(s, name);
+        uint8_t local_id = scope_put_local(s, name);
+        if (id) *id = local_id;
         return true;
     }
 
     return false;
+}
+
+static void scope_debug_print(Compiler *c, Scope *s, FILE *f) {
+    fprintf(f, "scope stack, inner-most first:\n");
+
+    for (size_t i = 0; s; s = s->outer, i++) {
+        fprintf(f, "#%zu\n  locals:  ", i);
+
+        for (size_t j = 0; j < s->locals.len; j++) {
+            symbol *sym = (symbol *)vector_get(&s->locals, j);
+            fprintf(f, " " F_STRING, FA_STRING(string_pool_get(&c->idents, *sym)));
+        }
+
+        fprintf(f, "\n  captures:");
+
+        for (size_t j = 0; j < s->captures.len; j++) {
+            symbol *sym = (symbol *)vector_get(&s->captures, j);
+            fprintf(f, " " F_STRING, FA_STRING(string_pool_get(&c->idents, *sym)));
+        }
+
+        fprintf(f, "\n");
+    }
 }
 
 static inline block_id push_block(Compiler *c) {
@@ -168,8 +191,10 @@ static void put_store_captures(Compiler *c, block_id bid, Scope *inner_scope) {
         symbol *capture = (symbol *)vector_get(&inner_scope->captures, i);
         uint8_t inner_local;
 
-        if (!scope_get_local(inner_scope, *capture, &inner_local))
+        if (!scope_get_local(inner_scope, *capture, &inner_local)) {
+            scope_debug_print(c, inner_scope, stderr);
             panic("unused capture: " F_STRING, FA_STRING(string_pool_get(&c->idents, *capture)));
+        }
 
         bytecode_put_store(&b->bytecode, inner_local);
     }
@@ -183,10 +208,12 @@ static void put_load_captures(Compiler *c, block_id bid, Scope *inner_scope, Sco
         symbol *capture = (symbol *)vector_get(&inner_scope->captures, i);
         uint8_t outer_local;
 
-        if (!scope_get_local(outer_scope, *capture, &outer_local))
+        if (!scope_get_local(outer_scope, *capture, &outer_local)) {
+            scope_debug_print(c, outer_scope, stderr);
             panic(
                 "unresolved capture: " F_STRING, FA_STRING(string_pool_get(&c->idents, *capture))
             );
+        }
 
         bytecode_put_load(&b->bytecode, outer_local);
     }
@@ -202,8 +229,10 @@ static void visit_ident(Compiler *c, Scope *scope, block_id bid, node *n) {
     symbol sym = string_pool_intern(&c->idents, name);
 
     uint8_t id;
-    if (!scope_resolve_symbol(scope, sym, &id))
+    if (!scope_resolve_symbol(scope, sym, &id)) {
+        scope_debug_print(c, scope, stderr);
         panic("unresolved symbol: " F_STRING, FA_STRING(name));
+    }
 
     Block *b = get_block(c, bid);
     bytecode_put_load(&b->bytecode, id);
@@ -446,12 +475,17 @@ static void visit_lambda(Compiler *c, Scope *scope, block_id bid, node *n) {
     visit_function(c, scope, bid, n->first_child, body, NULL);
 }
 
-static void visit_doblk(Compiler *c, Scope *scope, block_id *bid, node *n) {
+static void visit_block(Compiler *c, Scope *scope, block_id *bid, node *n) {
+    Scope inner_scope;
+    scope_init(&inner_scope, scope);
+
+    block_id prelude_bid = push_block(c);
+    block_id body_bid = push_block(c);
     block_id fail_bid = BLOCK_NULL;
 
     for (node *child = n->first_child; child; child = child->next_sibling) {
         if (!child->next_sibling) {
-            visit_expr(c, scope, bid, child);
+            visit_expr(c, &inner_scope, &body_bid, child);
             break;
         }
 
@@ -460,16 +494,25 @@ static void visit_doblk(Compiler *c, Scope *scope, block_id *bid, node *n) {
         switch (child->type) {
         case N_ASSIGN:
             lhs = child->first_child;
-            visit_pattern(c, scope, bid, lhs, lhs->next_sibling, &fail_bid);
+            visit_pattern(c, &inner_scope, &body_bid, lhs, lhs->next_sibling, &fail_bid);
             break;
         default: panic("unsupported node: %s", node_type_name(child->type));
         }
     }
 
+    Block *b = get_block(c, body_bid);
+    buffer_putc(&b->bytecode, OP_RETURN);
+
+    put_store_captures(c, prelude_bid, &inner_scope);
+    put_load_captures(c, *bid, &inner_scope, scope);
+    put_call(c, *bid, prelude_bid, &inner_scope);
+
     if (fail_bid != BLOCK_NULL) {
-        Block *b = get_block(c, fail_bid);
+        b = get_block(c, fail_bid);
         buffer_putc(&b->bytecode, (char)OP_HALT); // TODO: raise error
     }
+
+    scope_free(&inner_scope);
 }
 
 static void visit_expr(Compiler *c, Scope *scope, block_id *bid, node *n) {
@@ -484,7 +527,9 @@ static void visit_expr(Compiler *c, Scope *scope, block_id *bid, node *n) {
     case N_IF: visit_if(c, scope, bid, n); break;
     case N_MATCH: visit_match(c, scope, bid, n); break;
     case N_LAMBDA: visit_lambda(c, scope, *bid, n); break;
-    case N_DOBLK: visit_doblk(c, scope, bid, n); break;
+    // TODO: Remove do-blocks?
+    case N_DOBLK: visit_block(c, scope, bid, n); break;
+    case N_BLOCK: visit_block(c, scope, bid, n); break;
     default: panic("unsupported node: %s", node_type_name(n->type));
     }
 }
@@ -594,19 +639,11 @@ static void visit_pattern(
 }
 
 void compiler_visit_program(Compiler *c, node *n) {
-    Scope scope;
-    scope_init(&scope, NULL);
-
-    block_id prelude_bid = push_block(c);
     block_id bid = push_block(c);
-
-    visit_expr(c, &scope, &bid, n);
+    visit_expr(c, NULL, &bid, n);
 
     Block *last_block = get_block(c, bid);
     buffer_putc(&last_block->bytecode, (char)OP_HALT);
-
-    put_call(c, prelude_bid, bid, &scope);
-    scope_free(&scope);
 }
 
 void compiler_write_program(Compiler *c, Buffer *b) {

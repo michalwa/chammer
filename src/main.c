@@ -7,11 +7,13 @@
 #include "../lib/utils.h"
 
 // clang-format off
-#define PROGRAM_SOURCE \
-    "let rec map f xs = match xs\n" \
-    "  case [] then []\n" \
-    "  case [x, ...rest] then [f x, ...map f xs];\n" \
-    "map (\\x -> x + 1) [1, 2, 3]\n"
+#define PROGRAM_SOURCE "let f x = x + 1; let g x = { f (x + x) }; g 1"
+// #define PROGRAM_SOURCE "let x = 1; let y = { let x = 2; x + 1 }; x + y"
+// #define PROGRAM_SOURCE \
+//     "let rec map f xs = match xs\n" \
+//     "  case [] then []\n" \
+//     "  case [x, ...rest] then [f x, ...map f xs];\n" \
+//     "map (\\x -> x + 1) [1, 2, 3]\n"
 // clang-format on
 
 int main(void) {
@@ -19,18 +21,18 @@ int main(void) {
     Parser       p;
     parse_result presult;
     Compiler     c;
-    // Buffer       input;
+    Buffer       input;
     Buffer       comp_buffer;
     program      prog;
 
-    token_begin(&t, PROGRAM_SOURCE);
+    // token_begin(&t, PROGRAM_SOURCE);
 
-    // FILE *example = fopen("examples/html.ham", "rb");
-    // buffer_init(&input);
-    // buffer_read_file(&input, example);
-    // fclose(example);
+    FILE *example = fopen("examples/html.ham", "rb");
+    buffer_init(&input);
+    buffer_read_file(&input, example);
+    fclose(example);
 
-    // token_begin(&t, input.data);
+    token_begin(&t, input.data);
 
     parser_init(&p);
     if ((presult = parse_program(&p, &t)) != PARSE_OK)
@@ -83,6 +85,7 @@ int main(void) {
 
     // machine_free(&vm);
 
+    buffer_free(&input);
     buffer_free(&comp_buffer);
     buffer_free(&out);
 

@@ -35,6 +35,7 @@ void   buffer_printf(Buffer *, const char *format, ...);
  */
 char  *buffer_alloc(Buffer *, size_t len);
 void   buffer_clear(Buffer *);
+void   buffer_truncate(Buffer *, size_t len);
 /*
  * Appends the contents of the given file to the buffer
  */

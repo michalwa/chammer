@@ -3,6 +3,11 @@
 #include "bytecode.h"
 #include "utils.h"
 
+typedef struct {
+    uint32_t return_addr;
+    size_t   prev_offset;
+} frame_header;
+
 void machine_init(Machine *m, uint8_t *program, size_t program_size) {
     buffer_init(&m->fnstack);
     stack_init(&m->opstack, vm_value);
@@ -34,13 +39,15 @@ static inline uint8_t *fnstack_top(Machine *m) {
 }
 
 static inline size_t local_offset(uint8_t i) {
-    return sizeof(uint32_t) + (i + 1) * sizeof(vm_value);
+    return sizeof(frame_header) + (i + 1) * sizeof(vm_value);
 }
 
-static void push_frame(Machine *m, uint8_t locals) {
-    buffer_alloc(&m->fnstack, (size_t)locals * sizeof(vm_value) + sizeof(uint32_t));
-    uint32_t return_addr = (uint32_t)(m->ip - m->program);
-    *(uint32_t *)(fnstack_top(m) - sizeof(uint32_t)) = return_addr;
+static void push_frame(Machine *m, uint8_t locals, uint32_t return_addr) {
+    size_t fnstack_offset = m->fnstack.len;
+    buffer_alloc(&m->fnstack, (size_t)locals * sizeof(vm_value) + sizeof(frame_header));
+    frame_header *header = (frame_header *)(fnstack_top(m) - sizeof(frame_header));
+    header->return_addr = return_addr;
+    header->prev_offset = fnstack_offset;
 }
 
 static inline void push_operand(Machine *m, vm_value v) {
@@ -64,7 +71,8 @@ static void store_local(Machine *m, uint8_t i) {
 }
 
 bool machine_step(Machine *m) {
-    vm_value v1, v2;
+    vm_value      v1, v2;
+    frame_header *header;
 
     switch (*m->ip) {
     case OP_JUMP:
@@ -73,8 +81,14 @@ bool machine_step(Machine *m) {
         break;
     case OP_CALL:
         m->ip++;
-        push_frame(m, *m->ip++);
+        push_frame(m, *m->ip, (uint32_t)(m->ip - m->program + sizeof(u32be) + 1));
+        m->ip++;
         m->ip = m->program + read_u32be(m);
+        break;
+    case OP_RETURN:
+        header = (frame_header *)(fnstack_top(m) - sizeof(frame_header));
+        m->ip = m->program + header->return_addr;
+        buffer_truncate(&m->fnstack, header->prev_offset);
         break;
     case OP_LOAD:
         m->ip++;

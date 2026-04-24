@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "utils.h"
+
 #define BUFFER_DEFAULT_CAPACITY 0x400
 
 /*
@@ -72,6 +74,12 @@ char *buffer_alloc(Buffer *b, size_t len) {
 
 void buffer_clear(Buffer *b) {
     b->len = 0;
+    b->data[b->len] = '\0';
+}
+
+void buffer_truncate(Buffer *b, size_t len) {
+    debug_assert(len <= b->len);
+    b->len = len;
     b->data[b->len] = '\0';
 }
 
