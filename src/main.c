@@ -6,17 +6,27 @@
 #include "../lib/parser.h"
 #include "../lib/utils.h"
 
-#define PROGRAM_SOURCE "let f x y = \\z -> x + y + z; f 1 2 3"
+#define PROGRAM_SOURCE                                                                           \
+    "let z = 2;\n" "match 1\n" "  case (x, y) then x + y\n" "  case (x,) then x + z\n" "  else " \
+                                                                                       "3\n"
 
 int main(void) {
     token        t;
     Parser       p;
     parse_result presult;
     Compiler     c;
+    // Buffer input;
     Buffer       comp_buffer;
     program      prog;
 
     token_begin(&t, PROGRAM_SOURCE);
+
+    // FILE *example = fopen("examples/html.ham", "rb");
+    // buffer_init(&input);
+    // buffer_read_file(&input, example);
+    // fclose(example);
+
+    // token_begin(&t, input.data);
 
     parser_init(&p);
     if ((presult = parse_program(&p, &t)) != PARSE_OK)
@@ -39,9 +49,9 @@ int main(void) {
         panic("could not read compiled program");
 
     printf("version:           %04" PRIX16 "\n", u16be_value(*prog.version));
-    printf("string bytes len:  %08" PRIX32 "\n", u32be_value(*prog.string_bytes_len));
+    printf("string bytes len:  %" PRIu32 "\n", u32be_value(*prog.string_bytes_len));
     printf("string bytes:      %.*s\n", u32be_value(*prog.string_bytes_len), prog.string_bytes);
-    printf("bytecode len:      %zX\n", prog.bytecode_len);
+    printf("bytecode len:      %zu\n", prog.bytecode_len);
     printf("bytecode:");
 
     for (size_t i = 0; i < prog.bytecode_len; i++)

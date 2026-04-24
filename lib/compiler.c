@@ -15,6 +15,8 @@ typedef struct {
 
 typedef size_t block_id;
 
+#define BLOCK_NULL ((block_id) - 1)
+
 typedef struct Scope Scope;
 struct Scope {
     Scope *outer;
@@ -126,7 +128,7 @@ static inline block_id push_block(Compiler *c) {
 }
 
 static inline Block *get_block(Compiler *c, block_id bid) {
-    debug_assert(bid != (block_id)-1);
+    debug_assert(bid != BLOCK_NULL);
     return (Block *)vector_get(&c->blocks, bid);
 }
 
@@ -139,13 +141,13 @@ static void put_jump(Compiler *c, opcode op, block_id from_block, block_id to_bl
     bytecode_put_jump(&b->bytecode, op, &j->addr_offset);
 }
 
-static void put_call(Compiler *c, block_id from_block, block_id to_block, Scope *to_block_scope) {
+static void put_call(Compiler *c, block_id from_block, block_id to_block, Scope *inner_scope) {
     jump *j = (jump *)vector_push(&c->jumps);
     j->from_block = from_block;
     j->to_block = to_block;
 
     Block *b = get_block(c, from_block);
-    bytecode_put_call(&b->bytecode, (uint8_t)to_block_scope->locals.len, &j->addr_offset);
+    bytecode_put_call(&b->bytecode, (uint8_t)inner_scope->locals.len, &j->addr_offset);
 }
 
 static void put_makecls(Compiler *c, block_id bid, uint8_t captures, uint8_t args, block_id body) {
@@ -155,6 +157,39 @@ static void put_makecls(Compiler *c, block_id bid, uint8_t captures, uint8_t arg
 
     Block *b = get_block(c, bid);
     bytecode_put_makecls(&b->bytecode, captures, args, &j->addr_offset);
+}
+
+static void put_store_captures(Compiler *c, block_id bid, Scope *inner_scope) {
+    Block *b = get_block(c, bid);
+
+    // Store captures as locals (in reverse order, because they are pushed onto
+    // the stack in the original order)
+    for (int i = inner_scope->captures.len - 1; i >= 0; i--) {
+        symbol *capture = (symbol *)vector_get(&inner_scope->captures, i);
+        uint8_t inner_local;
+
+        if (!scope_get_local(inner_scope, *capture, &inner_local))
+            panic("unused capture: " F_STRING, FA_STRING(string_pool_get(&c->idents, *capture)));
+
+        bytecode_put_store(&b->bytecode, inner_local);
+    }
+}
+
+static void put_load_captures(Compiler *c, block_id bid, Scope *inner_scope, Scope *outer_scope) {
+    Block *b = get_block(c, bid);
+
+    // Load captures from outer locals
+    for (size_t i = 0; i < inner_scope->captures.len; i++) {
+        symbol *capture = (symbol *)vector_get(&inner_scope->captures, i);
+        uint8_t outer_local;
+
+        if (!scope_get_local(outer_scope, *capture, &outer_local))
+            panic(
+                "unresolved capture: " F_STRING, FA_STRING(string_pool_get(&c->idents, *capture))
+            );
+
+        bytecode_put_load(&b->bytecode, outer_local);
+    }
 }
 
 static void visit_expr(Compiler *, Scope *, block_id *, node *);
@@ -237,6 +272,66 @@ static void visit_if(Compiler *c, Scope *scope, block_id *bid, node *n) {
     *bid = cont_block; // resume in continuation block
 }
 
+static void visit_match(Compiler *c, Scope *scope, block_id *bid, node *n) {
+    Block *b;
+
+    node *scrutinee = n->first_child;
+    visit_expr(c, scope, bid, scrutinee);
+
+    block_id cont_block = push_block(c);
+
+    for (node *child = scrutinee->next_sibling; child;) {
+        node *rhs = child->next_sibling;
+
+        if (rhs) {
+            Scope inner_scope;
+            scope_init(&inner_scope, scope);
+
+            b = get_block(c, *bid);
+            buffer_putc(&b->bytecode, OP_DUP);
+
+            block_id fail_bid = BLOCK_NULL;
+            block_id prelude_bid = push_block(c);
+            block_id case_body_bid = push_block(c);
+
+            visit_pattern(c, &inner_scope, &case_body_bid, child, NULL, &fail_bid);
+            visit_expr(c, &inner_scope, &case_body_bid, rhs);
+            b = get_block(c, case_body_bid);
+            buffer_putc(&b->bytecode, OP_RETURN);
+
+            put_store_captures(c, prelude_bid, &inner_scope);
+            put_load_captures(c, *bid, &inner_scope, scope);
+            put_call(c, *bid, prelude_bid, &inner_scope);
+            put_jump(c, OP_JUMPIFOK, *bid, cont_block);
+
+            scope_free(&inner_scope);
+
+            if (fail_bid != BLOCK_NULL) {
+                b = get_block(c, fail_bid);
+                buffer_putc(&b->bytecode, OP_ERRSET);
+                buffer_putc(&b->bytecode, OP_RETURN);
+            } else {
+                // TODO: emit warning
+                // infallible pattern, no point compiling following cases
+                break;
+            }
+
+            child = rhs->next_sibling;
+        } else {
+            b = get_block(c, *bid);
+            buffer_putc(&b->bytecode, OP_POP);
+            visit_expr(c, scope, bid, child);
+            put_jump(c, OP_JUMP, *bid, cont_block);
+            break;
+        }
+    }
+
+    b = get_block(c, *bid);
+    buffer_putc(&b->bytecode, (char)OP_HALT); // TODO: raise error
+
+    *bid = cont_block;
+}
+
 /*
  * Universal implementation for N_LAMBDA and N_PAPPLY
  */
@@ -250,7 +345,7 @@ static void visit_function(Compiler *c, Scope *scope, block_id bid, node *first_
     block_id body_start_bid = push_block(c);
     block_id body_bid = body_start_bid;
     // Block for handling arg pattern match failures
-    block_id fail_bid = (block_id)-1;
+    block_id fail_bid = BLOCK_NULL;
 
     uint8_t args = 0;
     for (node *arg = first_arg; arg && arg != body; arg = arg->next_sibling) {
@@ -260,40 +355,14 @@ static void visit_function(Compiler *c, Scope *scope, block_id bid, node *first_
 
     visit_expr(c, &inner_scope, &body_bid, body);
 
-    if (fail_bid != (block_id)-1) {
+    if (fail_bid != BLOCK_NULL) {
         Block *fail = get_block(c, fail_bid);
         buffer_putc(&fail->bytecode, (char)OP_HALT); // TODO: raise error
     }
 
-    Block *prelude = get_block(c, prelude_bid);
+    put_store_captures(c, prelude_bid, &inner_scope);
+    put_load_captures(c, bid, &inner_scope, scope);
 
-    // Store captures as locals (in reverse order, because they are pushed onto
-    // the stack in the original order)
-    for (int i = inner_scope.captures.len - 1; i >= 0; i--) {
-        symbol *capture = (symbol *)vector_get(&inner_scope.captures, i);
-        uint8_t inner_local;
-
-        if (!scope_get_local(&inner_scope, *capture, &inner_local))
-            panic("unused capture: " F_STRING, FA_STRING(string_pool_get(&c->idents, *capture)));
-
-        bytecode_put_store(&prelude->bytecode, inner_local);
-    }
-
-    // Load captures from outer locals
-    for (size_t i = 0; i < inner_scope.captures.len; i++) {
-        symbol *capture = (symbol *)vector_get(&inner_scope.captures, i);
-        uint8_t outer_local;
-
-        if (!scope_get_local(scope, *capture, &outer_local))
-            panic(
-                "unresolved capture: " F_STRING, FA_STRING(string_pool_get(&c->idents, *capture))
-            );
-
-        Block *b = get_block(c, bid);
-        bytecode_put_load(&b->bytecode, outer_local);
-    }
-
-    // Make the closure
     put_makecls(c, bid, inner_scope.captures.len, args, prelude_bid);
     scope_free(&inner_scope);
 }
@@ -306,7 +375,7 @@ static void visit_lambda(Compiler *c, Scope *scope, block_id bid, node *n) {
 }
 
 static void visit_doblk(Compiler *c, Scope *scope, block_id *bid, node *n) {
-    block_id fail_bid = (block_id)-1;
+    block_id fail_bid = BLOCK_NULL;
 
     for (node *child = n->first_child; child; child = child->next_sibling) {
         if (!child->next_sibling) {
@@ -325,7 +394,7 @@ static void visit_doblk(Compiler *c, Scope *scope, block_id *bid, node *n) {
         }
     }
 
-    if (fail_bid != (block_id)-1) {
+    if (fail_bid != BLOCK_NULL) {
         Block *b = get_block(c, fail_bid);
         buffer_putc(&b->bytecode, (char)OP_HALT); // TODO: raise error
     }
@@ -339,6 +408,7 @@ static void visit_expr(Compiler *c, Scope *scope, block_id *bid, node *n) {
     case N_BINARY: visit_binary(c, scope, bid, n); break;
     case N_APPLY: visit_apply(c, scope, bid, n); break;
     case N_IF: visit_if(c, scope, bid, n); break;
+    case N_MATCH: visit_match(c, scope, bid, n); break;
     case N_LAMBDA: visit_lambda(c, scope, *bid, n); break;
     case N_DOBLK: visit_doblk(c, scope, bid, n); break;
     default: panic("unsupported node: %s", node_type_name(n->type));
@@ -367,7 +437,7 @@ static void visit_ptuple(Compiler *c, Scope *scope, block_id *bid, node *lhs, bl
     uint8_t len = 0;
     for (node *child = lhs->first_child; child; child = child->next_sibling) len++;
 
-    if (*fail_bid == (block_id)-1) *fail_bid = push_block(c);
+    if (*fail_bid == BLOCK_NULL) *fail_bid = push_block(c);
 
     Block *b = get_block(c, *bid);
     bytecode_put_istuple(&b->bytecode, len);
@@ -375,12 +445,14 @@ static void visit_ptuple(Compiler *c, Scope *scope, block_id *bid, node *lhs, bl
 
     uint8_t index = 0;
     for (node *child = lhs->first_child; child; child = child->next_sibling) {
-        if (child->next_sibling) {
-            b = get_block(c, *bid);
-            buffer_putc(&b->bytecode, OP_DUP);
-        }
         bytecode_put_tupleget(&b->bytecode, index);
         visit_pattern(c, scope, bid, child, NULL, fail_bid);
+
+        if (!child->next_sibling) {
+            b = get_block(c, *bid);
+            buffer_putc(&b->bytecode, OP_POP);
+        }
+
         index++;
     }
 }
