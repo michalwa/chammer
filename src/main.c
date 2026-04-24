@@ -7,12 +7,7 @@
 #include "../lib/utils.h"
 
 // clang-format off
-#define PROGRAM_SOURCE                                                                           \
-    "let z = 2;\n" \
-    "match 1\n" \
-    "  case (x, y) then x + y\n" \
-    "  case (x,) then x + z\n" \
-    "  else 3\n"
+#define PROGRAM_SOURCE "let x = [1, 2, 3]; x"
 // clang-format on
 
 int main(void) {

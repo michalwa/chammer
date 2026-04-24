@@ -123,6 +123,16 @@ void bytecode_put_tupleget(Buffer *b, uint8_t index) {
     buffer_putc(b, index);
 }
 
+void bytecode_put_maketuple(Buffer *b, uint8_t len) {
+    buffer_putc(b, OP_MAKETUPLE);
+    buffer_putc(b, len);
+}
+
+void bytecode_put_makelist(Buffer *b, uint8_t len) {
+    buffer_putc(b, OP_MAKELIST);
+    buffer_putc(b, len);
+}
+
 bool program_read(program *p, uint8_t *bytes, size_t len) {
     if (len < 0x0E) return false;
     if (memcmp(bytes, MAGIC_HAMMER, sizeof(MAGIC_HAMMER) - 1) != 0) return false;
@@ -180,7 +190,9 @@ void bytecode_debug_print(const uint8_t *bytecode, size_t bytecode_len, Buffer *
         case OP_STORE:
         case OP_CALLCLS:
         case OP_ISTUPLE:
-        case OP_TUPLEGET: debug_print_u8(bytecode, &offset, output); break;
+        case OP_TUPLEGET:
+        case OP_MAKETUPLE:
+        case OP_MAKELIST: debug_print_u8(bytecode, &offset, output); break;
         case OP_PUSHINT: debug_print_u64(bytecode, &offset, output); break;
         case OP_PUSHSTR:
             debug_print_u32(bytecode, &offset, output);

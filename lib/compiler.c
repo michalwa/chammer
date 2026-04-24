@@ -227,6 +227,28 @@ static void visit_int(Compiler *c, block_id bid, node *n) {
     bytecode_put_pushint(&b->bytecode, value);
 }
 
+static void visit_tuple(Compiler *c, Scope *scope, block_id *bid, node *n) {
+    uint8_t len = 0;
+    for (node *child = n->first_child; child; child = child->next_sibling) {
+        visit_expr(c, scope, bid, child);
+        len++;
+    }
+
+    Block *b = get_block(c, *bid);
+    bytecode_put_maketuple(&b->bytecode, len);
+}
+
+static void visit_list(Compiler *c, Scope *scope, block_id *bid, node *n) {
+    uint8_t len = 0;
+    for (node *child = n->first_child; child; child = child->next_sibling) {
+        visit_expr(c, scope, bid, child);
+        len++;
+    }
+
+    Block *b = get_block(c, *bid);
+    bytecode_put_makelist(&b->bytecode, len);
+}
+
 static void visit_binary(Compiler *c, Scope *scope, block_id *bid, node *n) {
     for (node *child = n->first_child; child; child = child->next_sibling)
         visit_expr(c, scope, bid, child);
@@ -405,6 +427,8 @@ static void visit_expr(Compiler *c, Scope *scope, block_id *bid, node *n) {
     case N_IDENT: visit_ident(c, scope, *bid, n); break;
     case N_STRING: visit_string(c, *bid, n); break;
     case N_INT: visit_int(c, *bid, n); break;
+    case N_TUPLE: visit_tuple(c, scope, bid, n); break;
+    case N_LIST: visit_list(c, scope, bid, n); break;
     case N_BINARY: visit_binary(c, scope, bid, n); break;
     case N_APPLY: visit_apply(c, scope, bid, n); break;
     case N_IF: visit_if(c, scope, bid, n); break;
