@@ -351,6 +351,8 @@ static void visit_match(Compiler *c, Scope *scope, block_id *bid, node *n) {
             put_store_captures(c, prelude_bid, &inner_scope);
             put_load_captures(c, *bid, &inner_scope, scope);
             put_call(c, *bid, prelude_bid, &inner_scope);
+
+            b = get_block(c, *bid);
             put_jump(c, OP_JUMPIF, *bid, cont_block);
             buffer_putc(&b->bytecode, OP_POP); // pop `false`
 
