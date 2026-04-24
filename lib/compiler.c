@@ -115,7 +115,7 @@ static bool scope_resolve_symbol(Scope *s, symbol name, uint8_t *id) {
 
     if (s->outer && scope_resolve_symbol(s->outer, name, NULL)) {
         scope_put_capture(s, name);
-        *id = scope_put_local(s, name);
+        if (id) *id = scope_put_local(s, name);
         return true;
     }
 
@@ -239,14 +239,40 @@ static void visit_tuple(Compiler *c, Scope *scope, block_id *bid, node *n) {
 }
 
 static void visit_list(Compiler *c, Scope *scope, block_id *bid, node *n) {
-    uint8_t len = 0;
-    for (node *child = n->first_child; child; child = child->next_sibling) {
-        visit_expr(c, scope, bid, child);
-        len++;
+    Block  *b;
+    size_t  parts = 1;
+    uint8_t part_len = 0;
+
+    if (!n->first_child) {
+        b = get_block(c, *bid);
+        bytecode_put_makelist(&b->bytecode, 0);
+        return;
     }
 
-    Block *b = get_block(c, *bid);
-    bytecode_put_makelist(&b->bytecode, len);
+    for (node *child = n->first_child; child; child = child->next_sibling) {
+        if (child->type == N_SPREAD) {
+            visit_expr(c, scope, bid, child->first_child);
+            parts++;
+        } else {
+            visit_expr(c, scope, bid, child);
+            part_len++;
+        }
+
+        if (!child->next_sibling || child->next_sibling->type == N_SPREAD) {
+            b = get_block(c, *bid);
+
+            if (child->type != N_SPREAD) {
+                bytecode_put_makelist(&b->bytecode, part_len);
+                parts++;
+                part_len = 0;
+            }
+        }
+
+        if (parts > 2) {
+            buffer_putc(&b->bytecode, OP_CONCAT);
+            parts--;
+        }
+    }
 }
 
 static void visit_binary(Compiler *c, Scope *scope, block_id *bid, node *n) {
