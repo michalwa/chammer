@@ -170,8 +170,8 @@ void bytecode_debug_print(const uint8_t *bytecode, size_t bytecode_len, Buffer *
 
         switch (op) {
         case OP_JUMP:
-        case OP_JUMPIFN:
-        case OP_JUMPIFOK: debug_print_u32_addr(bytecode, &offset, output); break;
+        case OP_JUMPIF:
+        case OP_JUMPIFN: debug_print_u32_addr(bytecode, &offset, output); break;
         case OP_CALL:
             debug_print_u8(bytecode, &offset, output);
             debug_print_u32_addr(bytecode, &offset, output);

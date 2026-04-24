@@ -297,18 +297,20 @@ static void visit_match(Compiler *c, Scope *scope, block_id *bid, node *n) {
             visit_pattern(c, &inner_scope, &case_body_bid, child, NULL, &fail_bid);
             visit_expr(c, &inner_scope, &case_body_bid, rhs);
             b = get_block(c, case_body_bid);
+            buffer_putc(&b->bytecode, OP_PUSHTRUE); // `true` means success
             buffer_putc(&b->bytecode, OP_RETURN);
 
             put_store_captures(c, prelude_bid, &inner_scope);
             put_load_captures(c, *bid, &inner_scope, scope);
             put_call(c, *bid, prelude_bid, &inner_scope);
-            put_jump(c, OP_JUMPIFOK, *bid, cont_block);
+            put_jump(c, OP_JUMPIF, *bid, cont_block);
+            buffer_putc(&b->bytecode, OP_POP); // pop `false`
 
             scope_free(&inner_scope);
 
             if (fail_bid != BLOCK_NULL) {
                 b = get_block(c, fail_bid);
-                buffer_putc(&b->bytecode, OP_ERRSET);
+                buffer_putc(&b->bytecode, OP_PUSHFALSE); // `false` means error
                 buffer_putc(&b->bytecode, OP_RETURN);
             } else {
                 // TODO: emit warning
@@ -339,12 +341,8 @@ static void visit_function(Compiler *c, Scope *scope, block_id bid, node *first_
     Scope inner_scope;
     scope_init(&inner_scope, scope);
 
-    // The lambda prelude is responsible for storing captures as locals
     block_id prelude_bid = push_block(c);
-    // The first block of the lambda body
-    block_id body_start_bid = push_block(c);
-    block_id body_bid = body_start_bid;
-    // Block for handling arg pattern match failures
+    block_id body_bid = push_block(c);
     block_id fail_bid = BLOCK_NULL;
 
     uint8_t args = 0;
@@ -354,6 +352,8 @@ static void visit_function(Compiler *c, Scope *scope, block_id bid, node *first_
     }
 
     visit_expr(c, &inner_scope, &body_bid, body);
+    Block *b = get_block(c, body_bid);
+    buffer_putc(&b->bytecode, OP_RETURN);
 
     if (fail_bid != BLOCK_NULL) {
         Block *fail = get_block(c, fail_bid);
@@ -362,8 +362,8 @@ static void visit_function(Compiler *c, Scope *scope, block_id bid, node *first_
 
     put_store_captures(c, prelude_bid, &inner_scope);
     put_load_captures(c, bid, &inner_scope, scope);
-
     put_makecls(c, bid, inner_scope.captures.len, args, prelude_bid);
+
     scope_free(&inner_scope);
 }
 
