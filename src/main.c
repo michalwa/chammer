@@ -7,7 +7,7 @@
 #include "../lib/utils.h"
 
 // clang-format off
-#define PROGRAM_SOURCE "let x = [1, 2, 3]; x"
+#define PROGRAM_SOURCE "let [] = [1, 2, 3]; 1"
 // clang-format on
 
 int main(void) {

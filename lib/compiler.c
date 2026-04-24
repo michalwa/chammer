@@ -471,14 +471,46 @@ static void visit_ptuple(Compiler *c, Scope *scope, block_id *bid, node *lhs, bl
     for (node *child = lhs->first_child; child; child = child->next_sibling) {
         bytecode_put_tupleget(&b->bytecode, index);
         visit_pattern(c, scope, bid, child, NULL, fail_bid);
-
-        if (!child->next_sibling) {
-            b = get_block(c, *bid);
-            buffer_putc(&b->bytecode, OP_POP);
-        }
-
         index++;
     }
+
+    b = get_block(c, *bid);
+    buffer_putc(&b->bytecode, OP_POP);
+}
+
+static inline void visit_plist(
+    Compiler *c, Scope *scope, block_id *bid, node *lhs, block_id *fail_bid
+) {
+    if (*fail_bid == BLOCK_NULL) *fail_bid = push_block(c);
+
+    Block *b;
+
+    for (node *child = lhs->first_child; child; child = child->next_sibling) {
+        b = get_block(c, *bid);
+
+        if (child->type == N_PLTAIL) {
+            if (child->flags & NF_NAMED) {
+                symbol  sym = string_pool_intern(&c->idents, token_string(child->token));
+                uint8_t i = scope_get_or_put_local(scope, sym);
+                bytecode_put_store(&b->bytecode, i);
+            } else {
+                buffer_putc(&b->bytecode, OP_POP);
+            }
+
+            return;
+        }
+
+        buffer_putc(&b->bytecode, OP_ISCONS);
+        put_jump(c, OP_JUMPIFN, *bid, *fail_bid);
+
+        buffer_putc(&b->bytecode, OP_UNCONS);
+        visit_pattern(c, scope, bid, child, NULL, fail_bid);
+    }
+
+    b = get_block(c, *bid);
+    buffer_putc(&b->bytecode, OP_ISNIL);
+    put_jump(c, OP_JUMPIFN, *bid, *fail_bid);
+    buffer_putc(&b->bytecode, OP_POP);
 }
 
 /*
@@ -502,6 +534,10 @@ static void visit_pattern(
     case N_PTUPLE:
         if (rhs) visit_expr(c, scope, bid, rhs);
         visit_ptuple(c, scope, bid, lhs, fail_bid);
+        break;
+    case N_PLIST:
+        if (rhs) visit_expr(c, scope, bid, rhs);
+        visit_plist(c, scope, bid, lhs, fail_bid);
         break;
     default: panic("unsupported node: %s", node_type_name(lhs->type));
     }

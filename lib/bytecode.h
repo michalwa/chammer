@@ -32,6 +32,9 @@ typedef uint8_t u64be[8];
     _(OP_TUPLEGET, 0x51)  /* push N-th element of tuple on top of the stack (don't pop) */         \
     _(OP_MAKETUPLE, 0x52) /* pop N values and make a tuple */                                      \
     _(OP_MAKELIST, 0x53) /* push `nil` (empty list) and N times: pop 2 values and make a `cons` */ \
+    _(OP_ISNIL, 0x54)    /* check if top value on the stack is a `nil` (empty list) (don't pop) */ \
+    _(OP_ISCONS, 0x55)   /* check if top value on the stack is a `cons` (list) (don't pop) */      \
+    _(OP_UNCONS, 0x56)   /* pop top `cons` and push `tail` and `head` separately */                \
     _(OP_HALT, 0xFF)     /* stop execution */
 
 #define ENUM_MEMBER(name, byte) name = byte,
