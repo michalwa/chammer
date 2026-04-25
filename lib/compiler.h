@@ -3,6 +3,7 @@
 
 #include "ast.h"
 #include "buffer.h"
+#include "stack.h"
 #include "string_pool.h"
 #include "vector.h"
 
@@ -10,7 +11,7 @@ typedef struct {
     Buffer     string_buffer;
     StringPool strings;
     StringPool idents;
-    Vector     blocks;
+    Stack      blocks;
     Vector     jumps;
 } Compiler;
 
