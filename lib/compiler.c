@@ -693,7 +693,7 @@ void compiler_write_program(Compiler *c, Buffer *b) {
     for (EACH_IN_VECTOR(c->jumps, jump, j)) {
         Block *from_block = (Block *)vector_get(&c->blocks, j->from_block);
         Block *to_block = (Block *)vector_get(&c->blocks, j->to_block);
-        bytecode_set_u32be(from_block->bytecode.data + j->addr_offset, to_block->offset);
+        bytecode_set_u32be((uint8_t *)from_block->bytecode.data + j->addr_offset, to_block->offset);
     }
 
     for (EACH_IN_VECTOR(c->blocks, Block, block)) buffer_puts(b, buffer_string(&block->bytecode));

@@ -8,62 +8,56 @@ const char *opcode_name(opcode op) {
     RETURN_ENUM_NAME_V(opcode, op, EACH_OPCODE);
 }
 
-#define read_be_bytes(b, t)                      \
-    do {                                         \
-        t v = 0;                                 \
-        for (size_t i = 0; i < sizeof(t); i++) { \
-            v <<= 8;                             \
-            v |= b[i];                           \
-        }                                        \
-        return v;                                \
-    } while (0)
-
-inline uint16_t u16be_value(u16be bytes) {
-    read_be_bytes(bytes, uint16_t);
+static inline uint64_t read_be_bytes(const uint8_t *bytes, size_t len) {
+    uint64_t value = 0;
+    for (size_t i = 0; i < len; i++) {
+        value <<= 8;
+        value |= bytes[i];
+    }
+    return value;
 }
 
-inline uint32_t u32be_value(u32be bytes) {
-    read_be_bytes(bytes, uint32_t);
+uint16_t u16be_value(u16be bytes) {
+    return (uint16_t)read_be_bytes(&bytes[0], sizeof(u16be));
 }
 
-inline uint64_t u64be_value(u64be bytes) {
-    read_be_bytes(bytes, uint64_t);
+uint32_t u32be_value(u32be bytes) {
+    return (uint32_t)read_be_bytes(&bytes[0], sizeof(u32be));
 }
 
-#undef read_be_bytes
-
-#define set_be_bytes(c, v)                                                                      \
-    do {                                                                                        \
-        for (intptr_t i = sizeof(v) - 1; i >= 0; i--) *c++ = (uint8_t)((v >> (i << 3)) & 0xFF); \
-    } while (0)
-
-inline void bytecode_set_u16be(char *c, uint16_t v) {
-    set_be_bytes(c, v);
+uint64_t u64be_value(u64be bytes) {
+    return (uint64_t)read_be_bytes(&bytes[0], sizeof(u64be));
 }
 
-inline void bytecode_set_u32be(char *c, uint32_t v) {
-    set_be_bytes(c, v);
+static inline void set_be_bytes(uint8_t *bytes, size_t len, uint64_t value) {
+    for (size_t i = 0; i < len; i++) *bytes++ = (uint8_t)((value >> ((len - 1 - i) << 3)) & 0xFF);
 }
 
-inline void bytecode_set_u64be(char *c, uint64_t v) {
-    set_be_bytes(c, v);
+void bytecode_set_u16be(uint8_t *bytes, uint16_t value) {
+    set_be_bytes(bytes, sizeof(value), value);
 }
 
-#undef set_be_bytes
-
-inline void bytecode_put_u16be(Buffer *b, uint16_t v) {
-    char *c = buffer_alloc(b, sizeof(v));
-    bytecode_set_u16be(c, v);
+void bytecode_set_u32be(uint8_t *bytes, uint32_t value) {
+    set_be_bytes(bytes, sizeof(value), value);
 }
 
-inline void bytecode_put_u32be(Buffer *b, uint32_t v) {
-    char *c = buffer_alloc(b, sizeof(v));
-    bytecode_set_u32be(c, v);
+void bytecode_set_u64be(uint8_t *bytes, uint64_t value) {
+    set_be_bytes(bytes, sizeof(value), value);
 }
 
-inline void bytecode_put_u64be(Buffer *b, uint64_t v) {
-    char *c = buffer_alloc(b, sizeof(v));
-    bytecode_set_u64be(c, v);
+inline void bytecode_put_u16be(Buffer *b, uint16_t value) {
+    uint8_t *c = (uint8_t *)buffer_alloc(b, sizeof(value));
+    bytecode_set_u16be(c, value);
+}
+
+inline void bytecode_put_u32be(Buffer *b, uint32_t value) {
+    uint8_t *c = (uint8_t *)buffer_alloc(b, sizeof(value));
+    bytecode_set_u32be(c, value);
+}
+
+inline void bytecode_put_u64be(Buffer *b, uint64_t value) {
+    uint8_t *c = (uint8_t *)buffer_alloc(b, sizeof(value));
+    bytecode_set_u64be(c, value);
 }
 
 void bytecode_put_jump(Buffer *b, opcode op, size_t *addr_offset) {
@@ -153,21 +147,21 @@ bool program_read(program *p, uint8_t *bytes, size_t len) {
     return true;
 }
 
-static void debug_print_u8(const uint8_t *bytecode, size_t *offset, Buffer *output) {
+static inline void debug_print_u8(const uint8_t *bytecode, size_t *offset, Buffer *output) {
     buffer_printf(output, " %" PRIu8, bytecode[(*offset)++]);
 }
 
-static void debug_print_u32(const uint8_t *bytecode, size_t *offset, Buffer *output) {
+static inline void debug_print_u32(const uint8_t *bytecode, size_t *offset, Buffer *output) {
     buffer_printf(output, " %" PRIu32, u32be_value(*(u32be *)&bytecode[*offset]));
     *offset += sizeof(u32be);
 }
 
-static void debug_print_u32_addr(const uint8_t *bytecode, size_t *offset, Buffer *output) {
+static inline void debug_print_u32_addr(const uint8_t *bytecode, size_t *offset, Buffer *output) {
     buffer_printf(output, " %08" PRIX32, u32be_value(*(u32be *)&bytecode[*offset]));
     *offset += sizeof(u32be);
 }
 
-static void debug_print_u64(const uint8_t *bytecode, size_t *offset, Buffer *output) {
+static inline void debug_print_u64(const uint8_t *bytecode, size_t *offset, Buffer *output) {
     buffer_printf(output, " %" PRIu64, u64be_value(*(u64be *)&bytecode[*offset]));
     *offset += sizeof(u64be);
 }

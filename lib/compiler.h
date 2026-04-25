@@ -19,6 +19,9 @@ void compiler_free(Compiler *);
 void compiler_visit_program(Compiler *, node *);
 void compiler_write_program(Compiler *, Buffer *);
 
+/*
+ * Expects the full contents of a string token, including quotes
+ */
 void compile_string(string, Buffer *);
 
 #endif // COMPILER_H_

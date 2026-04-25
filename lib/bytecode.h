@@ -7,15 +7,22 @@
 
 #include "buffer.h"
 
+/*
+ * Big-endian integer encodings
+ */
 typedef uint8_t u16be[2];
 typedef uint8_t u32be[4];
 typedef uint8_t u64be[8];
 
+/*
+ * Some opcodes expect extra bytes with arguments. Consult the `bytecode_put_*`
+ * functions for specification.
+ */
 #define EACH_OPCODE(_)                                                                             \
     _(OP_JUMP, 0x01)      /* jump to instruction unconditionally */                                \
     _(OP_JUMPIF, 0x02)    /* pop a value and jump to instruction if it's `true` */                 \
     _(OP_JUMPIFN, 0x03)   /* pop a value and jump to instruction if it's `false` */                \
-    _(OP_CALL, 0x04)      /* push a function frame and jump to instruction */                      \
+    _(OP_CALL, 0x04)      /* push a function frame with N locals and jump to instruction */        \
     _(OP_RETURN, 0x05)    /* return from OP_CALL */                                                \
     _(OP_LOAD, 0x10)      /* load local */                                                         \
     _(OP_STORE, 0x11)     /* store local */                                                        \
@@ -43,13 +50,6 @@ typedef uint8_t u64be[8];
 typedef enum { EACH_OPCODE(ENUM_MEMBER) } opcode;
 #undef ENUM_MEMBER
 
-typedef void *op_void;
-
-typedef struct {
-    uint32_t offset;
-    uint32_t len;
-} op_pushstr;
-
 typedef struct {
     u16be   *version;
     u32be   *string_bytes_len;
@@ -67,16 +67,25 @@ uint16_t u16be_value(u16be);
 uint32_t u32be_value(u32be);
 uint64_t u64be_value(u64be);
 
-void bytecode_set_u16be(char *, uint16_t);
-void bytecode_set_u32be(char *, uint32_t);
-void bytecode_set_u64be(char *, uint64_t);
+void bytecode_set_u16be(uint8_t *, uint16_t);
+void bytecode_set_u32be(uint8_t *, uint32_t);
+void bytecode_set_u64be(uint8_t *, uint64_t);
 
 void bytecode_put_u16be(Buffer *, uint16_t);
 void bytecode_put_u32be(Buffer *, uint32_t);
 void bytecode_put_u64be(Buffer *, uint64_t);
 
-void bytecode_put_jump(Buffer *b, opcode op, size_t *addr_offset);
-void bytecode_put_call(Buffer *b, uint8_t locals, size_t *addr_offset);
+/*
+ * The following functions should be used to generate instructions which expect
+ * arguments. For 0-arg instructions, `buffer_putc` can be used.
+ *
+ * `size_t *addr_offset` is set to the offset relative to the buffer start
+ * where an `u32be` instruction address is located. This offset is stored
+ * by the compiler to resolve jumps at a later stage.
+ */
+
+void bytecode_put_jump(Buffer *, opcode op, size_t *addr_offset);
+void bytecode_put_call(Buffer *, uint8_t locals, size_t *addr_offset);
 void bytecode_put_load(Buffer *, uint8_t local);
 void bytecode_put_store(Buffer *, uint8_t local);
 void bytecode_put_pushint(Buffer *, uint64_t value);
@@ -88,6 +97,10 @@ void bytecode_put_tupleget(Buffer *, uint8_t index);
 void bytecode_put_maketuple(Buffer *, uint8_t len);
 void bytecode_put_makelist(Buffer *, uint8_t len);
 
+/*
+ * Validates a compiled program and stores pointers to specific sections in `p`.
+ * Does not allocate any new buffers.
+ */
 bool program_read(program *p, uint8_t *bytes, size_t len);
 
 void bytecode_debug_print(const uint8_t *bytecode, size_t bytecode_len, Buffer *output);
