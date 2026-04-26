@@ -554,7 +554,7 @@ static void visit_papply(Compiler *c, Block **b, Block **fail, Scope *s, node *l
     symbol  sym = string_pool_intern(&c->idents, token_string(lhs->token));
     uint8_t i = scope_get_or_put_local(s, sym);
 
-    visit_function(c, b, s, lhs->first_child, rhs, &sym);
+    visit_function(c, b, s, lhs->first_child, rhs, (lhs->flags & NF_REC) ? &sym : NULL);
     bytecode_put_store(&(*b)->bytecode, i);
 }
 
