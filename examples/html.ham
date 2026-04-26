@@ -1,2 +1,28 @@
-let f x = x + 1;
-f 1
+let rec map f xs = match xs
+  case [] then []
+  case [x, ...rest] then [f x] + map f rest;
+
+let rec concat strings = match strings
+  case [] then ""
+  case [xs, ...rest] then xs + concat rest;
+
+let rec join separator xs = match xs
+  case [] then ""
+  case [x] then x
+  case [x, ...rest] then x + separator + join separator rest;
+
+let h name attrs children = {
+  let str_attrs = concat (map (\(k, v) -> " " + k + "=\"" + v + "\"") attrs);
+  let str_children = join "\n" children;
+  "<" + name + str_attrs + ">" + str_children + "</" + name + ">"
+};
+
+let document =
+  h "body" [] [
+    h "div" [("class", "container")] [
+      h "h1" [] ["Hello, Hammer!"],
+      h "p" [] ["Lorem ipsum dolor sit amet"],
+    ],
+  ];
+
+print document
