@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "bytecode.h"
+#include "bytes.h"
 #include "utils.h"
 
 /*
@@ -632,9 +633,12 @@ void compiler_visit_program(Compiler *c, node *n) {
 
 void compiler_write_program(Compiler *c, Buffer *b) {
     buffer_puts(b, STRING(MAGIC_HAMMER));
-    bytecode_put_u16be(b, BYTECODE_VERSION);
-    bytecode_put_u32be(b, (uint32_t)c->strings.buffer.len);
+    buffer_put_u16be(b, BYTECODE_VERSION);
+    buffer_put_u32be(b, (uint32_t)c->strings.buffer.len);
     buffer_puts(b, buffer_string(&c->strings.buffer));
+
+    // TODO: function metadata
+    buffer_put_u32be(b, 0);
 
     size_t block_offset = 0;
     for (stack_iter i = stack_iter_begin(&c->blocks); stack_iter_next(&i);) {
@@ -643,8 +647,10 @@ void compiler_write_program(Compiler *c, Buffer *b) {
         block_offset += block->bytecode.len;
     }
 
-    for (EACH_IN_VECTOR(c->jumps, jump, j))
-        bytecode_set_u32be((uint8_t *)j->origin->bytecode.data + j->addr_offset, j->target->offset);
+    for (EACH_IN_VECTOR(c->jumps, jump, j)) {
+        uint8_t *addr = (uint8_t *)j->origin->bytecode.data + j->addr_offset;
+        write_u32be(&addr, j->target->offset);
+    }
 
     for (stack_iter i = stack_iter_begin(&c->blocks); stack_iter_next(&i);) {
         Block *block = (Block *)i.item;

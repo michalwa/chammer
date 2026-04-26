@@ -35,7 +35,7 @@
         ASSERT_(a_ == b_, #a " == " #b "\n   left = " fmt "\n  right = " fmt, a_, b_); \
     } while (0)
 
-#define ASSERT_INT_EQ(a, b) ASSERT_EQ_(int, "%d", a, b)
+#define ASSERT_INT_EQ(a, b) ASSERT_EQ_(long long, "%lld", a, b)
 
 #define ASSERT_ENUM_EQ(a, b, name_fn)                                                             \
     do {                                                                                          \

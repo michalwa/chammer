@@ -8,13 +8,6 @@
 #include "buffer.h"
 
 /*
- * Big-endian integer encodings
- */
-typedef uint8_t u16be[2];
-typedef uint8_t u32be[4];
-typedef uint8_t u64be[8];
-
-/*
  * Some opcodes expect extra bytes with arguments. Consult the `bytecode_put_*`
  * functions for specification.
  */
@@ -51,29 +44,31 @@ typedef enum { EACH_OPCODE(ENUM_MEMBER) } opcode;
 #undef ENUM_MEMBER
 
 typedef struct {
-    u16be   *version;
-    u32be   *string_bytes_len;
-    char    *string_bytes;
-    uint8_t *bytecode;
-    size_t   bytecode_len;
+    uint32_t addr;
+    uint8_t  locals;
+    uint8_t  args;
+} func_meta;
+
+typedef struct {
+    uint8_t addr[4];
+    uint8_t locals;
+    uint8_t args;
+} func_meta_bytes;
+
+typedef struct {
+    uint16_t         version;
+    uint32_t         string_bytes_len;
+    const char      *string_bytes;
+    uint32_t         funcs_len;
+    func_meta_bytes *funcs;
+    const uint8_t   *bytecode;
+    size_t           bytecode_len;
 } program;
 
 #define MAGIC_HAMMER     "HAMMER"
 #define BYTECODE_VERSION 0x0001
 
 const char *op_name(opcode);
-
-uint16_t u16be_value(u16be);
-uint32_t u32be_value(u32be);
-uint64_t u64be_value(u64be);
-
-void bytecode_set_u16be(uint8_t *, uint16_t);
-void bytecode_set_u32be(uint8_t *, uint32_t);
-void bytecode_set_u64be(uint8_t *, uint64_t);
-
-void bytecode_put_u16be(Buffer *, uint16_t);
-void bytecode_put_u32be(Buffer *, uint32_t);
-void bytecode_put_u64be(Buffer *, uint64_t);
 
 /*
  * The following functions should be used to generate instructions which expect
@@ -101,7 +96,8 @@ void bytecode_put_makelist(Buffer *, uint8_t len);
  * Validates a compiled program and stores pointers to specific sections in `p`.
  * Does not allocate any new buffers.
  */
-bool program_read(program *p, uint8_t *bytes, size_t len);
+bool program_read(program *p, const uint8_t *bytes, size_t len);
+func_meta program_func_meta(const program *p, uint32_t index);
 
 void bytecode_debug_print(const uint8_t *bytecode, size_t bytecode_len, Buffer *output);
 

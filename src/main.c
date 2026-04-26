@@ -2,7 +2,6 @@
 #include "../lib/bytecode.h"
 #include "../lib/compiler.h"
 #include "../lib/lexer.h"
-#include "../lib/machine.h"
 #include "../lib/parser.h"
 #include "../lib/utils.h"
 
@@ -54,9 +53,9 @@ int main(void) {
     if (!program_read(&prog, (uint8_t *)comp_buffer.data, comp_buffer.len))
         panic("could not read compiled program");
 
-    printf("version:           %04" PRIX16 "\n", u16be_value(*prog.version));
-    printf("string bytes len:  %" PRIu32 "\n", u32be_value(*prog.string_bytes_len));
-    printf("string bytes:      %.*s\n", u32be_value(*prog.string_bytes_len), prog.string_bytes);
+    printf("version:           %04" PRIX16 "\n", prog.version);
+    printf("string bytes len:  %" PRIu32 "\n", prog.string_bytes_len);
+    printf("string bytes:      %.*s\n", (int)prog.string_bytes_len, prog.string_bytes);
     printf("bytecode len:      %zu\n", prog.bytecode_len);
     printf("bytecode:");
 
@@ -67,23 +66,6 @@ int main(void) {
 
     bytecode_debug_print(prog.bytecode, prog.bytecode_len, &out);
     printf(F_BUFFER, FA_BUFFER(out));
-
-    // Machine vm;
-    // machine_init(&vm, prog.bytecode, prog.bytecode_len);
-
-    // while (machine_step(&vm));
-
-    // printf("\nbytecode executed\nstack:\n");
-
-    // for (stack_iter i = stack_iter_begin(&vm.opstack); stack_iter_next(&i);) {
-    //     vm_value *v = (vm_value *)i.item;
-    //     switch (v->type) {
-    //     case V_INT: printf("  %" PRIu64 "\n", v->value.int_value); break;
-    //     default: printf("  (value)\n"); break;
-    //     }
-    // }
-
-    // machine_free(&vm);
 
     buffer_free(&input);
     buffer_free(&comp_buffer);
