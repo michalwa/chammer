@@ -92,9 +92,9 @@ void bytecode_put_makelist(Buffer *, uint8_t len);
  * Validates a compiled program and stores pointers to specific sections in `p`.
  * Does not allocate any new buffers.
  */
-bool program_read(program *p, const uint8_t *bytes, size_t len);
+bool      program_read(program *p, const uint8_t *bytes, size_t len);
 func_meta program_func_meta(const program *p, uint32_t index);
-void bytecode_put_func_meta(Buffer *, func_meta);
+void      bytecode_put_func_meta(Buffer *, func_meta);
 
 void bytecode_debug_print(const uint8_t *bytecode, size_t bytecode_len, Buffer *output);
 

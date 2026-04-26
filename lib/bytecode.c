@@ -101,7 +101,7 @@ bool program_read(program *p, const uint8_t *bytes, size_t len) {
 }
 
 func_meta program_func_meta(const program *p, uint32_t index) {
-    func_meta fn;
+    func_meta      fn;
     const uint8_t *cursor = (const uint8_t *)(p->funcs + index);
 
     fn.addr = read_u32be(&cursor);
@@ -139,7 +139,7 @@ void bytecode_debug_print(const uint8_t *bytecode, size_t bytecode_len, Buffer *
 
     while (cursor < end) {
         uint32_t offset = (uint32_t)(cursor - bytecode);
-        uint8_t op = *cursor++;
+        uint8_t  op = *cursor++;
 
         buffer_printf(output, "%08" PRIX32 "  %s", (uint32_t)offset, opcode_name(op));
 
@@ -147,9 +147,7 @@ void bytecode_debug_print(const uint8_t *bytecode, size_t bytecode_len, Buffer *
         case OP_JUMP:
         case OP_JUMPIF:
         case OP_JUMPIFN: debug_print_u32_addr(&cursor, output); break;
-        case OP_CALL:
-            debug_print_u32(&cursor, output);
-            break;
+        case OP_CALL: debug_print_u32(&cursor, output); break;
         case OP_LOAD:
         case OP_STORE:
         case OP_CALLCLS:

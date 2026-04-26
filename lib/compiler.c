@@ -659,11 +659,14 @@ void compiler_write_program(Compiler *c, Buffer *b) {
     }
 
     for (EACH_IN_VECTOR(c->funcs, func, f)) {
-        bytecode_put_func_meta(b, (func_meta){
-            .addr = f->start->offset,
-            .locals = (uint8_t)f->locals,
-            .args = (uint8_t)f->args,
-        });
+        bytecode_put_func_meta(
+            b,
+            (func_meta){
+                .addr = f->start->offset,
+                .locals = (uint8_t)f->locals,
+                .args = (uint8_t)f->args,
+            }
+        );
     }
 
     for (stack_iter i = stack_iter_begin(&c->blocks); stack_iter_next(&i);) {

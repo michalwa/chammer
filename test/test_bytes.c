@@ -33,7 +33,7 @@ TEST(read_be_bytes) {
 }
 
 TEST(write_be_bytes) {
-    uint8_t buffer[9] = { 0 };
+    uint8_t  buffer[9] = { 0 };
     uint8_t *b;
 
     b = memset(buffer, 0xFF, sizeof(buffer));

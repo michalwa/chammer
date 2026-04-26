@@ -1,11 +1,10 @@
 #include "bytes.h"
 
-#define READ_BE_BYTES(t, b) \
-    do { \
-        t v = 0; \
-        for (intptr_t i = sizeof(t) - 1; i >= 0; i--) \
-            v = (v << 8) | *(*b)++; \
-        return v; \
+#define READ_BE_BYTES(t, b)                                                   \
+    do {                                                                      \
+        t v = 0;                                                              \
+        for (intptr_t i = sizeof(t) - 1; i >= 0; i--) v = (v << 8) | *(*b)++; \
+        return v;                                                             \
     } while (0)
 
 inline uint16_t read_u16be(const uint8_t **b) {
@@ -34,10 +33,9 @@ inline int64_t read_i64be(const uint8_t **b) {
 
 #undef READ_BE_BYTES
 
-#define WRITE_BE_BYTES(t, b, v) \
-    do { \
-        for (intptr_t i = sizeof(t) - 1; i >= 0; i--) \
-            *(*b)++ = (v >> (i << 3)) & 0xFF; \
+#define WRITE_BE_BYTES(t, b, v)                                                         \
+    do {                                                                                \
+        for (intptr_t i = sizeof(t) - 1; i >= 0; i--) *(*b)++ = (v >> (i << 3)) & 0xFF; \
     } while (0)
 
 inline void write_u16be(uint8_t **b, uint16_t v) {

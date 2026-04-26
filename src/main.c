@@ -50,9 +50,8 @@ int main(void) {
     for (uint32_t i = 0; i < prog.funcs_len; i++) {
         func_meta fn = program_func_meta(&prog, i);
         printf(
-            "\n  %2" PRIu32 " | %08" PRIX32 \
-            " locals: %2" PRIu8 ", args: %2" PRIu8,
-            i, fn.addr, fn.locals, fn.args
+            "\n  %2" PRIu32 " | %08" PRIX32 " locals: %2" PRIu8 ", args: %2" PRIu8, i, fn.addr,
+            fn.locals, fn.args
         );
     }
 
