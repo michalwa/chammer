@@ -5,16 +5,6 @@
 #include "../lib/parser.h"
 #include "../lib/utils.h"
 
-// clang-format off
-#define PROGRAM_SOURCE "let f x = x + 1; let g x = { f (x + x) }; g 1"
-// #define PROGRAM_SOURCE "let x = 1; let y = { let x = 2; x + 1 }; x + y"
-// #define PROGRAM_SOURCE \
-//     "let rec map f xs = match xs\n" \
-//     "  case [] then []\n" \
-//     "  case [x, ...rest] then [f x, ...map f xs];\n" \
-//     "map (\\x -> x + 1) [1, 2, 3]\n"
-// clang-format on
-
 int main(void) {
     token        t;
     Parser       p;
@@ -23,8 +13,6 @@ int main(void) {
     Buffer       input;
     Buffer       comp_buffer;
     program      prog;
-
-    // token_begin(&t, PROGRAM_SOURCE);
 
     FILE *example = fopen("examples/html.ham", "rb");
     buffer_init(&input);
@@ -56,13 +44,26 @@ int main(void) {
     printf("version:           %04" PRIX16 "\n", prog.version);
     printf("string bytes len:  %" PRIu32 "\n", prog.string_bytes_len);
     printf("string bytes:      %.*s\n", (int)prog.string_bytes_len, prog.string_bytes);
+    printf("funcs len:         %" PRIu32 "\n", prog.funcs_len);
+    printf("funcs:");
+
+    for (uint32_t i = 0; i < prog.funcs_len; i++) {
+        func_meta fn = program_func_meta(&prog, i);
+        printf(
+            "\n  %2" PRIu32 " | %08" PRIX32 \
+            " locals: %2" PRIu8 ", args: %2" PRIu8,
+            i, fn.addr, fn.locals, fn.args
+        );
+    }
+
+    printf("\n");
     printf("bytecode len:      %zu\n", prog.bytecode_len);
-    printf("bytecode:");
+    // printf("bytecode:");
 
-    for (size_t i = 0; i < prog.bytecode_len; i++)
-        printf("%s%02" PRIX8, (i % 16) ? ((i % 8) ? " " : "  ") : "\n  ", prog.bytecode[i]);
+    // for (size_t i = 0; i < prog.bytecode_len; i++)
+    //     printf("%s%02" PRIX8, (i % 16) ? ((i % 8) ? " " : "  ") : "\n  ", prog.bytecode[i]);
 
-    printf("\n\n");
+    // printf("\n\n");
 
     bytecode_debug_print(prog.bytecode, prog.bytecode_len, &out);
     printf(F_BUFFER, FA_BUFFER(out));

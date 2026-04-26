@@ -10,16 +10,16 @@ const char *opcode_name(opcode op) {
 }
 
 void bytecode_put_jump(Buffer *b, opcode op, size_t *addr_offset) {
+    debug_assert(op == OP_JUMP || op == OP_JUMPIF || op == OP_JUMPIFN);
+
     buffer_putc(b, op);
     if (addr_offset) *addr_offset = b->len;
     buffer_put_u32be(b, BYTECODE_ADDR_PLACEHOLDER);
 }
 
-void bytecode_put_call(Buffer *b, uint8_t locals, size_t *addr_offset) {
+void bytecode_put_call(Buffer *b, uint32_t fnindex) {
     buffer_putc(b, OP_CALL);
-    buffer_putc(b, locals);
-    if (addr_offset) *addr_offset = b->len;
-    buffer_put_u32be(b, BYTECODE_ADDR_PLACEHOLDER);
+    buffer_put_u32be(b, fnindex);
 }
 
 void bytecode_put_load(Buffer *b, uint8_t local) {
@@ -43,12 +43,10 @@ void bytecode_put_pushstr(Buffer *b, uint32_t offset, uint32_t len) {
     buffer_put_u32be(b, len);
 }
 
-void bytecode_put_makecls(Buffer *b, uint8_t captures, uint8_t args, size_t *addr_offset) {
+void bytecode_put_makecls(Buffer *b, uint32_t fnindex, uint8_t captures) {
     buffer_putc(b, OP_MAKECLS);
+    buffer_put_u32be(b, fnindex);
     buffer_putc(b, captures);
-    buffer_putc(b, args);
-    if (addr_offset) *addr_offset = b->len;
-    buffer_put_u32be(b, BYTECODE_ADDR_PLACEHOLDER);
 }
 
 void bytecode_put_callcls(Buffer *b, uint8_t args) {
@@ -102,7 +100,22 @@ bool program_read(program *p, const uint8_t *bytes, size_t len) {
     return true;
 }
 
-func_meta program_func_meta(const program *p, uint32_t index);
+func_meta program_func_meta(const program *p, uint32_t index) {
+    func_meta fn;
+    const uint8_t *cursor = (const uint8_t *)(p->funcs + index);
+
+    fn.addr = read_u32be(&cursor);
+    fn.locals = *cursor++;
+    fn.args = *cursor++;
+
+    return fn;
+}
+
+void bytecode_put_func_meta(Buffer *b, func_meta fn) {
+    buffer_put_u32be(b, fn.addr);
+    buffer_putc(b, fn.locals);
+    buffer_putc(b, fn.args);
+}
 
 static inline void debug_print_u8(const uint8_t **b, Buffer *output) {
     buffer_printf(output, " %" PRIu8, *(*b)++);
@@ -135,8 +148,7 @@ void bytecode_debug_print(const uint8_t *bytecode, size_t bytecode_len, Buffer *
         case OP_JUMPIF:
         case OP_JUMPIFN: debug_print_u32_addr(&cursor, output); break;
         case OP_CALL:
-            debug_print_u8(&cursor, output);
-            debug_print_u32_addr(&cursor, output);
+            debug_print_u32(&cursor, output);
             break;
         case OP_LOAD:
         case OP_STORE:
@@ -151,9 +163,8 @@ void bytecode_debug_print(const uint8_t *bytecode, size_t bytecode_len, Buffer *
             debug_print_u32(&cursor, output);
             break;
         case OP_MAKECLS:
+            debug_print_u32(&cursor, output);
             debug_print_u8(&cursor, output);
-            debug_print_u8(&cursor, output);
-            debug_print_u32_addr(&cursor, output);
             break;
         }
 

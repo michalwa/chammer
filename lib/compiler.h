@@ -13,6 +13,7 @@ typedef struct {
     StringPool idents;
     Stack      blocks;
     Vector     jumps;
+    Vector     funcs;
 } Compiler;
 
 void compiler_init(Compiler *);

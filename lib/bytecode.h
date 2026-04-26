@@ -71,21 +71,17 @@ typedef struct {
 const char *op_name(opcode);
 
 /*
- * The following functions should be used to generate instructions which expect
- * arguments. For 0-arg instructions, `buffer_putc` can be used.
- *
  * `size_t *addr_offset` is set to the offset relative to the buffer start
  * where an `u32be` instruction address is located. This offset is stored
  * by the compiler to resolve jumps at a later stage.
  */
-
 void bytecode_put_jump(Buffer *, opcode op, size_t *addr_offset);
-void bytecode_put_call(Buffer *, uint8_t locals, size_t *addr_offset);
+void bytecode_put_call(Buffer *, uint32_t fnindex);
 void bytecode_put_load(Buffer *, uint8_t local);
 void bytecode_put_store(Buffer *, uint8_t local);
 void bytecode_put_pushint(Buffer *, uint64_t value);
 void bytecode_put_pushstr(Buffer *, uint32_t offset, uint32_t len);
-void bytecode_put_makecls(Buffer *, uint8_t captures, uint8_t args, size_t *addr_offset);
+void bytecode_put_makecls(Buffer *, uint32_t fnindex, uint8_t captures);
 void bytecode_put_callcls(Buffer *, uint8_t args);
 void bytecode_put_istuple(Buffer *, uint8_t len);
 void bytecode_put_tupleget(Buffer *, uint8_t index);
@@ -98,6 +94,7 @@ void bytecode_put_makelist(Buffer *, uint8_t len);
  */
 bool program_read(program *p, const uint8_t *bytes, size_t len);
 func_meta program_func_meta(const program *p, uint32_t index);
+void bytecode_put_func_meta(Buffer *, func_meta);
 
 void bytecode_debug_print(const uint8_t *bytecode, size_t bytecode_len, Buffer *output);
 

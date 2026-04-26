@@ -34,6 +34,15 @@ typedef struct {
     size_t addr_offset;
 } jump;
 
+/*
+ * Function metadata, later translated into `func_meta` with a resolved address
+ */
+typedef struct {
+    Block *start;
+    size_t locals;
+    size_t args;
+} func;
+
 static void block_init(Block *b) {
     buffer_init(&b->bytecode);
     b->offset = 0; // offset is only calcuated in `compiler_write_program`
@@ -60,6 +69,7 @@ void compiler_init(Compiler *c) {
     string_pool_init(&c->idents);
     stack_init(&c->blocks, Block);
     vector_init(&c->jumps, jump);
+    vector_init(&c->funcs, func);
 }
 
 void compiler_free(Compiler *c) {
@@ -71,6 +81,7 @@ void compiler_free(Compiler *c) {
     string_pool_free(&c->idents);
     stack_free(&c->blocks);
     vector_free(&c->jumps);
+    vector_free(&c->funcs);
 }
 
 /*
@@ -156,25 +167,19 @@ static inline Block *push_block(Compiler *c) {
     return b;
 }
 
+static uint32_t push_func(Compiler *c, Block *start, Scope *inner_scope, size_t args) {
+    func *f = (func *)vector_push(&c->funcs);
+    f->start = start;
+    f->locals = inner_scope->locals.len;
+    f->args = args;
+    return (uint32_t)(c->funcs.len - 1);
+}
+
 static void put_jump(Compiler *c, opcode op, Block *origin, Block *target) {
     jump *j = (jump *)vector_push(&c->jumps);
     j->origin = origin;
     j->target = target;
     bytecode_put_jump(&origin->bytecode, op, &j->addr_offset);
-}
-
-static void put_call(Compiler *c, Block *origin, Block *target, Scope *inner_scope) {
-    jump *j = (jump *)vector_push(&c->jumps);
-    j->origin = origin;
-    j->target = target;
-    bytecode_put_call(&origin->bytecode, (uint8_t)inner_scope->locals.len, &j->addr_offset);
-}
-
-static void put_makecls(Compiler *c, Block *b, uint8_t captures, uint8_t args, Block *body) {
-    jump *j = (jump *)vector_push(&c->jumps);
-    j->origin = b;
-    j->target = body;
-    bytecode_put_makecls(&b->bytecode, captures, args, &j->addr_offset);
 }
 
 /*
@@ -387,7 +392,8 @@ static void visit_match(Compiler *c, Block **b, Scope *s, node *n) {
 
             put_store_captures(c, prelude, &inner_scope);
             put_load_captures(c, *b, &inner_scope, s);
-            put_call(c, *b, prelude, &inner_scope);
+            uint32_t fnindex = push_func(c, prelude, &inner_scope, 1);
+            bytecode_put_call(&(*b)->bytecode, fnindex);
 
             put_jump(c, OP_JUMPIF, *b, cont_block);
             buffer_putc(&(*b)->bytecode, OP_POP); // pop `false`
@@ -457,7 +463,8 @@ static void visit_function(Compiler *c, Block **b, Scope *s, node *arg0, node *b
 
     put_store_captures(c, prelude, &inner_scope);
     put_load_captures(c, *b, &inner_scope, s);
-    put_makecls(c, *b, inner_scope.captures.len, args, prelude);
+    uint32_t fnindex = push_func(c, prelude, &inner_scope, args);
+    bytecode_put_makecls(&(*b)->bytecode, fnindex, inner_scope.captures.len);
 
     scope_free(&inner_scope);
 
@@ -503,7 +510,8 @@ static void visit_block(Compiler *c, Block **b, Scope *s, node *n) {
 
     put_store_captures(c, prelude, &inner_scope);
     put_load_captures(c, *b, &inner_scope, s);
-    put_call(c, *b, prelude, &inner_scope);
+    uint32_t fnindex = push_func(c, prelude, &inner_scope, 0);
+    bytecode_put_call(&(*b)->bytecode, fnindex);
 
     if (fail) buffer_putc(&fail->bytecode, (char)OP_HALT); // TODO: raise error
 
@@ -636,9 +644,7 @@ void compiler_write_program(Compiler *c, Buffer *b) {
     buffer_put_u16be(b, BYTECODE_VERSION);
     buffer_put_u32be(b, (uint32_t)c->strings.buffer.len);
     buffer_puts(b, buffer_string(&c->strings.buffer));
-
-    // TODO: function metadata
-    buffer_put_u32be(b, 0);
+    buffer_put_u32be(b, (uint32_t)c->funcs.len);
 
     size_t block_offset = 0;
     for (stack_iter i = stack_iter_begin(&c->blocks); stack_iter_next(&i);) {
@@ -650,6 +656,14 @@ void compiler_write_program(Compiler *c, Buffer *b) {
     for (EACH_IN_VECTOR(c->jumps, jump, j)) {
         uint8_t *addr = (uint8_t *)j->origin->bytecode.data + j->addr_offset;
         write_u32be(&addr, j->target->offset);
+    }
+
+    for (EACH_IN_VECTOR(c->funcs, func, f)) {
+        bytecode_put_func_meta(b, (func_meta){
+            .addr = f->start->offset,
+            .locals = (uint8_t)f->locals,
+            .args = (uint8_t)f->args,
+        });
     }
 
     for (stack_iter i = stack_iter_begin(&c->blocks); stack_iter_next(&i);) {
