@@ -4,84 +4,97 @@
 #include "lib/snapshot.h"
 #include "lib/test.h"
 
-#define EXAMPLES_FILE_PATH "test/compiler_examples.txt"
+#define EACH_EXAMPLE(_)                                                                           \
+    _("int", "42")                                                                                \
+    _("string", "\"foo\"")                                                                        \
+    _("tuple", "(1, 2, 3)")                                                                       \
+    _("list", "[1, 2, 3]")                                                                        \
+    _("list_spread", "[1, 2, ...[3, 4], 5]")                                                      \
+    _("extern", "print 1")                                                                        \
+    _("if", "if 1 then 2 else 3")                                                                 \
+    _("if_nested", "if 1 then if 2 then 3 else 4 else if 5 then 6 else 7")                        \
+    _("assign", "let x = 1; let y = 2; (x, y)")                                                   \
+    _("assign_nested", "let x = 1; let y = { let x = 2; x }; (x, y)")                             \
+    _("tuple_unpack", "let (x, y) = (1, 2); (x, y)")                                              \
+    _("list_unpack", "let [x, y] = [1, 2]; (x, y)")                                               \
+    _("list_unpack_tail", "let [x, ...] = [1, 2, 3]; x")                                          \
+    _("list_unpack_tail_named", "let [x, ...xs] = [1, 2, 3]; (x, xs)")                            \
+    _("function_unary", "let f x = (x,); f 1")                                                    \
+    _("function_binary", "let f x y = (x, y); f 1 2")                                             \
+    _("function_nested", "let f x = { let g x y = (x, y); g x x }; f 1")                          \
+    _("function_tuple_unpack", "let f (x, y) = (y, x); f (1, 2)")                                 \
+    _("lambda", "let f = \\x y -> (x, y); f 1 2")                                                 \
+    _("lambda_tuple_unpack", "let f = \\(x, y) -> (y, x); f (1, 2)")                              \
+    _("let_rec",                                                                                  \
+      "let rec map f xs = match xs case [] then [] case [x, ...rest] then [f x, ...map f rest]; " \
+      "map (\\x -> x + 1) [1, 2, 3]")
 
-TEST(compiler_examples) {
-    token       t;
-    Parser      p;
-    Compiler    c;
-    FILE       *examples_file;
-    Buffer      examples_buffer;
-    const char *line;
-    size_t      line_len;
-    char        line_buffer[0x400];
-    Buffer      comp_buffer;
-    Buffer      output;
-    program     prog;
-    int         i;
+static int run_example(
+    Buffer *output_, const char *name, const char *snapshot_name, const char *source,
+    Buffer *comp_buffer, Buffer *output, Parser *parser
+) {
+    token    t;
+    Compiler c;
+    program  prog;
 
-    examples_file = fopen(EXAMPLES_FILE_PATH, "rb");
-    if (!examples_file) {
-        perror("Could not open `" EXAMPLES_FILE_PATH "`: ");
-        return TEST_FAIL;
+    token_begin(&t, source);
+    test_printf("%s\n", name);
+
+    ASSERT_ENUM_EQ(parse_program(parser, &t), PARSE_OK, parse_result_name);
+
+    compiler_init(&c);
+    compiler_visit_program(&c, parser->node);
+    compiler_write_program(&c, comp_buffer);
+
+    program_read(&prog, (const uint8_t *)comp_buffer->data, comp_buffer->len);
+
+    buffer_printf(output, "source: %s\n\n", source);
+    buffer_printf(output, "string bytes len:  %" PRIu32 "\n", prog.string_bytes_len);
+    buffer_printf(
+        output, "string bytes:      %.*s\n", (int)prog.string_bytes_len, prog.string_bytes
+    );
+    buffer_printf(output, "funcs len:         %" PRIu32 "\n", prog.funcs_len);
+    buffer_printf(output, "funcs:\n");
+
+    for (uint32_t i = 0; i < prog.funcs_len; i++) {
+        func_meta fn = program_func_meta(&prog, i);
+        buffer_printf(
+            output, "  %2" PRIu32 " | %08" PRIX32 " locals: %2" PRIu8 ", args: %2" PRIu8 "\n", i,
+            fn.addr, fn.locals, fn.args
+        );
     }
 
-    buffer_init(&examples_buffer);
-    buffer_read_file(&examples_buffer, examples_file);
+    buffer_putc(output, '\n');
+    bytecode_debug_print(prog.bytecode, prog.bytecode_len, output);
 
-    fclose(examples_file);
+    SNAPSHOT(snapshot_name, output->data);
 
-    parser_init(&p);
+    compiler_free(&c);
+    parser_reset(parser);
+    buffer_clear(output);
+    buffer_clear(comp_buffer);
+
+    return TEST_OK;
+}
+
+TEST(compiler_examples) {
+    Parser parser;
+    Buffer comp_buffer;
+    Buffer output;
+    int    result;
+
+    parser_init(&parser);
     buffer_init(&comp_buffer);
     buffer_init(&output);
 
-    for (i = 1, line = examples_buffer.data, line_len = 0; *line; i++) {
-        next_line(&line, &line_len);
-        if (line_len == 0) continue;
+#define RUN(name, source)                                                                          \
+    result = run_example(output_, name, "bytecode_" name, source, &comp_buffer, &output, &parser); \
+    if (result != TEST_OK) return result;
 
-        strncpy(line_buffer, line, line_len)[line_len] = '\0';
+    EACH_EXAMPLE(RUN)
+#undef RUN
 
-        buffer_printf(&output, "source: %s\n\n", line_buffer);
-
-        token_begin(&t, line_buffer);
-        test_printf("%s\n", line_buffer);
-        ASSERT_ENUM_EQ(parse_program(&p, &t), PARSE_OK, parse_result_name);
-
-        compiler_init(&c);
-        compiler_visit_program(&c, p.node);
-        compiler_write_program(&c, &comp_buffer);
-
-        program_read(&prog, (const uint8_t *)comp_buffer.data, comp_buffer.len);
-
-        buffer_printf(&output, "string bytes len:  %" PRIu32 "\n", prog.string_bytes_len);
-        buffer_printf(
-            &output, "string bytes:      %.*s\n", (int)prog.string_bytes_len, prog.string_bytes
-        );
-        buffer_printf(&output, "funcs len:         %" PRIu32 "\n", prog.funcs_len);
-        buffer_printf(&output, "funcs:\n");
-
-        for (uint32_t i = 0; i < prog.funcs_len; i++) {
-            func_meta fn = program_func_meta(&prog, i);
-            buffer_printf(
-                &output, "  %2" PRIu32 " | %08" PRIX32 " locals: %2" PRIu8 ", args: %2" PRIu8 "\n",
-                i, fn.addr, fn.locals, fn.args
-            );
-        }
-
-        buffer_putc(&output, '\n');
-        bytecode_debug_print(prog.bytecode, prog.bytecode_len, &output);
-
-        sprintf(line_buffer, "bytecode_%03d", i);
-        SNAPSHOT(line_buffer, output.data);
-
-        compiler_free(&c);
-        parser_reset(&p);
-        buffer_clear(&comp_buffer);
-        buffer_clear(&output);
-    }
-
-    parser_free(&p);
-    buffer_free(&examples_buffer);
+    parser_free(&parser);
     buffer_free(&comp_buffer);
     buffer_free(&output);
 
