@@ -3,6 +3,15 @@
 
 #include "buffer.h"
 
+#define CHECKED_UINT_CAST(type, max, value)                                                 \
+    ((0 <= (value) && (value) <= max)                                                       \
+         ? (type)(value)                                                                    \
+         : (panic(#value " cast to " #type " with overflow: %lld", (long long)(value)), 0))
+
+#define CHECKED_U8(value)  CHECKED_UINT_CAST(uint8_t, UINT8_MAX, value)
+#define CHECKED_U16(value) CHECKED_UINT_CAST(uint16_t, UINT16_MAX, value)
+#define CHECKED_U32(value) CHECKED_UINT_CAST(uint32_t, UINT32_MAX, value)
+
 uint16_t read_u16be(const uint8_t **);
 uint32_t read_u32be(const uint8_t **);
 uint64_t read_u64be(const uint8_t **);

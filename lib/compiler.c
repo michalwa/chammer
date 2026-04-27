@@ -29,9 +29,13 @@ typedef struct {
     Block *origin;
     Block *target;
     /*
-     * byte offset of instruction address relative to start of `source`
+     * byte offset of instruction address relative to start of `origin`
      */
     size_t addr_offset;
+    /*
+     * byte offset of the jump instruction relative to start of `origin`
+     */
+    size_t origin_offset;
 } jump;
 
 /*
@@ -101,7 +105,7 @@ static bool scope_get_local(Scope *s, symbol name, uint8_t *id) {
 
 static uint8_t scope_put_local(Scope *s, symbol name) {
     *(symbol *)vector_push(&s->locals) = name;
-    return (uint8_t)(s->locals.len - 1);
+    return CHECKED_U8(s->locals.len - 1);
 }
 
 static inline uint8_t scope_get_or_put_local(Scope *s, symbol name) {
@@ -172,13 +176,14 @@ static uint32_t push_func(Compiler *c, Block *start, Scope *inner_scope, size_t 
     f->start = start;
     f->locals = inner_scope->locals.len;
     f->args = args;
-    return (uint32_t)(c->funcs.len - 1);
+    return CHECKED_U32(c->funcs.len - 1);
 }
 
 static void put_jump(Compiler *c, opcode op, Block *origin, Block *target) {
     jump *j = (jump *)vector_push(&c->jumps);
     j->origin = origin;
     j->target = target;
+    j->origin_offset = origin->bytecode.len;
     bytecode_put_jump(&origin->bytecode, op, &j->addr_offset);
 }
 
@@ -642,9 +647,9 @@ void compiler_visit_program(Compiler *c, node *n) {
 void compiler_write_program(Compiler *c, Buffer *b) {
     buffer_puts(b, STRING(MAGIC_HAMMER));
     buffer_put_u16be(b, BYTECODE_VERSION);
-    buffer_put_u32be(b, (uint32_t)c->strings.buffer.len);
+    buffer_put_u32be(b, CHECKED_U32(c->strings.buffer.len));
     buffer_puts(b, buffer_string(&c->strings.buffer));
-    buffer_put_u32be(b, (uint32_t)c->funcs.len);
+    buffer_put_u32be(b, CHECKED_U32(c->funcs.len));
 
     size_t block_offset = 0;
     for (stack_iter i = stack_iter_begin(&c->blocks); stack_iter_next(&i);) {
@@ -655,7 +660,8 @@ void compiler_write_program(Compiler *c, Buffer *b) {
 
     for (EACH_IN_VECTOR(c->jumps, jump, j)) {
         uint8_t *addr = (uint8_t *)j->origin->bytecode.data + j->addr_offset;
-        write_u32be(&addr, j->target->offset);
+        size_t   jump_rel_addr = j->target->offset - j->origin->offset - j->origin_offset;
+        write_i16be(&addr, CHECKED_U16(jump_rel_addr));
     }
 
     for (EACH_IN_VECTOR(c->funcs, func, f)) {
@@ -663,8 +669,8 @@ void compiler_write_program(Compiler *c, Buffer *b) {
             b,
             (func_meta){
                 .addr = f->start->offset,
-                .locals = (uint8_t)f->locals,
-                .args = (uint8_t)f->args,
+                .locals = CHECKED_U8(f->locals),
+                .args = CHECKED_U8(f->args),
             }
         );
     }

@@ -3,7 +3,7 @@
 #include "bytes.h"
 #include "utils.h"
 
-#define BYTECODE_ADDR_PLACEHOLDER 0xFFFFFFFF
+#define BYTECODE_ADDR_PLACEHOLDER (int16_t)0xFFFF
 
 const char *opcode_name(opcode op) {
     RETURN_ENUM_NAME_V(opcode, op, EACH_OPCODE);
@@ -14,7 +14,7 @@ void bytecode_put_jump(Buffer *b, opcode op, size_t *addr_offset) {
 
     buffer_putc(b, op);
     if (addr_offset) *addr_offset = b->len;
-    buffer_put_u32be(b, BYTECODE_ADDR_PLACEHOLDER);
+    buffer_put_u16be(b, BYTECODE_ADDR_PLACEHOLDER);
 }
 
 void bytecode_put_call(Buffer *b, uint32_t fnindex) {
@@ -121,12 +121,13 @@ static inline void debug_print_u8(const uint8_t **b, Buffer *output) {
     buffer_printf(output, " %" PRIu8, *(*b)++);
 }
 
-static inline void debug_print_u32(const uint8_t **b, Buffer *output) {
-    buffer_printf(output, " %" PRIu32, read_u32be(b));
+static inline void debug_print_u16_reladdr(const uint8_t **b, uint32_t origin, Buffer *output) {
+    int16_t offset = read_i16be(b);
+    buffer_printf(output, " %+" PRIi16 " (%08" PRIX32 ")", offset, origin + offset);
 }
 
-static inline void debug_print_u32_addr(const uint8_t **b, Buffer *output) {
-    buffer_printf(output, " %08" PRIX32, read_u32be(b));
+static inline void debug_print_u32(const uint8_t **b, Buffer *output) {
+    buffer_printf(output, " %" PRIu32, read_u32be(b));
 }
 
 static inline void debug_print_u64(const uint8_t **b, Buffer *output) {
@@ -146,7 +147,7 @@ void bytecode_debug_print(const uint8_t *bytecode, size_t bytecode_len, Buffer *
         switch (op) {
         case OP_JUMP:
         case OP_JUMPIF:
-        case OP_JUMPIFN: debug_print_u32_addr(&cursor, output); break;
+        case OP_JUMPIFN: debug_print_u16_reladdr(&cursor, offset, output); break;
         case OP_CALL: debug_print_u32(&cursor, output); break;
         case OP_LOAD:
         case OP_STORE:

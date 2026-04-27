@@ -72,7 +72,7 @@ const char *op_name(opcode);
 
 /*
  * `size_t *addr_offset` is set to the offset relative to the buffer start
- * where an `u32be` instruction address is located. This offset is stored
+ * where an `u16be` relative jump address is located. This offset is stored
  * by the compiler to resolve jumps at a later stage.
  */
 void bytecode_put_jump(Buffer *, opcode op, size_t *addr_offset);
