@@ -278,11 +278,7 @@ static void visit_string(Compiler *c, Block **b, Scope *s, node *n) {
 static void visit_int(Compiler *c, Block **b, Scope *s, node *n) {
     (void)c;
     (void)s;
-
-    uint64_t value = 0;
-    for (size_t i = 0; i < n->token.len; i++) value = (value * 10) + (n->token.str[i] - '0');
-
-    bytecode_put_pushint(&(*b)->bytecode, value);
+    bytecode_put_pushint(&(*b)->bytecode, compile_int(n->token.str, n->token.len));
 }
 
 static void visit_tuple(Compiler *c, Block **b, Scope *s, node *n) {
@@ -328,13 +324,30 @@ static void visit_list(Compiler *c, Block **b, Scope *s, node *n) {
     }
 }
 
+static void visit_unary(Compiler *c, Block **b, Scope *s, node *n) {
+    if (string_eq(token_string(n->token), STRING("-")) && n->first_child->type == N_INT) {
+        int64_t value = compile_int(n->first_child->token.str, n->first_child->token.len);
+        bytecode_put_pushint(&(*b)->bytecode, -value);
+        return;
+    }
+
+    visit_expr(c, b, s, n->first_child);
+    visit_ident(c, b, s, n);
+    bytecode_put_callcls(&(*b)->bytecode, 2);
+}
+
 static void visit_binary(Compiler *c, Block **b, Scope *s, node *n) {
     for (node *child = n->first_child; child; child = child->next_sibling)
         visit_expr(c, b, s, child);
 
-    if (string_eq(token_string(n->token), STRING("+"))) buffer_putc(&(*b)->bytecode, OP_ADD);
+    // TODO: Remove special case for (+), this is for testing purposes only
+    if (string_eq(token_string(n->token), STRING("+"))) {
+        buffer_putc(&(*b)->bytecode, OP_ADD);
+        return;
+    }
 
-    // TODO: Other built-ins and user functions
+    visit_ident(c, b, s, n);
+    bytecode_put_callcls(&(*b)->bytecode, 2);
 }
 
 static void visit_apply(Compiler *c, Block **b, Scope *s, node *n) {
@@ -530,6 +543,7 @@ static void visit_expr(Compiler *c, Block **b, Scope *s, node *n) {
     case N_INT: visit_int(c, b, s, n); break;
     case N_TUPLE: visit_tuple(c, b, s, n); break;
     case N_LIST: visit_list(c, b, s, n); break;
+    case N_UNARY: visit_unary(c, b, s, n); break;
     case N_BINARY: visit_binary(c, b, s, n); break;
     case N_APPLY: visit_apply(c, b, s, n); break;
     case N_IF: visit_if(c, b, s, n); break;
@@ -679,6 +693,12 @@ void compiler_write_program(Compiler *c, Buffer *b) {
         Block *block = (Block *)i.item;
         buffer_puts(b, buffer_string(&block->bytecode));
     }
+}
+
+int64_t compile_int(const char *str, size_t len) {
+    int64_t value = 0;
+    for (size_t i = 0; i < len; i++) value = (value * 10) + (str[i] - '0');
+    return value;
 }
 
 void compile_string(string str, Buffer *out) {

@@ -1,34 +1,42 @@
 #include "bytes.h"
 
-#define READ_BE_BYTES(t, b)                                                   \
-    do {                                                                      \
-        t v = 0;                                                              \
-        for (intptr_t i = sizeof(t) - 1; i >= 0; i--) v = (v << 8) | *(*b)++; \
-        return v;                                                             \
-    } while (0)
+#define READ_BE_BYTES(v, b)                                               \
+    for (intptr_t i = sizeof(v) - 1; i >= 0; i--) v = (v << 8) | *(*b)++;
 
 inline uint16_t read_u16be(const uint8_t **b) {
-    READ_BE_BYTES(uint16_t, b);
+    uint16_t v = 0;
+    READ_BE_BYTES(v, b);
+    return v;
 }
 
 inline uint32_t read_u32be(const uint8_t **b) {
-    READ_BE_BYTES(uint32_t, b);
+    uint32_t v = 0;
+    READ_BE_BYTES(v, b);
+    return v;
 }
 
 inline uint64_t read_u64be(const uint8_t **b) {
-    READ_BE_BYTES(uint64_t, b);
+    uint64_t v = 0;
+    READ_BE_BYTES(v, b);
+    return v;
 }
 
 inline int16_t read_i16be(const uint8_t **b) {
-    READ_BE_BYTES(int16_t, b);
+    uint16_t v = 0;
+    READ_BE_BYTES(v, b);
+    return (int16_t)v;
 }
 
 inline int32_t read_i32be(const uint8_t **b) {
-    READ_BE_BYTES(int32_t, b);
+    uint32_t v = 0;
+    READ_BE_BYTES(v, b);
+    return (int32_t)v;
 }
 
 inline int64_t read_i64be(const uint8_t **b) {
-    READ_BE_BYTES(int64_t, b);
+    uint64_t v = 0;
+    READ_BE_BYTES(v, b);
+    return (int64_t)v;
 }
 
 #undef READ_BE_BYTES

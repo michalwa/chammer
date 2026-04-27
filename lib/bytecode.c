@@ -32,9 +32,9 @@ void bytecode_put_store(Buffer *b, uint8_t local) {
     buffer_putc(b, local);
 }
 
-void bytecode_put_pushint(Buffer *b, uint64_t value) {
+void bytecode_put_pushint(Buffer *b, int64_t value) {
     buffer_putc(b, OP_PUSHINT);
-    buffer_put_u64be(b, value);
+    buffer_put_i64be(b, value);
 }
 
 void bytecode_put_pushstr(Buffer *b, uint32_t offset, uint32_t len) {
@@ -130,8 +130,8 @@ static inline void debug_print_u32(const uint8_t **b, Buffer *output) {
     buffer_printf(output, " %" PRIu32, read_u32be(b));
 }
 
-static inline void debug_print_u64(const uint8_t **b, Buffer *output) {
-    buffer_printf(output, " %" PRIu64, read_u64be(b));
+static inline void debug_print_i64(const uint8_t **b, Buffer *output) {
+    buffer_printf(output, " %" PRIi64, read_i64be(b));
 }
 
 void bytecode_debug_print(const uint8_t *bytecode, size_t bytecode_len, Buffer *output) {
@@ -156,7 +156,7 @@ void bytecode_debug_print(const uint8_t *bytecode, size_t bytecode_len, Buffer *
         case OP_TUPLEGET:
         case OP_MAKETUPLE:
         case OP_MAKELIST: debug_print_u8(&cursor, output); break;
-        case OP_PUSHINT: debug_print_u64(&cursor, output); break;
+        case OP_PUSHINT: debug_print_i64(&cursor, output); break;
         case OP_PUSHSTR:
             debug_print_u32(&cursor, output);
             debug_print_u32(&cursor, output);

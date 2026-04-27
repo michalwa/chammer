@@ -77,7 +77,7 @@ void bytecode_put_jump(Buffer *, opcode op, size_t *addr_offset);
 void bytecode_put_call(Buffer *, uint32_t fnindex);
 void bytecode_put_load(Buffer *, uint8_t local);
 void bytecode_put_store(Buffer *, uint8_t local);
-void bytecode_put_pushint(Buffer *, uint64_t value);
+void bytecode_put_pushint(Buffer *, int64_t value);
 void bytecode_put_pushstr(Buffer *, uint32_t offset, uint32_t len);
 void bytecode_put_makecls(Buffer *, uint32_t fnindex, uint8_t captures);
 void bytecode_put_callcls(Buffer *, uint8_t args);
