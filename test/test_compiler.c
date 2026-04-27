@@ -4,30 +4,32 @@
 #include "lib/snapshot.h"
 #include "lib/test.h"
 
-#define EACH_EXAMPLE(_)                                                                           \
-    _("int", "42")                                                                                \
-    _("string", "\"foo\"")                                                                        \
-    _("tuple", "(1, 2, 3)")                                                                       \
-    _("list", "[1, 2, 3]")                                                                        \
-    _("list_spread", "[1, 2, ...[3, 4], 5]")                                                      \
-    _("extern", "print 1")                                                                        \
-    _("if", "if 1 then 2 else 3")                                                                 \
-    _("if_nested", "if 1 then if 2 then 3 else 4 else if 5 then 6 else 7")                        \
-    _("assign", "let x = 1; let y = 2; (x, y)")                                                   \
-    _("assign_nested", "let x = 1; let y = { let x = 2; x }; (x, y)")                             \
-    _("tuple_unpack", "let (x, y) = (1, 2); (x, y)")                                              \
-    _("list_unpack", "let [x, y] = [1, 2]; (x, y)")                                               \
-    _("list_unpack_tail", "let [x, ...] = [1, 2, 3]; x")                                          \
-    _("list_unpack_tail_named", "let [x, ...xs] = [1, 2, 3]; (x, xs)")                            \
-    _("function_unary", "let f x = (x,); f 1")                                                    \
-    _("function_binary", "let f x y = (x, y); f 1 2")                                             \
-    _("function_nested", "let f x = { let g x y = (x, y); g x x }; f 1")                          \
-    _("function_tuple_unpack", "let f (x, y) = (y, x); f (1, 2)")                                 \
-    _("lambda", "let f = \\x y -> (x, y); f 1 2")                                                 \
-    _("lambda_tuple_unpack", "let f = \\(x, y) -> (y, x); f (1, 2)")                              \
-    _("let_rec",                                                                                  \
-      "let rec map f xs = match xs case [] then [] case [x, ...rest] then [f x, ...map f rest]; " \
-      "map (\\x -> x + 1) [1, 2, 3]")
+#define EACH_EXAMPLE(_)                                                                      \
+    _("int", "42")                                                                           \
+    _("string", "\"foo\"")                                                                   \
+    _("tuple", "(1, 2, 3)")                                                                  \
+    _("list", "[1, 2, 3]")                                                                   \
+    _("list_spread", "[1, 2, ...[3, 4], 5]")                                                 \
+    _("extern", "print 1")                                                                   \
+    _("if", "if 1 then 2 else 3")                                                            \
+    _("if_nested", "if 1 then if 2 then 3 else 4 else if 5 then 6 else 7")                   \
+    _("assign", "let x = 1; let y = 2; (x, y)")                                              \
+    _("assign_nested", "let x = 1; let y = { let x = 2; x }; (x, y)")                        \
+    _("tuple_unpack", "let (x, y) = (1, 2); (x, y)")                                         \
+    _("list_unpack", "let [x, y] = [1, 2]; (x, y)")                                          \
+    _("list_unpack_tail", "let [x, ...] = [1, 2, 3]; x")                                     \
+    _("list_unpack_tail_named", "let [x, ...xs] = [1, 2, 3]; (x, xs)")                       \
+    _("function_unary", "let f x = (x,); f 1")                                               \
+    _("function_binary", "let f x y = (x, y); f 1 2")                                        \
+    _("function_nested", "let f x = { let g x y = (x, y); g x x }; f 1")                     \
+    _("function_tuple_unpack", "let f (x, y) = (y, x); f (1, 2)")                            \
+    _("lambda", "let f = \\x y -> (x, y); f 1 2")                                            \
+    _("lambda_tuple_unpack", "let f = \\(x, y) -> (y, x); f (1, 2)")                         \
+    _(                                                                                       \
+        "let_rec",                                                                           \
+        "let rec map f xs = match xs case [] then [] case [x, ...rest] then [f x, ...map f " \
+        "rest]; " "map (\\x -> x + 1) [1, 2, 3]"                                             \
+    )
 
 static int run_example(
     Buffer *output_, const char *name, const char *snapshot_name, const char *source,

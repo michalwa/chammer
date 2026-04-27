@@ -9,10 +9,12 @@
 /*
  * A logical block of bytecode, either a branch or a function
  */
-typedef struct {
+typedef struct Block Block;
+struct Block {
+    Block *next;
     Buffer bytecode;
     size_t offset;
-} Block;
+};
 
 typedef struct Scope Scope;
 struct Scope {
@@ -165,9 +167,11 @@ static void scope_debug_print(Compiler *c, Scope *s, FILE *f) {
     }
 }
 
-static inline Block *push_block(Compiler *c) {
-    Block *b = (Block *)stack_push(&c->blocks);
+static inline Block *insert_block_after(Compiler *c, Block *prev) {
+    Block *b = (Block *)stack_push_zeroed(&c->blocks);
     block_init(b);
+    b->next = prev->next;
+    prev->next = b;
     return b;
 }
 
@@ -369,17 +373,16 @@ static void visit_if(Compiler *c, Block **b, Scope *s, node *n) {
     node *then = cond->next_sibling;
     node *elze = then->next_sibling;
 
-    // prepare a continuation block so that the `then` block falls through to it
-    Block *cont_block = push_block(c);
-
-    Block *else_start = push_block(c);
-    Block *else_block = else_start;
-    visit_expr(c, &else_block, s, elze);
-    put_jump(c, OP_JUMP, *b, cont_block);
+    Block *else_block = insert_block_after(c, *b);
 
     visit_expr(c, b, s, cond);
-    put_jump(c, OP_JUMPIFN, *b, else_start);
+    put_jump(c, OP_JUMPIFN, *b, else_block);
     visit_expr(c, b, s, then);
+
+    Block *cont_block = insert_block_after(c, *b);
+
+    visit_expr(c, &else_block, s, elze);
+    put_jump(c, OP_JUMP, else_block, cont_block);
 
     *b = cont_block; // resume in continuation block
 }
@@ -388,7 +391,7 @@ static void visit_match(Compiler *c, Block **b, Scope *s, node *n) {
     node *scrutinee = n->first_child;
     visit_expr(c, b, s, scrutinee);
 
-    Block *cont_block = push_block(c);
+    Block *cont_block = insert_block_after(c, *b);
 
     for (node *child = scrutinee->next_sibling; child;) {
         node *rhs = child->next_sibling;
@@ -400,8 +403,8 @@ static void visit_match(Compiler *c, Block **b, Scope *s, node *n) {
             buffer_putc(&(*b)->bytecode, OP_DUP);
 
             Block *fail = NULL;
-            Block *prelude = push_block(c);
-            Block *case_body = push_block(c);
+            Block *prelude = insert_block_after(c, cont_block);
+            Block *case_body = insert_block_after(c, prelude);
 
             visit_pattern(c, &case_body, &fail, &inner_scope, child, NULL);
             visit_expr(c, &case_body, &inner_scope, rhs);
@@ -453,8 +456,8 @@ static void visit_function(Compiler *c, Block **b, Scope *s, node *arg0, node *b
     Scope inner_scope;
     scope_init(&inner_scope, s);
 
-    Block *prelude = push_block(c);
-    Block *body_block = push_block(c);
+    Block *prelude = insert_block_after(c, *b);
+    Block *body_block = insert_block_after(c, prelude);
     Block *fail = NULL;
 
     uint8_t args = 0;
@@ -503,8 +506,8 @@ static void visit_block(Compiler *c, Block **b, Scope *s, node *n) {
     Scope inner_scope;
     scope_init(&inner_scope, s);
 
-    Block *prelude = push_block(c);
-    Block *body = push_block(c);
+    Block *prelude = insert_block_after(c, *b);
+    Block *body = insert_block_after(c, prelude);
     Block *fail = NULL;
 
     for (node *child = n->first_child; child; child = child->next_sibling) {
@@ -583,7 +586,7 @@ static void visit_ptuple(Compiler *c, Block **b, Block **fail, Scope *s, node *l
     uint8_t len = 0;
     for (node *child = lhs->first_child; child; child = child->next_sibling) len++;
 
-    if (!*fail) *fail = push_block(c);
+    if (!*fail) *fail = insert_block_after(c, *b);
 
     bytecode_put_istuple(&(*b)->bytecode, len);
     put_jump(c, OP_JUMPIFN, *b, *fail);
@@ -601,7 +604,7 @@ static void visit_ptuple(Compiler *c, Block **b, Block **fail, Scope *s, node *l
 static void visit_plist(Compiler *c, Block **b, Block **fail, Scope *s, node *lhs, node *rhs) {
     if (rhs) visit_expr(c, b, s, rhs);
 
-    if (!*fail) *fail = push_block(c);
+    if (!*fail) *fail = insert_block_after(c, *b);
 
     for (node *child = lhs->first_child; child; child = child->next_sibling) {
         if (child->type == N_PLTAIL) {
@@ -649,8 +652,10 @@ void compiler_visit_program(Compiler *c, node *n) {
     Scope global_scope;
     scope_init(&global_scope, NULL);
 
-    Block *prelude = push_block(c);
-    Block *block = push_block(c);
+    Block *prelude = (Block *)stack_push_zeroed(&c->blocks);
+    block_init(prelude);
+
+    Block *block = insert_block_after(c, prelude);
     visit_expr(c, &block, &global_scope, n);
     buffer_putc(&block->bytecode, (char)OP_HALT);
     put_load_externs(c, prelude, &global_scope);
@@ -665,17 +670,19 @@ void compiler_write_program(Compiler *c, Buffer *b) {
     buffer_puts(b, buffer_string(&c->strings.buffer));
     buffer_put_u32be(b, CHECKED_U32(c->funcs.len));
 
+    Block *prelude_block = (Block *)stack_get(&c->blocks, 0);
+
     size_t block_offset = 0;
-    for (stack_iter i = stack_iter_begin(&c->blocks); stack_iter_next(&i);) {
-        Block *block = (Block *)i.item;
+    for (Block *block = prelude_block; block; block = block->next) {
         block->offset = block_offset;
         block_offset += block->bytecode.len;
     }
 
     for (EACH_IN_VECTOR(c->jumps, jump, j)) {
         uint8_t *addr = (uint8_t *)j->origin->bytecode.data + j->addr_offset;
-        size_t   jump_rel_addr = j->target->offset - j->origin->offset - j->origin_offset;
-        write_i16be(&addr, CHECKED_U16(jump_rel_addr));
+        long     jump_rel_addr =
+            (long)j->target->offset - (long)j->origin->offset - (long)j->origin_offset;
+        write_i16be(&addr, CHECKED_I16(jump_rel_addr));
     }
 
     for (EACH_IN_VECTOR(c->funcs, func, f)) {
@@ -689,10 +696,8 @@ void compiler_write_program(Compiler *c, Buffer *b) {
         );
     }
 
-    for (stack_iter i = stack_iter_begin(&c->blocks); stack_iter_next(&i);) {
-        Block *block = (Block *)i.item;
+    for (Block *block = prelude_block; block; block = block->next)
         buffer_puts(b, buffer_string(&block->bytecode));
-    }
 }
 
 int64_t compile_int(string str) {

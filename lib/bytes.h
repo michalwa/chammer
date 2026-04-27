@@ -1,16 +1,23 @@
 #ifndef BYTES_H_
 #define BYTES_H_
 
+#include <inttypes.h>
+
 #include "buffer.h"
 
-#define CHECKED_UINT_CAST(type, max, value)                                                 \
-    ((0 <= (value) && (value) <= max)                                                       \
+#define CHECKED_INT_CAST(type, min, max, value)                                             \
+    (((min) <= (value) && (value) <= (max))                                                 \
          ? (type)(value)                                                                    \
          : (panic(#value " cast to " #type " with overflow: %lld", (long long)(value)), 0))
 
-#define CHECKED_U8(value)  CHECKED_UINT_CAST(uint8_t, UINT8_MAX, value)
-#define CHECKED_U16(value) CHECKED_UINT_CAST(uint16_t, UINT16_MAX, value)
-#define CHECKED_U32(value) CHECKED_UINT_CAST(uint32_t, UINT32_MAX, value)
+#define CHECKED_U8(value)  CHECKED_INT_CAST(uint8_t, 0, UINT8_MAX, value)
+#define CHECKED_U16(value) CHECKED_INT_CAST(uint16_t, 0, UINT16_MAX, value)
+#define CHECKED_U32(value) CHECKED_INT_CAST(uint32_t, 0, UINT32_MAX, value)
+#define CHECKED_U64(value) CHECKED_INT_CAST(uint64_t, 0, UINT64_MAX, value)
+#define CHECKED_I8(value)  CHECKED_INT_CAST(int8_t, INT8_MIN, INT8_MAX, value)
+#define CHECKED_I16(value) CHECKED_INT_CAST(int16_t, INT16_MIN, INT16_MAX, value)
+#define CHECKED_I32(value) CHECKED_INT_CAST(int32_t, INT32_MIN, INT32_MAX, value)
+#define CHECKED_I64(value) CHECKED_INT_CAST(int64_t, INT64_MIN, INT64_MAX, value)
 
 uint16_t read_u16be(const uint8_t **);
 uint32_t read_u32be(const uint8_t **);
