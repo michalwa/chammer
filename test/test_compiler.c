@@ -40,6 +40,9 @@ TEST(compiler_examples) {
         if (line_len == 0) continue;
 
         strncpy(line_buffer, line, line_len)[line_len] = '\0';
+
+        buffer_printf(&output, "source: %s\n\n", line_buffer);
+
         token_begin(&t, line_buffer);
         test_printf("%s\n", line_buffer);
         ASSERT_ENUM_EQ(parse_program(&p, &t), PARSE_OK, parse_result_name);
@@ -49,6 +52,23 @@ TEST(compiler_examples) {
         compiler_write_program(&c, &comp_buffer);
 
         program_read(&prog, (const uint8_t *)comp_buffer.data, comp_buffer.len);
+
+        buffer_printf(&output, "string bytes len:  %" PRIu32 "\n", prog.string_bytes_len);
+        buffer_printf(
+            &output, "string bytes:      %.*s\n", (int)prog.string_bytes_len, prog.string_bytes
+        );
+        buffer_printf(&output, "funcs len:         %" PRIu32 "\n", prog.funcs_len);
+        buffer_printf(&output, "funcs:\n");
+
+        for (uint32_t i = 0; i < prog.funcs_len; i++) {
+            func_meta fn = program_func_meta(&prog, i);
+            buffer_printf(
+                &output, "  %2" PRIu32 " | %08" PRIX32 " locals: %2" PRIu8 ", args: %2" PRIu8 "\n",
+                i, fn.addr, fn.locals, fn.args
+            );
+        }
+
+        buffer_putc(&output, '\n');
         bytecode_debug_print(prog.bytecode, prog.bytecode_len, &output);
 
         sprintf(line_buffer, "bytecode_%03d", i);

@@ -1,3 +1,12 @@
+source: let f x = (x,); f 1
+
+string bytes len:  0
+string bytes:      
+funcs len:         2
+funcs:
+   0 | 0000001C locals:  1, args:  1
+   1 | 00000006 locals:  1, args:  0
+
 00000000  OP_CALL 1
 00000005  OP_HALT
 00000006  OP_MAKECLS 0 0
