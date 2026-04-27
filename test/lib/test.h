@@ -1,9 +1,10 @@
 #ifndef TEST_H_
 #define TEST_H_
 
-#include <string.h> // strcmp
+#include <string.h>
 
-#include "../../lib/buffer.h" // buffer_printf
+#include "../../lib/buffer.h"
+#include "../../lib/string.h"
 
 #define RED(str)   "\033[0;31m" str "\033[0m"
 #define GREEN(str) "\033[0;32m" str "\033[0m"
@@ -34,7 +35,7 @@
         ASSERT_(a_ == b_, #a " == " #b "\n   left = " fmt "\n  right = " fmt, a_, b_); \
     } while (0)
 
-#define ASSERT_INT_EQ(a, b) ASSERT_EQ_(int, "%d", a, b)
+#define ASSERT_INT_EQ(a, b) ASSERT_EQ_(long long, "%lld", a, b)
 
 #define ASSERT_ENUM_EQ(a, b, name_fn)                                                             \
     do {                                                                                          \
@@ -57,6 +58,18 @@
         }                                                                             \
     } while (0)
 
-void buffer_print_c_string_literal(Buffer *, const char *);
+#define ASSERT_STRING_EQ(a, b)                                                      \
+    do {                                                                            \
+        string a_ = (a);                                                            \
+        string b_ = (b);                                                            \
+        if (!string_eq(a_, b_)) {                                                   \
+            test_printf("Assertion failed: string_eq(" #a ", " #b ")\n   left = "); \
+            buffer_print_string_literal(output_, a_);                               \
+            test_printf("\n  right = ");                                            \
+            buffer_print_string_literal(output_, b_);                               \
+            test_printf("\n%s:%d\n", __FILE__, __LINE__);                           \
+            return TEST_FAIL;                                                       \
+        }                                                                           \
+    } while (0)
 
 #endif // TEST_H_

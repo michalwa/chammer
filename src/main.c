@@ -1,32 +1,55 @@
-#include "../lib/graphviz.h"
+#include "../lib/buffer.h"
+#include "../lib/bytecode.h"
+#include "../lib/compiler.h"
+#include "../lib/lexer.h"
+#include "../lib/parser.h"
+#include "../lib/utils.h"
 
 int main(void) {
-    Buffer input;
+    token        t;
+    Parser       p;
+    parse_result presult;
+    Compiler     c;
+    Buffer       input;
+    Buffer       comp_buffer;
+    program      prog;
+
+    FILE *example = fopen("examples/html.ham", "rb");
     buffer_init(&input);
+    buffer_read_file(&input, example);
+    fclose(example);
 
-    char   buffer[0x100];
-    size_t read;
-    while (read = fread(buffer, 1, 0x100, stdin)) buffer_printf(&input, "%.*s", (int)read, buffer);
-
-    token t;
     token_begin(&t, input.data);
 
-    Parser parser;
-    parser_init(&parser);
+    parser_init(&p);
+    if ((presult = parse_program(&p, &t)) != PARSE_OK)
+        panic("parse failed: %s", parse_result_name(presult));
 
-    parse_result result;
-    if ((result = parse_program(&parser, &t)) != PARSE_OK)
-        panic("parse failed: %s", parse_result_name(result));
+    Buffer out;
+    buffer_init(&out);
+    node_print(*p.node, &out);
+    printf(F_BUFFER "\n\n", FA_BUFFER(out));
+    buffer_clear(&out);
 
-    Buffer output;
-    buffer_init(&output);
-    node_print_dot(parser.node, &output);
+    buffer_init(&comp_buffer);
+    compiler_init(&c);
+    compiler_visit_program(&c, p.node);
+    compiler_write_program(&c, &comp_buffer);
+    compiler_free(&c);
+    parser_free(&p);
 
-    printf("%s", output.data);
+    if (!program_read(&prog, (uint8_t *)comp_buffer.data, comp_buffer.len))
+        panic("could not read compiled program");
 
-    buffer_free(&output);
-    parser_free(&parser);
+    program_debug_print(&prog, &out);
+    printf(
+        F_BUFFER "\ntotal size: %zu bytes, bytecode: %zu bytes\n", FA_BUFFER(out), comp_buffer.len,
+        prog.bytecode_len
+    );
+
     buffer_free(&input);
+    buffer_free(&comp_buffer);
+    buffer_free(&out);
 
     return 0;
 }

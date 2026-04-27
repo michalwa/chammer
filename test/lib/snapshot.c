@@ -4,16 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../../lib/string.h"
 #include "test.h"
-
-static void next_line(const char **line, size_t *len) {
-    *line += *len;
-
-    if (**line == '\r') (*line)++;
-    if (**line == '\n') (*line)++;
-
-    *len = strcspn(*line, "\r\n");
-}
 
 void snapshot_diff(Buffer *output, const char *a, const char *b) {
     const char *a_line = a, *b_line = b;

@@ -3,6 +3,12 @@
     _(buffer_printf)                    \
     _(buffer_alloc)                     \
     _(buffer_read_file)                 \
+    _(read_be_bytes)                    \
+    _(write_be_bytes)                   \
+    _(buffer_put_be_bytes)              \
+    _(compiler_examples)                \
+    _(compile_int)                      \
+    _(compile_string)                   \
     _(lexer_full_example)               \
     _(lexer_empty)                      \
     _(lexer_empty_string_after_keyword) \
@@ -17,4 +23,6 @@
     _(snapshot_diff_empty_lines)        \
     _(snapshot_diff_line_endings)       \
     _(stack)                            \
-    _(buffer_print_c_string_literal)
+    _(string_pool)                      \
+    _(buffer_print_c_string_literal)    \
+    _(vector)

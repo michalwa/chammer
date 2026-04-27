@@ -24,6 +24,18 @@
 #define RETURN_ENUM_NAME_CASE_(name) \
     case name: return #name;
 
+#define RETURN_ENUM_NAME_V(type, value, x_macro)             \
+    do {                                                     \
+        type value_ = (value);                               \
+        switch (value_) {                                    \
+            x_macro(RETURN_ENUM_NAME_CASE_V_);               \
+        default: panic("invalid " #type ": %d", (int)value); \
+        }                                                    \
+    } while (0)
+
+#define RETURN_ENUM_NAME_CASE_V_(name, ...) \
+    case name: return #name;
+
 #define HAMMER_EXIT_PANIC 100
 
 #define panic(...) panic_(__FILE__, __LINE__, __VA_ARGS__)

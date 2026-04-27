@@ -1,9 +1,13 @@
 #include "buffer.h"
 
+#include <ctype.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include "utils.h"
 
 #define BUFFER_DEFAULT_CAPACITY 0x400
 
@@ -42,6 +46,10 @@ void buffer_putc(Buffer *b, char c) {
     b->data[b->len] = '\0';
 }
 
+inline void buffer_puts(Buffer *b, string str) {
+    memcpy(buffer_alloc(b, str.len), str.data, str.len);
+}
+
 void buffer_printf(Buffer *b, const char *format, ...) {
     va_list args;
 
@@ -70,6 +78,12 @@ void buffer_clear(Buffer *b) {
     b->data[b->len] = '\0';
 }
 
+void buffer_truncate(Buffer *b, size_t len) {
+    debug_assert(len <= b->len);
+    b->len = len;
+    b->data[b->len] = '\0';
+}
+
 void buffer_read_file(Buffer *b, FILE *f) {
     fseek(f, 0, SEEK_END);
     size_t size = ftell(f);
@@ -83,4 +97,40 @@ void buffer_read_file(Buffer *b, FILE *f) {
     size_t actual_size = fread(data, 1, size, f);
     b->len -= size - actual_size;
     b->data[b->len] = '\0';
+}
+
+inline string buffer_string(Buffer *b) {
+    return (string){ .data = b->data, .len = b->len };
+}
+
+void buffer_print_c_string_literal(Buffer *b, const char *str) {
+    buffer_print_string_literal(b, string_from_cstr(str));
+}
+
+void buffer_print_string_literal(Buffer *b, string str) {
+    buffer_putc(b, '"');
+
+    for (size_t i = 0; i < str.len; i++) {
+        char c = str.data[i];
+
+        switch (c) {
+        case '\0': buffer_printf(b, "\\0"); break;
+        case '\a': buffer_printf(b, "\\a"); break;
+        case '\b': buffer_printf(b, "\\b"); break;
+        case '\f': buffer_printf(b, "\\f"); break;
+        case '\n': buffer_printf(b, "\\n"); break;
+        case '\r': buffer_printf(b, "\\r"); break;
+        case '\t': buffer_printf(b, "\\t"); break;
+        case '\v': buffer_printf(b, "\\v"); break;
+        case '\\': buffer_printf(b, "\\\\"); break;
+        case '\"': buffer_printf(b, "\\\""); break;
+        default:
+            if (isprint(c))
+                buffer_printf(b, "%c", c);
+            else
+                buffer_printf(b, "\\%03o", c);
+        }
+    }
+
+    buffer_putc(b, '"');
 }

@@ -7,11 +7,13 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  CLANG_VERSION: "19.1.7"
+  CLANG_VERSION: "21.1.8"
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      TEST_ASAN: 1
     steps:
       - uses: actions/checkout@v4
       - uses: KyleMayes/install-llvm-action@v2
