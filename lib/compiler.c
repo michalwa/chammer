@@ -44,9 +44,13 @@ typedef struct {
  * Function metadata, later translated into `func_meta` with a resolved address
  */
 typedef struct {
-    Block *start;
-    size_t locals;
-    size_t args;
+    Block    *start;
+    size_t    locals;
+    size_t    args;
+    size_t    captures;
+    func_type type;
+    size_t    name_offset;
+    size_t    name_len;
 } func;
 
 static void block_init(Block *b) {
@@ -175,11 +179,29 @@ static inline Block *insert_block_after(Compiler *c, Block *prev) {
     return b;
 }
 
-static uint32_t push_func(Compiler *c, Block *start, Scope *inner_scope, size_t args) {
+static uint32_t push_func(
+    Compiler *c, Block *start, Scope *inner_scope, size_t args, func_type type, symbol *name
+) {
     func *f = (func *)vector_push(&c->funcs);
     f->start = start;
     f->locals = inner_scope->locals.len;
     f->args = args;
+    f->captures = inner_scope->captures.len;
+    f->type = type;
+
+    if (name) {
+        // Make function name accessible at runtime for debug traces
+        string             name_str = string_pool_get(&c->idents, *name);
+        symbol             sym = string_pool_intern(&c->strings, name_str);
+        string_pool_entry *name_entry = (string_pool_entry *)vector_get(&c->strings.entries, sym);
+
+        f->name_offset = name_entry->offset;
+        f->name_len = name_entry->len;
+    } else {
+        f->name_offset = 0;
+        f->name_len = 0;
+    }
+
     return CHECKED_U32(c->funcs.len - 1);
 }
 
@@ -413,7 +435,7 @@ static void visit_match(Compiler *c, Block **b, Scope *s, node *n) {
 
             put_store_captures(c, prelude, &inner_scope);
             put_load_captures(c, *b, &inner_scope, s);
-            uint32_t fnindex = push_func(c, prelude, &inner_scope, 1);
+            uint32_t fnindex = push_func(c, prelude, &inner_scope, 1, FN_CASE, NULL);
             bytecode_put_call(&(*b)->bytecode, fnindex);
 
             put_jump(c, OP_JUMPIF, *b, cont_block);
@@ -448,11 +470,10 @@ static void visit_match(Compiler *c, Block **b, Scope *s, node *n) {
  * Universal implementation for `N_LAMBDA` and `N_PAPPLY`
  *
  * `arg0` and its siblings will be iterated until `body` or `NULL`
- *
- * `self` can point to the name of a recursive definition, in which case the
- * compiled function will be equipped with a self-reference
  */
-static void visit_function(Compiler *c, Block **b, Scope *s, node *arg0, node *body, symbol *self) {
+static void visit_function(
+    Compiler *c, Block **b, Scope *s, node *arg0, node *body, symbol *name, bool rec
+) {
     Scope inner_scope;
     scope_init(&inner_scope, s);
 
@@ -462,8 +483,8 @@ static void visit_function(Compiler *c, Block **b, Scope *s, node *arg0, node *b
 
     uint8_t args = 0;
 
-    if (self) {
-        uint8_t self_local = scope_put_local(&inner_scope, *self);
+    if (rec) {
+        uint8_t self_local = scope_put_local(&inner_scope, *name);
 
         buffer_putc(&body_block->bytecode, OP_DUP);
         bytecode_put_callcls(&body_block->bytecode, 1);
@@ -484,22 +505,28 @@ static void visit_function(Compiler *c, Block **b, Scope *s, node *arg0, node *b
 
     put_store_captures(c, prelude, &inner_scope);
     put_load_captures(c, *b, &inner_scope, s);
-    uint32_t fnindex = push_func(c, prelude, &inner_scope, args);
-    bytecode_put_makecls(&(*b)->bytecode, fnindex, inner_scope.captures.len);
+
+    uint32_t fnindex;
+    if (name)
+        fnindex = push_func(c, prelude, &inner_scope, args, FN_NAMED, name);
+    else
+        fnindex = push_func(c, prelude, &inner_scope, args, FN_LAMBDA, NULL);
+
+    bytecode_put_makecls(&(*b)->bytecode, fnindex);
 
     scope_free(&inner_scope);
 
-    if (self) {
+    if (rec) {
         buffer_putc(&(*b)->bytecode, OP_DUP);
         bytecode_put_callcls(&(*b)->bytecode, 1);
     }
 }
 
-static void visit_lambda(Compiler *c, Block **b, Scope *s, node *n) {
+static void visit_lambda(Compiler *c, Block **b, Scope *s, node *n, symbol *name) {
     node *body = n->first_child;
     while (body->next_sibling) body = body->next_sibling;
 
-    visit_function(c, b, s, n->first_child, body, NULL);
+    visit_function(c, b, s, n->first_child, body, name, false);
 }
 
 static void visit_block(Compiler *c, Block **b, Scope *s, node *n) {
@@ -531,7 +558,7 @@ static void visit_block(Compiler *c, Block **b, Scope *s, node *n) {
 
     put_store_captures(c, prelude, &inner_scope);
     put_load_captures(c, *b, &inner_scope, s);
-    uint32_t fnindex = push_func(c, prelude, &inner_scope, 0);
+    uint32_t fnindex = push_func(c, prelude, &inner_scope, 0, FN_BLOCK, NULL);
     bytecode_put_call(&(*b)->bytecode, fnindex);
 
     if (fail) buffer_putc(&fail->bytecode, (char)OP_HALT); // TODO: raise error
@@ -551,7 +578,7 @@ static void visit_expr(Compiler *c, Block **b, Scope *s, node *n) {
     case N_APPLY: visit_apply(c, b, s, n); break;
     case N_IF: visit_if(c, b, s, n); break;
     case N_MATCH: visit_match(c, b, s, n); break;
-    case N_LAMBDA: visit_lambda(c, b, s, n); break;
+    case N_LAMBDA: visit_lambda(c, b, s, n, NULL); break;
     // TODO: Remove do-blocks?
     case N_DOBLK: visit_block(c, b, s, n); break;
     case N_BLOCK: visit_block(c, b, s, n); break;
@@ -562,9 +589,16 @@ static void visit_expr(Compiler *c, Block **b, Scope *s, node *n) {
 static void visit_pident(Compiler *c, Block **b, Block **fail, Scope *s, node *lhs, node *rhs) {
     (void)fail;
 
-    if (rhs) visit_expr(c, b, s, rhs);
+    symbol sym = string_pool_intern(&c->idents, token_string(lhs->token));
 
-    symbol  sym = string_pool_intern(&c->idents, token_string(lhs->token));
+    if (rhs) {
+        // Special case to propagate name
+        if (rhs->type == N_LAMBDA)
+            visit_lambda(c, b, s, rhs, &sym);
+        else
+            visit_expr(c, b, s, rhs);
+    }
+
     uint8_t i = scope_get_or_put_local(s, sym);
 
     bytecode_put_store(&(*b)->bytecode, i);
@@ -576,7 +610,7 @@ static void visit_papply(Compiler *c, Block **b, Block **fail, Scope *s, node *l
     symbol  sym = string_pool_intern(&c->idents, token_string(lhs->token));
     uint8_t i = scope_get_or_put_local(s, sym);
 
-    visit_function(c, b, s, lhs->first_child, rhs, (lhs->flags & NF_REC) ? &sym : NULL);
+    visit_function(c, b, s, lhs->first_child, rhs, &sym, lhs->flags & NF_REC);
     bytecode_put_store(&(*b)->bytecode, i);
 }
 
@@ -692,6 +726,10 @@ void compiler_write_program(Compiler *c, Buffer *b) {
                 .addr = f->start->offset,
                 .locals = CHECKED_U8(f->locals),
                 .args = CHECKED_U8(f->args),
+                .captures = CHECKED_U8(f->captures),
+                .type = f->type,
+                .name_offset = CHECKED_U32(f->name_offset),
+                .name_len = CHECKED_U8(f->name_len),
             }
         );
     }

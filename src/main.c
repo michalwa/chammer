@@ -64,7 +64,7 @@ int main(void) {
 
     // printf("\n\n");
 
-    bytecode_debug_print(prog.bytecode, prog.bytecode_len, &out);
+    bytecode_debug_print(prog.bytecode, prog.bytecode_len, prog.string_bytes, &out);
     printf(F_BUFFER, FA_BUFFER(out));
 
     buffer_free(&input);

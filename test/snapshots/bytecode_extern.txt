@@ -1,12 +1,11 @@
 source: print 1
 
-string bytes len:  5
-string bytes:      print
-funcs len:         1
-funcs:
-   0 | 00000014 locals:  1, args:  0
+string bytes: "print"
 
-00000000  OP_PUSHSTR 0 5
+functions:
+   0 | 00000014 locals: 1, args: 0, captures: 1 | (block)
+
+00000000  OP_PUSHSTR 00000000 5 (`print`)
 00000009  OP_LOADEXT
 0000000A  OP_STORE 0
 0000000C  OP_LOAD 0

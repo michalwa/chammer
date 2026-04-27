@@ -4,31 +4,32 @@
 #include "lib/snapshot.h"
 #include "lib/test.h"
 
-#define EACH_EXAMPLE(_)                                                                      \
-    _("int", "42")                                                                           \
-    _("string", "\"foo\"")                                                                   \
-    _("tuple", "(1, 2, 3)")                                                                  \
-    _("list", "[1, 2, 3]")                                                                   \
-    _("list_spread", "[1, 2, ...[3, 4], 5]")                                                 \
-    _("extern", "print 1")                                                                   \
-    _("if", "if 1 then 2 else 3")                                                            \
-    _("if_nested", "if 1 then if 2 then 3 else 4 else if 5 then 6 else 7")                   \
-    _("assign", "let x = 1; let y = 2; (x, y)")                                              \
-    _("assign_nested", "let x = 1; let y = { let x = 2; x }; (x, y)")                        \
-    _("tuple_unpack", "let (x, y) = (1, 2); (x, y)")                                         \
-    _("list_unpack", "let [x, y] = [1, 2]; (x, y)")                                          \
-    _("list_unpack_tail", "let [x, ...] = [1, 2, 3]; x")                                     \
-    _("list_unpack_tail_named", "let [x, ...xs] = [1, 2, 3]; (x, xs)")                       \
-    _("function_unary", "let f x = (x,); f 1")                                               \
-    _("function_binary", "let f x y = (x, y); f 1 2")                                        \
-    _("function_nested", "let f x = { let g x y = (x, y); g x x }; f 1")                     \
-    _("function_tuple_unpack", "let f (x, y) = (y, x); f (1, 2)")                            \
-    _("lambda", "let f = \\x y -> (x, y); f 1 2")                                            \
-    _("lambda_tuple_unpack", "let f = \\(x, y) -> (y, x); f (1, 2)")                         \
+#define EACH_EXAMPLE(_)                                                                        \
+    _("int", "42")                                                                             \
+    _("string", "\"foo\"")                                                                     \
+    _("tuple", "(1, 2, 3)")                                                                    \
+    _("list", "[1, 2, 3]")                                                                     \
+    _("list_spread", "[1, 2, ...[3, 4], 5]")                                                   \
+    _("extern", "print 1")                                                                     \
+    _("if", "if 1 then 2 else 3")                                                              \
+    _("if_nested", "if 1 then if 2 then 3 else 4 else if 5 then 6 else 7")                     \
+    _("assign", "let x = 1; let y = 2; (x, y)")                                                \
+    _("assign_nested", "let x = 1; let y = { let x = 2; x }; (x, y)")                          \
+    _("assign_capture", "let x = 1; let y = { let z = 2; (x, z) }; y")                         \
+    _("tuple_unpack", "let (x, y) = (1, 2); (x, y)")                                           \
+    _("list_unpack", "let [x, y] = [1, 2]; (x, y)")                                            \
+    _("list_unpack_tail", "let [x, ...] = [1, 2, 3]; x")                                       \
+    _("list_unpack_tail_named", "let [x, ...xs] = [1, 2, 3]; (x, xs)")                         \
+    _("function_unary", "let f x = (x,); f 1")                                                 \
+    _("function_binary", "let f x y = (x, y); f 1 2")                                          \
+    _("function_nested", "let f x = { let g x y = (x, y); g x x }; f 1")                       \
+    _("function_tuple_unpack", "let f (x, y) = (y, x); f (1, 2)")                              \
+    _("lambda", "let f = \\x y -> (x, y); f 1 2")                                              \
+    _("lambda_tuple_unpack", "let f = \\(x, y) -> (y, x); f (1, 2)")                           \
     _(                                                                                       \
         "let_rec",                                                                           \
         "let rec map f xs = match xs case [] then [] case [x, ...rest] then [f x, ...map f " \
-        "rest]; " "map (\\x -> x + 1) [1, 2, 3]"                                             \
+        "rest]; map (\\x -> x + 1) [1, 2, 3]"                                                \
     )
 
 static int run_example(
@@ -51,23 +52,37 @@ static int run_example(
     program_read(&prog, (const uint8_t *)comp_buffer->data, comp_buffer->len);
 
     buffer_printf(output, "source: %s\n\n", source);
-    buffer_printf(output, "string bytes len:  %" PRIu32 "\n", prog.string_bytes_len);
-    buffer_printf(
-        output, "string bytes:      %.*s\n", (int)prog.string_bytes_len, prog.string_bytes
+    buffer_printf(output, "string bytes: ");
+    buffer_print_string_literal(
+        output, (string){ .data = prog.string_bytes, .len = prog.string_bytes_len }
     );
-    buffer_printf(output, "funcs len:         %" PRIu32 "\n", prog.funcs_len);
-    buffer_printf(output, "funcs:\n");
+    buffer_printf(output, "\n\n");
+    buffer_printf(output, "functions:\n");
 
     for (uint32_t i = 0; i < prog.funcs_len; i++) {
         func_meta fn = program_func_meta(&prog, i);
+
         buffer_printf(
-            output, "  %2" PRIu32 " | %08" PRIX32 " locals: %2" PRIu8 ", args: %2" PRIu8 "\n", i,
-            fn.addr, fn.locals, fn.args
+            output,
+            "  %2" PRIu32 " | %08" PRIX32 " locals: %" PRIu8 ", args: %" PRIu8 ", captures: %" PRIu8
+            " | ",
+            i, fn.addr, fn.locals, fn.args, fn.captures
         );
+
+        switch (fn.type) {
+        case FN_NAMED:
+            buffer_printf(output, "%.*s", fn.name_len, prog.string_bytes + fn.name_offset);
+            break;
+        case FN_BLOCK: buffer_printf(output, "(block)"); break;
+        case FN_LAMBDA: buffer_printf(output, "(lambda)"); break;
+        case FN_CASE: buffer_printf(output, "(case)"); break;
+        }
+
+        buffer_putc(output, '\n');
     }
 
     buffer_putc(output, '\n');
-    bytecode_debug_print(prog.bytecode, prog.bytecode_len, output);
+    bytecode_debug_print(prog.bytecode, prog.bytecode_len, prog.string_bytes, output);
 
     SNAPSHOT(snapshot_name, output->data);
 

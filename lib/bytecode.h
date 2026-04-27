@@ -39,16 +39,34 @@
 typedef enum { EACH_OPCODE(ENUM_MEMBER) } opcode;
 #undef ENUM_MEMBER
 
+#define EACH_FUNC_TYPE(_) \
+    _(FN_NAMED)           \
+    _(FN_BLOCK)           \
+    _(FN_LAMBDA)          \
+    _(FN_CASE)
+
+#define ENUM_MEMBER(name) name,
+typedef enum { EACH_FUNC_TYPE(ENUM_MEMBER) } func_type;
+#undef ENUM_MEMBER
+
 typedef struct {
-    uint32_t addr;
-    uint8_t  locals;
-    uint8_t  args;
+    uint32_t  addr;
+    uint8_t   locals;
+    uint8_t   args;
+    uint8_t   captures;
+    func_type type;
+    uint32_t  name_offset;
+    uint8_t   name_len;
 } func_meta;
 
 typedef struct {
     uint8_t addr[4];
     uint8_t locals;
     uint8_t args;
+    uint8_t captures;
+    uint8_t type;
+    uint8_t name_offset[4];
+    uint8_t name_len;
 } func_meta_bytes;
 
 typedef struct {
@@ -65,6 +83,7 @@ typedef struct {
 #define BYTECODE_VERSION 0x0001
 
 const char *op_name(opcode);
+const char *func_type_name(func_type);
 
 /*
  * `size_t *addr_offset` is set to the offset relative to the buffer start
@@ -77,7 +96,7 @@ void bytecode_put_load(Buffer *, uint8_t local);
 void bytecode_put_store(Buffer *, uint8_t local);
 void bytecode_put_pushint(Buffer *, int64_t value);
 void bytecode_put_pushstr(Buffer *, uint32_t offset, uint32_t len);
-void bytecode_put_makecls(Buffer *, uint32_t fnindex, uint8_t captures);
+void bytecode_put_makecls(Buffer *, uint32_t fnindex);
 void bytecode_put_callcls(Buffer *, uint8_t args);
 void bytecode_put_istuple(Buffer *, uint8_t len);
 void bytecode_put_tupleget(Buffer *, uint8_t index);
@@ -92,6 +111,8 @@ bool      program_read(program *p, const uint8_t *bytes, size_t len);
 func_meta program_func_meta(const program *p, uint32_t index);
 void      bytecode_put_func_meta(Buffer *, func_meta);
 
-void bytecode_debug_print(const uint8_t *bytecode, size_t bytecode_len, Buffer *output);
+void bytecode_debug_print(
+    const uint8_t *bytecode, size_t bytecode_len, const char *string_bytes, Buffer *output
+);
 
 #endif // BYTECODE_H_

@@ -12,6 +12,8 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      TEST_ASAN: 1
     steps:
       - uses: actions/checkout@v4
       - uses: KyleMayes/install-llvm-action@v2

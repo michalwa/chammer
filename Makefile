@@ -1,5 +1,5 @@
 ifeq ($(origin CC), default)
-CC = clang
+	CC = clang
 endif
 
 CFLAGS += -std=c99 \
@@ -12,7 +12,12 @@ CFLAGS += -std=c99 \
 	-Werror=incompatible-pointer-types \
 	-Werror=enum-conversion
 CFLAGS_RELEASE += -O3
-CFLAGS_DEBUG   += -g -O0 -fsanitize=address -fsanitize=undefined -DHAMMER_DEBUG
+CFLAGS_DEBUG   += -g -O0 -DHAMMER_DEBUG -fsanitize=address -fsanitize=undefined
+CFLAGS_TEST    += -g -O0 -DHAMMER_DEBUG
+
+ifeq ($(TEST_ASAN), 1)
+	CFLAGS_TEST += -fsanitize=address -fsanitize=undefined
+endif
 
 SRC_LIB   = lib/*.c lib/*.h
 SRC_BIN   = src/*.c
@@ -44,7 +49,7 @@ bin/hammer-debug: $(SRC_BIN) $(SRC_LIB)
 
 bin/test: bin/build_test $(SRC_TEST) $(SRC_LIB)
 	bin/build_test test/runner/tests.gen.h test/*.c
-	$(CC) $(filter %.c, $^) -o $@ $(CFLAGS) $(CFLAGS_DEBUG)
+	$(CC) $(filter %.c, $^) -o $@ $(CFLAGS) $(CFLAGS_TEST)
 
 bin/build_test: build_test.c test/*.c
 	mkdir -p bin
