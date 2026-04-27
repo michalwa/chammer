@@ -1,9 +1,9 @@
 #ifndef TEST_H_
 #define TEST_H_
 
-#include <string.h> // strcmp
+#include <string.h>
 
-#include "../../lib/buffer.h" // buffer_printf
+#include "../../lib/buffer.h"
 #include "../../lib/string.h"
 
 #define RED(str)   "\033[0;31m" str "\033[0m"
@@ -71,8 +71,5 @@
             return TEST_FAIL;                                                       \
         }                                                                           \
     } while (0)
-
-void buffer_print_c_string_literal(Buffer *, const char *);
-void buffer_print_string_literal(Buffer *, string);
 
 #endif // TEST_H_

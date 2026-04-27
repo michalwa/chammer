@@ -51,38 +51,8 @@ static int run_example(
 
     program_read(&prog, (const uint8_t *)comp_buffer->data, comp_buffer->len);
 
-    buffer_printf(output, "source: %s\n\n", source);
-    buffer_printf(output, "string bytes: ");
-    buffer_print_string_literal(
-        output, (string){ .data = prog.string_bytes, .len = prog.string_bytes_len }
-    );
-    buffer_printf(output, "\n\n");
-    buffer_printf(output, "functions:\n");
-
-    for (uint32_t i = 0; i < prog.funcs_len; i++) {
-        func_meta fn = program_func_meta(&prog, i);
-
-        buffer_printf(
-            output,
-            "  %2" PRIu32 " | %08" PRIX32 " locals: %" PRIu8 ", args: %" PRIu8 ", captures: %" PRIu8
-            " | ",
-            i, fn.addr, fn.locals, fn.args, fn.captures
-        );
-
-        switch (fn.type) {
-        case FN_NAMED:
-            buffer_printf(output, "%.*s", fn.name_len, prog.string_bytes + fn.name_offset);
-            break;
-        case FN_BLOCK: buffer_printf(output, "(block)"); break;
-        case FN_LAMBDA: buffer_printf(output, "(lambda)"); break;
-        case FN_CASE: buffer_printf(output, "(case)"); break;
-        }
-
-        buffer_putc(output, '\n');
-    }
-
-    buffer_putc(output, '\n');
-    bytecode_debug_print(prog.bytecode, prog.bytecode_len, prog.string_bytes, output);
+    buffer_printf(output, "%s\n\n", source);
+    program_debug_print(&prog, output);
 
     SNAPSHOT(snapshot_name, output->data);
 

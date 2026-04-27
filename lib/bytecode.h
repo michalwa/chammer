@@ -39,15 +39,12 @@
 typedef enum { EACH_OPCODE(ENUM_MEMBER) } opcode;
 #undef ENUM_MEMBER
 
-#define EACH_FUNC_TYPE(_) \
-    _(FN_NAMED)           \
-    _(FN_BLOCK)           \
-    _(FN_LAMBDA)          \
-    _(FN_CASE)
-
-#define ENUM_MEMBER(name) name,
-typedef enum { EACH_FUNC_TYPE(ENUM_MEMBER) } func_type;
-#undef ENUM_MEMBER
+typedef enum {
+    FN_NAMED,
+    FN_BLOCK,
+    FN_LAMBDA,
+    FN_CASE,
+} func_type;
 
 typedef struct {
     uint32_t  addr;
@@ -83,7 +80,6 @@ typedef struct {
 #define BYTECODE_VERSION 0x0001
 
 const char *op_name(opcode);
-const char *func_type_name(func_type);
 
 /*
  * `size_t *addr_offset` is set to the offset relative to the buffer start
@@ -103,16 +99,15 @@ void bytecode_put_tupleget(Buffer *, uint8_t index);
 void bytecode_put_maketuple(Buffer *, uint8_t len);
 void bytecode_put_makelist(Buffer *, uint8_t len);
 
+void bytecode_put_func_meta(Buffer *, func_meta *);
+
 /*
  * Validates a compiled program and stores pointers to specific sections in `p`.
  * Does not allocate any new buffers.
  */
-bool      program_read(program *p, const uint8_t *bytes, size_t len);
-func_meta program_func_meta(const program *p, uint32_t index);
-void      bytecode_put_func_meta(Buffer *, func_meta);
-
-void bytecode_debug_print(
-    const uint8_t *bytecode, size_t bytecode_len, const char *string_bytes, Buffer *output
-);
+bool   program_read(program *, const uint8_t *bytes, size_t len);
+void   program_func_meta(const program *, uint32_t, func_meta *);
+string program_func_name(const program *, func_meta *);
+void   program_debug_print(const program *, Buffer *);
 
 #endif // BYTECODE_H_

@@ -41,31 +41,11 @@ int main(void) {
     if (!program_read(&prog, (uint8_t *)comp_buffer.data, comp_buffer.len))
         panic("could not read compiled program");
 
-    printf("version:           %04" PRIX16 "\n", prog.version);
-    printf("string bytes len:  %" PRIu32 "\n", prog.string_bytes_len);
-    printf("string bytes:      %.*s\n", (int)prog.string_bytes_len, prog.string_bytes);
-    printf("funcs len:         %" PRIu32 "\n", prog.funcs_len);
-    printf("funcs:");
-
-    for (uint32_t i = 0; i < prog.funcs_len; i++) {
-        func_meta fn = program_func_meta(&prog, i);
-        printf(
-            "\n  %2" PRIu32 " | %08" PRIX32 " locals: %2" PRIu8 ", args: %2" PRIu8, i, fn.addr,
-            fn.locals, fn.args
-        );
-    }
-
-    printf("\n");
-    printf("bytecode len:      %zu\n", prog.bytecode_len);
-    // printf("bytecode:");
-
-    // for (size_t i = 0; i < prog.bytecode_len; i++)
-    //     printf("%s%02" PRIX8, (i % 16) ? ((i % 8) ? " " : "  ") : "\n  ", prog.bytecode[i]);
-
-    // printf("\n\n");
-
-    bytecode_debug_print(prog.bytecode, prog.bytecode_len, prog.string_bytes, &out);
-    printf(F_BUFFER, FA_BUFFER(out));
+    program_debug_print(&prog, &out);
+    printf(
+        F_BUFFER "\ntotal size: %zu bytes, bytecode: %zu bytes\n", FA_BUFFER(out), comp_buffer.len,
+        prog.bytecode_len
+    );
 
     buffer_free(&input);
     buffer_free(&comp_buffer);

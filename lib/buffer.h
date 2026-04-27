@@ -42,4 +42,7 @@ void   buffer_truncate(Buffer *, size_t len);
 void   buffer_read_file(Buffer *, FILE *);
 string buffer_string(Buffer *);
 
+void buffer_print_c_string_literal(Buffer *, const char *);
+void buffer_print_string_literal(Buffer *, string);
+
 #endif // BUFFER_H_

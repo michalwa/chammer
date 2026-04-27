@@ -720,18 +720,16 @@ void compiler_write_program(Compiler *c, Buffer *b) {
     }
 
     for (EACH_IN_VECTOR(c->funcs, func, f)) {
-        bytecode_put_func_meta(
-            b,
-            (func_meta){
-                .addr = f->start->offset,
-                .locals = CHECKED_U8(f->locals),
-                .args = CHECKED_U8(f->args),
-                .captures = CHECKED_U8(f->captures),
-                .type = f->type,
-                .name_offset = CHECKED_U32(f->name_offset),
-                .name_len = CHECKED_U8(f->name_len),
-            }
-        );
+        func_meta fn = {
+            .addr = f->start->offset,
+            .locals = CHECKED_U8(f->locals),
+            .args = CHECKED_U8(f->args),
+            .captures = CHECKED_U8(f->captures),
+            .type = f->type,
+            .name_offset = CHECKED_U32(f->name_offset),
+            .name_len = CHECKED_U8(f->name_len),
+        };
+        bytecode_put_func_meta(b, &fn);
     }
 
     for (Block *block = prelude_block; block; block = block->next)
