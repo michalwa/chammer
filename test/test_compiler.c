@@ -13,6 +13,8 @@
     _("extern", "print 1")                                                                     \
     _("if", "if 1 then 2 else 3")                                                              \
     _("if_nested", "if 1 then if 2 then 3 else 4 else if 5 then 6 else 7")                     \
+    _("unary", "!1")                                                                           \
+    _("binary", "1 % 2")                                                                       \
     _("assign", "let x = 1; let y = 2; (x, y)")                                                \
     _("assign_nested", "let x = 1; let y = { let x = 2; x }; (x, y)")                          \
     _("assign_capture", "let x = 1; let y = { let z = 2; (x, z) }; y")                         \

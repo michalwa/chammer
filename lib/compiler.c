@@ -6,9 +6,6 @@
 #include "bytes.h"
 #include "utils.h"
 
-/*
- * A logical block of bytecode, either a branch or a function
- */
 typedef struct Block Block;
 struct Block {
     Block *next;
@@ -359,7 +356,7 @@ static void visit_unary(Compiler *c, Block **b, Scope *s, node *n) {
 
     visit_expr(c, b, s, n->first_child);
     visit_ident(c, b, s, n);
-    bytecode_put_callcls(&(*b)->bytecode, 2);
+    bytecode_put_callcls(&(*b)->bytecode, 1);
 }
 
 static void visit_binary(Compiler *c, Block **b, Scope *s, node *n) {
@@ -380,6 +377,7 @@ static void visit_apply(Compiler *c, Block **b, Scope *s, node *n) {
     int items = 0;
     for (node *child = n->first_child; child; child = child->next_sibling) items++;
 
+    // FIXME: Unfortunate O(n^2) solution in order to iterate backwards
     for (int i = items - 1; i >= 0; i--) {
         node *nth = n->first_child;
         for (int j = 0; j < i; j++) nth = nth->next_sibling;
@@ -484,6 +482,7 @@ static void visit_function(
     uint8_t args = 0;
 
     if (rec) {
+        debug_assert(name);
         uint8_t self_local = scope_put_local(&inner_scope, *name);
 
         buffer_putc(&body_block->bytecode, OP_DUP);
@@ -522,6 +521,9 @@ static void visit_function(
     }
 }
 
+/*
+ * `name` is optionally passed down from other visitors
+ */
 static void visit_lambda(Compiler *c, Block **b, Scope *s, node *n, symbol *name) {
     node *body = n->first_child;
     while (body->next_sibling) body = body->next_sibling;
