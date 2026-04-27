@@ -6,6 +6,8 @@
     _(read_be_bytes)                    \
     _(write_be_bytes)                   \
     _(buffer_put_be_bytes)              \
+    _(compiler_examples)                \
+    _(compile_int)                      \
     _(compile_string)                   \
     _(lexer_full_example)               \
     _(lexer_empty)                      \

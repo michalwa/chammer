@@ -21,7 +21,7 @@ void compiler_free(Compiler *);
 void compiler_visit_program(Compiler *, node *);
 void compiler_write_program(Compiler *, Buffer *);
 
-int64_t compile_int(const char *str, size_t len);
+int64_t compile_int(string);
 /*
  * Expects the full contents of a string token, including quotes
  */

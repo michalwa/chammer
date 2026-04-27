@@ -278,7 +278,7 @@ static void visit_string(Compiler *c, Block **b, Scope *s, node *n) {
 static void visit_int(Compiler *c, Block **b, Scope *s, node *n) {
     (void)c;
     (void)s;
-    bytecode_put_pushint(&(*b)->bytecode, compile_int(n->token.str, n->token.len));
+    bytecode_put_pushint(&(*b)->bytecode, compile_int(token_string(n->token)));
 }
 
 static void visit_tuple(Compiler *c, Block **b, Scope *s, node *n) {
@@ -326,7 +326,7 @@ static void visit_list(Compiler *c, Block **b, Scope *s, node *n) {
 
 static void visit_unary(Compiler *c, Block **b, Scope *s, node *n) {
     if (string_eq(token_string(n->token), STRING("-")) && n->first_child->type == N_INT) {
-        int64_t value = compile_int(n->first_child->token.str, n->first_child->token.len);
+        int64_t value = compile_int(token_string(n->first_child->token));
         bytecode_put_pushint(&(*b)->bytecode, -value);
         return;
     }
@@ -695,9 +695,9 @@ void compiler_write_program(Compiler *c, Buffer *b) {
     }
 }
 
-int64_t compile_int(const char *str, size_t len) {
+int64_t compile_int(string str) {
     int64_t value = 0;
-    for (size_t i = 0; i < len; i++) value = (value * 10) + (str[i] - '0');
+    for (size_t i = 0; i < str.len; i++) value = (value * 10) + (str.data[i] - '0');
     return value;
 }
 

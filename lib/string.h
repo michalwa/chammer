@@ -17,4 +17,6 @@ typedef struct {
 bool   string_eq(string a, string b);
 string string_from_cstr(const char *str);
 
+void next_line(const char **line, size_t *len);
+
 #endif // STRING_H_
