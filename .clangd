@@ -1,7 +1,7 @@
-# NOTE: Keep in sync with CFLAGS + CFLAGS_DEBUG in the Makefile
+# Run `make .clangd` to update
 CompileFlags:
   Add:
-    - -xc # only required for the language server
+    - -xc
     - -std=c99
     - -Wall
     - -Wextra

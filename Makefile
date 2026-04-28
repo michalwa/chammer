@@ -14,6 +14,7 @@ CFLAGS += -std=c99 \
 CFLAGS_RELEASE += -O3
 CFLAGS_DEBUG   += -g -O0 -DHAMMER_DEBUG -fsanitize=address -fsanitize=undefined
 CFLAGS_TEST    += -g -O0 -DHAMMER_DEBUG
+CFLAGS_CLANGD  += -DHAMMER_DEBUG
 
 ifeq ($(TEST_ASAN), 1)
 	CFLAGS_TEST += -fsanitize=address -fsanitize=undefined
@@ -71,6 +72,15 @@ format:
 .PHONY: format-check
 format-check:
 	clang-format --dry-run -Werror $(SRC)
+
+.clangd: Makefile
+	@echo "# Run \`make .clangd\` to update" > $@
+	@echo "CompileFlags:" >> $@
+	@echo "  Add:" >> $@
+	@for flag in -xc $(CFLAGS) $(CFLAGS_CLANGD); do \
+		echo "    - $$flag" >> $@;                  \
+	done
+	@echo ".clangd file updated"
 
 .PHONY: clean
 clean:
