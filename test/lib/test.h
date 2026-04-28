@@ -1,5 +1,5 @@
-#ifndef TEST_H_
-#define TEST_H_
+#ifndef HAMMER_TEST_H_
+#define HAMMER_TEST_H_
 
 #include <string.h>
 
@@ -72,4 +72,4 @@
         }                                                                           \
     } while (0)
 
-#endif // TEST_H_
+#endif // HAMMER_TEST_H_

@@ -1,5 +1,5 @@
-#ifndef BYTECODE_H_
-#define BYTECODE_H_
+#ifndef HAMMER_BYTECODE_H_
+#define HAMMER_BYTECODE_H_
 
 #include <inttypes.h>
 #include <stdbool.h>
@@ -110,4 +110,4 @@ void   program_func_meta(const program *, uint32_t, func_meta *);
 string program_func_name(const program *, func_meta *);
 void   program_debug_print(const program *, Buffer *);
 
-#endif // BYTECODE_H_
+#endif // HAMMER_BYTECODE_H_

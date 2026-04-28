@@ -1,5 +1,5 @@
-#ifndef STRING_H_
-#define STRING_H_
+#ifndef HAMMER_STRING_H_
+#define HAMMER_STRING_H_
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -19,4 +19,4 @@ string string_from_cstr(const char *str);
 
 void next_line(const char **line, size_t *len);
 
-#endif // STRING_H_
+#endif // HAMMER_STRING_H_

@@ -1,5 +1,5 @@
-#ifndef AST_H_
-#define AST_H_
+#ifndef HAMMER_AST_H_
+#define HAMMER_AST_H_
 
 #include "buffer.h"
 #include "lexer.h"
@@ -69,4 +69,4 @@ bool node_has_token(node n);
 void node_print(node, Buffer *);
 void node_add_children_(node *parent, int n, ...);
 
-#endif // AST_H_
+#endif // HAMMER_AST_H_

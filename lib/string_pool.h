@@ -1,5 +1,5 @@
-#ifndef STRING_POOL_H_
-#define STRING_POOL_H_
+#ifndef HAMMER_STRING_POOL_H_
+#define HAMMER_STRING_POOL_H_
 
 #include "buffer.h"
 #include "string.h"
@@ -23,4 +23,4 @@ void   string_pool_free(StringPool *);
 symbol string_pool_intern(StringPool *, string);
 string string_pool_get(StringPool *, symbol);
 
-#endif // STRING_POOL_H_
+#endif // HAMMER_STRING_POOL_H_

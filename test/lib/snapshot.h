@@ -1,5 +1,5 @@
-#ifndef SNAPSHOT_H_
-#define SNAPSHOT_H_
+#ifndef HAMMER_SNAPSHOT_H_
+#define HAMMER_SNAPSHOT_H_
 
 #include "../../lib/buffer.h"
 
@@ -22,4 +22,4 @@ void snapshot_diff(Buffer *output, const char *a, const char *b);
  */
 int  snapshot(Buffer *output, const char *name, const char *data);
 
-#endif // SNAPSHOT_H_
+#endif // HAMMER_SNAPSHOT_H_

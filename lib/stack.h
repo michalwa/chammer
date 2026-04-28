@@ -1,5 +1,5 @@
-#ifndef STACK_H_
-#define STACK_H_
+#ifndef HAMMER_STACK_H_
+#define HAMMER_STACK_H_
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -42,4 +42,4 @@ size_t     stack_count_blocks(Stack *);
 stack_iter stack_iter_begin(Stack *);
 bool       stack_iter_next(stack_iter *);
 
-#endif // STACK_H_
+#endif // HAMMER_STACK_H_

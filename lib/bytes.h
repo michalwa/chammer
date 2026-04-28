@@ -1,5 +1,5 @@
-#ifndef BYTES_H_
-#define BYTES_H_
+#ifndef HAMMER_BYTES_H_
+#define HAMMER_BYTES_H_
 
 #include <inttypes.h>
 
@@ -40,4 +40,4 @@ void buffer_put_i16be(Buffer *, int16_t);
 void buffer_put_i32be(Buffer *, int32_t);
 void buffer_put_i64be(Buffer *, int64_t);
 
-#endif // BYTES_H_
+#endif // HAMMER_BYTES_H_

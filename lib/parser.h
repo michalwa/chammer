@@ -1,5 +1,5 @@
-#ifndef PARSER_H_
-#define PARSER_H_
+#ifndef HAMMER_PARSER_H_
+#define HAMMER_PARSER_H_
 
 #include "ast.h"
 #include "lexer.h"
@@ -105,4 +105,4 @@ parse_result parse_pident(Parser *, token *);
 parse_result parse_pwild(Parser *, token *);
 parse_result parse_pconst(Parser *, token *);
 
-#endif // PARSER_H_
+#endif // HAMMER_PARSER_H_

@@ -1,5 +1,5 @@
-#ifndef COMPILER_H_
-#define COMPILER_H_
+#ifndef HAMMER_COMPILER_H_
+#define HAMMER_COMPILER_H_
 
 #include "ast.h"
 #include "buffer.h"
@@ -27,4 +27,4 @@ int64_t compile_int(string);
  */
 void    compile_string(string, Buffer *);
 
-#endif // COMPILER_H_
+#endif // HAMMER_COMPILER_H_

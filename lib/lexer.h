@@ -1,5 +1,5 @@
-#ifndef LEXER_H_
-#define LEXER_H_
+#ifndef HAMMER_LEXER_H_
+#define HAMMER_LEXER_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -83,4 +83,4 @@ loc        token_loc(token, const char *);
 bool       token_is_comment(token);
 bool       token_is_binary_op(token);
 
-#endif // LEXER_H_
+#endif // HAMMER_LEXER_H_

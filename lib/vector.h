@@ -1,5 +1,5 @@
-#ifndef VECTOR_H_
-#define VECTOR_H_
+#ifndef HAMMER_VECTOR_H_
+#define HAMMER_VECTOR_H_
 
 #include <stddef.h>
 
@@ -34,4 +34,4 @@ void *vector_last(Vector *);
 void  vector_clear(Vector *);
 void *vector_get(Vector *, size_t index);
 
-#endif // VECTOR_H_
+#endif // HAMMER_VECTOR_H_

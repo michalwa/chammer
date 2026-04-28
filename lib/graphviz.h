@@ -1,5 +1,5 @@
-#ifndef GRAPHVIZ_H_
-#define GRAPHVIZ_H_
+#ifndef HAMMER_GRAPHVIZ_H_
+#define HAMMER_GRAPHVIZ_H_
 
 #include "parser.h"
 
@@ -8,4 +8,4 @@
  */
 void node_print_dot(node *, Buffer *);
 
-#endif // GRAPHVIZ_H_
+#endif // HAMMER_GRAPHVIZ_H_

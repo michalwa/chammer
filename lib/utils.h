@@ -1,5 +1,5 @@
-#ifndef UTILS_H_
-#define UTILS_H_
+#ifndef HAMMER_UTILS_H_
+#define HAMMER_UTILS_H_
 
 #define ARGC(...)                                         ARGC_(__VA_ARGS__, ARGC_SEQ_)
 #define ARGC_(...)                                        ARGC_NTH_(__VA_ARGS__)
@@ -48,4 +48,4 @@
 
 void panic_(const char *file, int line, const char *fmt, ...);
 
-#endif // UTILS_H_
+#endif // HAMMER_UTILS_H_

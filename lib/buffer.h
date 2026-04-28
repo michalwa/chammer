@@ -1,5 +1,5 @@
-#ifndef BUFFER_H_
-#define BUFFER_H_
+#ifndef HAMMER_BUFFER_H_
+#define HAMMER_BUFFER_H_
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -45,4 +45,4 @@ string buffer_string(Buffer *);
 void buffer_print_c_string_literal(Buffer *, const char *);
 void buffer_print_string_literal(Buffer *, string);
 
-#endif // BUFFER_H_
+#endif // HAMMER_BUFFER_H_
