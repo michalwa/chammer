@@ -49,6 +49,7 @@ bin/hammer-debug: $(SRC_BIN) $(SRC_LIB)
 
 bin/test: bin/build_test $(SRC_TEST) $(SRC_LIB)
 	bin/build_test test/runner/tests.gen.h test/*.c
+	clang-format -i test/runner/tests.gen.h
 	$(CC) $(filter %.c, $^) -o $@ $(CFLAGS) $(CFLAGS_TEST)
 
 bin/build_test: build_test.c test/*.c

@@ -51,6 +51,8 @@ Make and run tests:
 make test
 # or run a specific test
 make test TEST=<test-name>
+# sanitizers are disabled in tests by default to avoid cluttering output
+make test TEST_ASAN=1
 ```
 
 Review changed snapshots (interactive):
