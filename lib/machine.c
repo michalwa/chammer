@@ -135,15 +135,15 @@ bool machine_step(Machine *m) {
     case OP_DUP: opstack_dup(m); return true;
     case OP_POP: opstack_pop(m); return true;
     case OP_PUSHINT: opstack_push(m, hvalue_make_int(read_i64be(&m->ip))); return true;
-    case OP_PUSHSTR:
-        opstack_push(m, hvalue_make_string(read_string(m)));
-        return true;
+    case OP_PUSHSTR: opstack_push(m, hvalue_make_string(read_string(m))); return true;
     case OP_PUSHTRUE: opstack_push(m, hvalue_make(V_TRUE)); return true;
     case OP_PUSHFALSE: opstack_push(m, hvalue_make(V_FALSE)); return true;
     case OP_MAKECLS: opstack_push(m, make_closure(m, read_u32be(&m->ip))); return true;
     case OP_CALLCLS: call_closure(m, *m->ip++); return true;
     case OP_HALT: return false;
     default:
-        panic("unsupported opcode: %02" PRIX8 " @ %08" PRIX32, *op, (uint32_t)(op - m->prog->bytecode));
+        panic(
+            "unsupported opcode: %02" PRIX8 " @ %08" PRIX32, *op, (uint32_t)(op - m->prog->bytecode)
+        );
     }
 }

@@ -1,7 +1,7 @@
 #include "stack.h"
 
-#include <memory.h>
 #include <inttypes.h>
+#include <memory.h>
 #include <stdio.h>
 #include <stdlib.h>
 

@@ -10,11 +10,11 @@ typedef struct {
     /*
      * Function/call stack
      */
-    Buffer fnstack;
+    Buffer         fnstack;
     /*
      * Operand stack (item type: HValue)
      */
-    Vector opstack;
+    Vector         opstack;
     const uint8_t *ip;
 } Machine;
 
