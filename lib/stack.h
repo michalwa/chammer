@@ -17,6 +17,7 @@ typedef struct stack_block stack_block;
 typedef struct {
     size_t       item_size;
     size_t       items_per_block;
+    // TODO: Rename to `len` for consistency
     size_t       size;
     stack_block *head;
 } Stack;
@@ -33,7 +34,7 @@ void       stack_init_block_size_(Stack *, size_t item_size, size_t items_per_bl
 void       stack_free(Stack *);
 void      *stack_push(Stack *);
 void      *stack_push_zeroed(Stack *);
-void       stack_pop(Stack *);
+bool       stack_pop(Stack *, void *);
 void      *stack_get(Stack *, size_t index);
 void      *stack_top(Stack *);
 void       stack_truncate(Stack *, size_t size);

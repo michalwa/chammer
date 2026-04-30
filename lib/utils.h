@@ -46,6 +46,7 @@
 #define debug_assert(expr) (void)0
 #endif
 
+// TODO: noreturn
 void panic_(const char *file, int line, const char *fmt, ...);
 
 #endif // HAMMER_UTILS_H_

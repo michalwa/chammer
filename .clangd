@@ -12,3 +12,4 @@ CompileFlags:
     - -Werror=incompatible-pointer-types
     - -Werror=enum-conversion
     - -DHAMMER_DEBUG
+    - -D_CRT_SECURE_NO_WARNINGS

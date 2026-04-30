@@ -25,6 +25,15 @@ TEST(vector) {
     for (EACH_IN_VECTOR(v, uint32_t, i)) sum += *i;
     ASSERT_INT_EQ(sum, 6);
 
+    uint32_t popped;
+    ASSERT(vector_pop(&v, &popped));
+    ASSERT_INT_EQ(popped, 3);
+    ASSERT(vector_pop(&v, &popped));
+    ASSERT_INT_EQ(popped, 2);
+    ASSERT(vector_pop(&v, &popped));
+    ASSERT_INT_EQ(popped, 1);
+    ASSERT(!vector_pop(&v, &popped));
+
     vector_free(&v);
     return TEST_OK;
 }

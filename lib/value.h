@@ -1,7 +1,10 @@
 #ifndef HAMMER_VALUE_H_
 #define HAMMER_VALUE_H_
 
-#define EACH_VALUE_TYPE(_) \
+#include <inttypes.h>
+#include "string.h"
+
+#define EACH_HVALUE_TYPE(_) \
     _(V_INT, h_int, v_int) \
     _(V_FLOAT, h_float, v_float) \
     _(V_STRING, HString *, v_string) \
@@ -13,7 +16,7 @@
     _(V_TUPLE, HTuple *, v_tuple)
 
 #define ENUM_MEMBER(name, data_type, data_name) name,
-typedef enum { EACH_VALUE_TYPE(ENUM_MEMBER) } value_type;
+typedef enum { EACH_HVALUE_TYPE(ENUM_MEMBER) } hvalue_type;
 #undef ENUM_MEMBER
 
 typedef void *h_unit;
@@ -31,13 +34,15 @@ typedef struct HTuple HTuple;
  * `hvalue_drop` instead.
  */
 typedef struct {
-    value_type type;
+    hvalue_type type;
     union {
 #define UNION_MEMBER(name, data_type, data_name) data_type data_name;
-        EACH_VALUE_TYPE(UNION_MEMBER)
+        EACH_HVALUE_TYPE(UNION_MEMBER)
 #undef UNION_MEMBER
     } data;
 } HValue;
+
+const char *hvalue_type_name(hvalue_type);
 
 /*
  * Make a shared reference to the value by incrementing the reference count
@@ -47,5 +52,9 @@ HValue hvalue_ref(HValue);
  * Drops the shared reference by decrementing the reference count
  */
 void hvalue_drop(HValue);
+
+HValue hvalue_make(hvalue_type);
+HValue hvalue_make_int(int64_t);
+HValue hvalue_make_string(string);
 
 #endif // HAMMER_VALUE_H_

@@ -1,6 +1,7 @@
 #include "stack.h"
 
 #include <memory.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -61,9 +62,11 @@ void *stack_push_zeroed(Stack *s) {
     return ptr;
 }
 
-void stack_pop(Stack *s) {
-    debug_assert(s->size > 0);
+bool stack_pop(Stack *s, void *item) {
+    if (s->size == 0) return false;
+    if (item) memcpy(item, stack_get(s, s->size - 1), s->item_size);
     s->size--;
+    return true;
 }
 
 void *stack_get(Stack *s, size_t index) {
