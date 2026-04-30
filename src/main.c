@@ -2,6 +2,7 @@
 #include "../lib/bytecode.h"
 #include "../lib/compiler.h"
 #include "../lib/lexer.h"
+#include "../lib/machine.h"
 #include "../lib/parser.h"
 #include "../lib/utils.h"
 
@@ -13,6 +14,7 @@ int main(void) {
     Buffer       input;
     Buffer       comp_buffer;
     program      prog;
+    Machine      machine;
 
     FILE *example = fopen("examples/html.ham", "rb");
     buffer_init(&input);
@@ -46,6 +48,10 @@ int main(void) {
         F_BUFFER "\ntotal size: %zu bytes, bytecode: %zu bytes\n", FA_BUFFER(out), comp_buffer.len,
         prog.bytecode_len
     );
+
+    machine_init(&machine, &prog);
+    while (machine_step(&machine));
+    machine_free(&machine);
 
     buffer_free(&input);
     buffer_free(&comp_buffer);
