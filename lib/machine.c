@@ -4,6 +4,7 @@
 #include "bytes.h"
 #include "utils.h"
 #include "value.h"
+#include "vector.h"
 
 /*
  * Function call frame header (stack pointer at bottom)
@@ -15,6 +16,8 @@ typedef struct {
     uint32_t fnindex;
 } frame;
 
+static inline void pop_frame(Machine *);
+
 void machine_init(Machine *m, const program *prog) {
     m->prog = prog;
     buffer_init(&m->fnstack);
@@ -23,8 +26,12 @@ void machine_init(Machine *m, const program *prog) {
 }
 
 void machine_free(Machine *m) {
+    while (m->fnstack.len > 0) pop_frame(m);
+
+    for (EACH_IN_VECTOR(m->opstack, HValue, value)) hvalue_drop(*value);
+
     buffer_free(&m->fnstack);
-    vector_init(&m->opstack, HValue);
+    vector_free(&m->opstack);
 }
 
 static inline void push_frame(Machine *m, uint32_t fnindex) {
@@ -67,12 +74,6 @@ static inline void store_local(Machine *m, uint8_t i) {
 
 static inline void opstack_dup(Machine *m) {
     *(HValue *)vector_push(&m->opstack) = hvalue_ref(*(HValue *)vector_last(&m->opstack));
-}
-
-static inline void opstack_pop(Machine *m) {
-    HValue value;
-    debug_assert(vector_pop(&m->opstack, &value));
-    hvalue_drop(value);
 }
 
 static inline void opstack_push(Machine *m, HValue value) {
@@ -133,7 +134,10 @@ bool machine_step(Machine *m) {
     case OP_LOAD: load_local(m, *m->ip++); return true;
     case OP_STORE: store_local(m, *m->ip++); return true;
     case OP_DUP: opstack_dup(m); return true;
-    case OP_POP: opstack_pop(m); return true;
+    case OP_POP:
+        debug_assert(vector_pop(&m->opstack, &value));
+        hvalue_drop(value);
+        return true;
     case OP_PUSHINT: opstack_push(m, hvalue_make_int(read_i64be(&m->ip))); return true;
     case OP_PUSHSTR: opstack_push(m, hvalue_make_string(read_string(m))); return true;
     case OP_PUSHTRUE: opstack_push(m, hvalue_make(V_TRUE)); return true;
