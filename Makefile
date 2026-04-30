@@ -2,7 +2,7 @@ ifeq ($(origin CC), default)
 	CC = clang
 endif
 
-CFLAGS += -std=c99 \
+CFLAGS += -std=c11 \
 	-Wall \
 	-Wextra \
 	-Wpedantic \

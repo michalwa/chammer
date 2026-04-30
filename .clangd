@@ -2,7 +2,7 @@
 CompileFlags:
   Add:
     - -xc
-    - -std=c99
+    - -std=c11
     - -Wall
     - -Wextra
     - -Wpedantic
