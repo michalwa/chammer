@@ -17,10 +17,11 @@
  * Function call frame header (stack pointer at bottom)
  */
 typedef struct {
-    // value locals[]; (locals in reverse order)
+    // HValue locals[]; (locals in reverse order)
     uint32_t return_sp;
     uint32_t return_ip;
     uint32_t fnindex;
+    char     padding_[4]; // HValue array requires 8-byte alignment
 } frame;
 
 static inline void pop_frame(Machine *);
@@ -123,6 +124,11 @@ static void call_closure(Machine *m, HValue hv_closure, uint8_t args) {
 
     vm_debug_assert(m, closure->args_len + args <= fn.captures + fn.args);
 
+    printf(
+        "call_closure args_len=%" PRIu8 ", args=%" PRIu8 ", captures=%" PRIu8 ", args=%" PRIu8 "\n",
+        closure->args_len, args, fn.captures, fn.args
+    );
+
     if (closure->args_len + args < fn.captures + fn.args) {
         for (uint8_t i = 0; i < args; i++) {
             HValue arg;
@@ -172,31 +178,25 @@ static void call_value(Machine *m, uint8_t args) {
 }
 
 static void check_tuple(Machine *m, uint16_t len) {
-    HValue hv_tuple;
-    vm_debug_assert(m, vector_pop(&m->opstack, &hv_tuple));
+    HValue *hv_tuple = (HValue *)vector_last(&m->opstack);
 
-    if (hv_tuple.type == V_TUPLE) {
+    if (hv_tuple->type == V_TUPLE) {
         const HTuple *tuple;
-        vm_debug_assert(m, hvalue_get_tuple(&hv_tuple, &tuple));
+        vm_debug_assert(m, hvalue_get_tuple(hv_tuple, &tuple));
 
         opstack_push(m, hvalue_make_bool(tuple->len == len));
     } else {
         opstack_push(m, hvalue_make(V_FALSE));
     }
-
-    hvalue_drop(hv_tuple);
 }
 
 static void tuple_get(Machine *m, uint16_t i) {
-    HValue hv_tuple;
-    vm_debug_assert(m, vector_pop(&m->opstack, &hv_tuple));
+    HValue *hv_tuple = (HValue *)vector_last(&m->opstack);
 
     const HTuple *tuple;
-    vm_debug_assert(m, hvalue_get_tuple(&hv_tuple, &tuple));
+    vm_debug_assert(m, hvalue_get_tuple(hv_tuple, &tuple));
 
     opstack_push(m, hvalue_ref(&tuple->data[i]));
-
-    hvalue_drop(hv_tuple);
 }
 
 static void make_tuple(Machine *m, uint16_t len) {
@@ -248,29 +248,68 @@ static void load_extern(Machine *m, string name) {
         panic("unresolved symbol: " F_STRING, FA_STRING(name));
 }
 
+static void concat(Machine *m) {
+    HValue a, b;
+    vm_debug_assert(m, vector_pop(&m->opstack, &a));
+    vm_debug_assert(m, vector_pop(&m->opstack, &b));
+
+    opstack_push(m, hvalue_list_concat(a, b));
+}
+
+// TODO: Make this a native/builtin, this is for debugging only
+static void add_operands(Machine *m) {
+    HValue a, b;
+    vm_debug_assert(m, vector_pop(&m->opstack, &a));
+    vm_debug_assert(m, vector_pop(&m->opstack, &b));
+
+    if (a.type == V_STRING && b.type == V_STRING) {
+        Buffer concat;
+        buffer_init(&concat);
+        buffer_puts(&concat, hvalue_string_get(&b));
+        buffer_puts(&concat, hvalue_string_get(&a));
+        opstack_push(m, hvalue_make_string(buffer_string(&concat)));
+        buffer_free(&concat);
+    } else {
+        panic(
+            "unsupported operands for (+): %s, %s", hvalue_type_name(a.type),
+            hvalue_type_name(b.type)
+        );
+    }
+}
+
 bool machine_step(Machine *m) {
-    HValue value;
+    HValue  value;
+    int16_t jump;
 
     const uint8_t *op = m->ip++;
 
-    printf("stack:\n");
-    for (EACH_IN_VECTOR(m->opstack, HValue, value)) printf("  %s\n", hvalue_type_name(value->type));
-    printf("%s\n", opcode_name(*op));
+    Buffer stack_repr;
+    buffer_init(&stack_repr);
+    for (EACH_IN_VECTOR(m->opstack, HValue, value)) {
+        buffer_puts(&stack_repr, STRING("  "));
+        hvalue_print_repr(value, &stack_repr, m->prog);
+        buffer_putc(&stack_repr, '\n');
+    }
+    printf("\nstack:\n" F_BUFFER "\n", FA_BUFFER(stack_repr));
+    buffer_free(&stack_repr);
+    printf("%08" PRIX32 "  %s\n", (uint32_t)(op - m->prog->bytecode), opcode_name(*op));
 
     switch (*op) {
     case OP_JUMP: m->ip = op + read_i16be(&m->ip); return true;
     case OP_JUMPIF:
+        jump = read_i16be(&m->ip);
         vm_debug_assert(m, vector_pop(&m->opstack, &value));
         if (value.type == V_TRUE)
-            m->ip = op + read_i16be(&m->ip);
+            m->ip = op + jump;
         else
             vm_debug_assert(m, value.type == V_FALSE);
         hvalue_drop(value);
         return true;
     case OP_JUMPIFN:
+        jump = read_i16be(&m->ip);
         vm_debug_assert(m, vector_pop(&m->opstack, &value));
         if (value.type == V_FALSE)
-            m->ip = op + read_i16be(&m->ip);
+            m->ip = op + jump;
         else
             vm_debug_assert(m, value.type == V_TRUE);
         hvalue_drop(value);
@@ -284,12 +323,20 @@ bool machine_step(Machine *m) {
         vm_debug_assert(m, vector_pop(&m->opstack, &value));
         hvalue_drop(value);
         return true;
+    case OP_SWAP:
+        vm_debug_assert(m, m->opstack.len >= 2);
+        value = *(HValue *)vector_last(&m->opstack);
+        *(HValue *)vector_last(&m->opstack) =
+            *(HValue *)vector_get(&m->opstack, m->opstack.len - 2);
+        *(HValue *)vector_get(&m->opstack, m->opstack.len - 2) = value;
+        return true;
     case OP_PUSHINT: opstack_push(m, hvalue_make_int(read_i64be(&m->ip))); return true;
     case OP_PUSHSTR: opstack_push(m, hvalue_make_string(read_string(m))); return true;
     case OP_PUSHTRUE: opstack_push(m, hvalue_make(V_TRUE)); return true;
     case OP_PUSHFALSE: opstack_push(m, hvalue_make(V_FALSE)); return true;
     case OP_MAKECLS: opstack_push(m, make_closure(m, read_u32be(&m->ip))); return true;
     case OP_CALLVAL: call_value(m, *m->ip++); return true;
+    case OP_ADD: add_operands(m); return true;
     case OP_ISTUPLE: check_tuple(m, read_u16be(&m->ip)); return true;
     case OP_TUPLEGET: tuple_get(m, read_u16be(&m->ip)); return true;
     case OP_MAKETUPLE: make_tuple(m, read_u16be(&m->ip)); return true;
@@ -297,6 +344,7 @@ bool machine_step(Machine *m) {
     case OP_ISNIL: check_type(m, V_NIL); return true;
     case OP_ISCONS: check_type(m, V_CONS); return true;
     case OP_UNCONS: uncons(m); return true;
+    case OP_CONCAT: concat(m); return true;
     case OP_LOADEXT:
         vm_debug_assert(m, vector_pop(&m->opstack, &value));
         load_extern(m, hvalue_string_get(&value));

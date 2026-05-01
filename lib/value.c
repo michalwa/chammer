@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "bytecode.h"
 #include "utils.h"
 
 const char *hvalue_type_name(hvalue_type type) {
@@ -39,36 +40,27 @@ void hvalue_drop(HValue hv) {
     }
 }
 
-static HValue hvalue_closure_clone(const HValue *hv) {
-    const HClosure *closure;
-    debug_assert(hvalue_get_closure(hv, &closure));
-
+static HValue hclosure_clone(const HClosure *closure) {
     HValue clone = hvalue_make_closure(closure->fnindex, closure->argc);
+
+    clone.v_closure->args_len = closure->args_len;
     for (uint8_t i = 0; i < closure->args_len; i++)
         clone.v_closure->args[i] = hvalue_ref(&closure->args[i]);
 
     return clone;
 }
 
-static HValue hvalue_cons_clone(const HValue *hv) {
-    const HCons *cons;
-    debug_assert(hvalue_get_cons(hv, &cons));
+static HValue hcons_clone(const HCons *cons) {
     return hvalue_make_cons(hvalue_ref(&cons->head), hvalue_ref(&cons->tail));
 }
 
-static HValue hvalue_tuple_clone(const HValue *hv) {
-    const HTuple *tuple;
-    debug_assert(hvalue_get_tuple(hv, &tuple));
-
+static HValue htuple_clone(const HTuple *tuple) {
     HTupleBuilder clone = htuple_begin(tuple->len);
     for (uint16_t i = 0; i < tuple->len; i++) htuple_put(&clone, hvalue_ref(&tuple->data[i]));
     return htuple_end(clone);
 }
 
-static HValue hvalue_native_clone(const HValue *hv) {
-    const HNative *native;
-    debug_assert(hvalue_get_native(hv, &native));
-
+static HValue hnative_clone(const HNative *native) {
     void  *data_clone = native->meta->clone ? native->meta->clone(native->data) : native->data;
     HValue clone = hvalue_make_native(native->meta, data_clone);
 
@@ -85,10 +77,10 @@ HValue hvalue_clone(const HValue *hv) {
             .data = hv->v_string->data,
             .len = hv->v_string->len,
         });
-    case V_CLOSURE: return hvalue_closure_clone(hv);
-    case V_CONS: return hvalue_cons_clone(hv);
-    case V_TUPLE: return hvalue_tuple_clone(hv);
-    case V_NATIVE: return hvalue_native_clone(hv);
+    case V_CLOSURE: return hclosure_clone(hv->v_closure);
+    case V_CONS: return hcons_clone(hv->v_cons);
+    case V_TUPLE: return htuple_clone(hv->v_tuple);
+    case V_NATIVE: return hnative_clone(hv->v_native);
     default: debug_assert(!hvalue_is_rc(hv)); return *hv;
     }
 }
@@ -105,11 +97,77 @@ inline bool hvalue_is_uniq(const HValue *hv) {
     return !hvalue_is_rc(hv) || hvalue_header_(hv)->rc <= 1;
 }
 
+static void hclosure_print_repr(const HClosure *closure, Buffer *b, const program *prog) {
+    func_meta fn;
+    program_func_meta(prog, closure->fnindex, &fn);
+    string name = program_func_name(prog, &fn);
+
+    buffer_printf(b, "(" F_STRING, FA_STRING(name));
+    for (uint8_t i = 0; i < closure->args_len; i++) {
+        buffer_putc(b, ' ');
+        hvalue_print_repr(&closure->args[i], b, prog);
+    }
+    buffer_putc(b, ')');
+}
+
+static void hcons_print_repr(const HCons *cons, Buffer *b, const program *prog) {
+    buffer_putc(b, '[');
+
+    while (1) {
+        hvalue_print_repr(&cons->head, b, prog);
+
+        switch (cons->tail.type) {
+        case V_CONS:
+            cons = cons->tail.v_cons;
+            buffer_puts(b, STRING(", "));
+            break;
+        case V_NIL: buffer_putc(b, ']'); return;
+        default:
+            hvalue_print_repr(&cons->tail, b, prog);
+            buffer_puts(b, STRING(" (malformed list)]"));
+            return;
+        }
+    }
+}
+
+static void htuple_print_repr(const HTuple *tuple, Buffer *b, const program *prog) {
+    buffer_putc(b, '(');
+
+    for (uint16_t i = 0; i < tuple->len; i++) {
+        if (i > 0) buffer_puts(b, STRING(", "));
+        hvalue_print_repr(&tuple->data[i], b, prog);
+    }
+
+    if (tuple->len == 1) buffer_putc(b, ',');
+    buffer_putc(b, ')');
+}
+
+static void hnative_print_repr(const HNative *native, Buffer *b) {
+    // TODO
+    (void)native;
+    buffer_puts(b, STRING("<native>"));
+}
+
+void hvalue_print_repr(const HValue *hv, Buffer *b, const program *prog) {
+    switch (hv->type) {
+    case V_INT: buffer_printf(b, "%" PRIu32, hv->v_int); break;
+    case V_FLOAT: buffer_printf(b, "%lf", hv->v_float); break;
+    case V_STRING: buffer_print_string_literal(b, hvalue_string_get(hv)); break;
+    case V_CLOSURE: hclosure_print_repr(hv->v_closure, b, prog); break;
+    case V_TRUE: buffer_puts(b, STRING("true")); break;
+    case V_FALSE: buffer_puts(b, STRING("false")); break;
+    case V_NIL: buffer_puts(b, STRING("[]")); break;
+    case V_CONS: hcons_print_repr(hv->v_cons, b, prog); break;
+    case V_TUPLE: htuple_print_repr(hv->v_tuple, b, prog); break;
+    case V_NATIVE: hnative_print_repr(hv->v_native, b); break;
+    }
+}
+
 inline HValue hvalue_make(hvalue_type type) {
     switch (type) {
     case V_FALSE:
     case V_TRUE:
-    case V_NIL: return (HValue){ .type = V_INT };
+    case V_NIL: return (HValue){ .type = type };
     default: panic("`hvalue_make` used with non-primitive type %s", hvalue_type_name(type));
     }
 }
@@ -257,4 +315,21 @@ void htuple_put(HTupleBuilder *tb, HValue item) {
 HValue htuple_end(HTupleBuilder tb) {
     debug_assert(tb.len == tb.tuple->len);
     return (HValue){ .type = V_TUPLE, .v_tuple = tb.tuple };
+}
+
+// (1 . nil)       + (2 . nil) = (1 . (2 . nil))
+// (1 . (2 . nil)) + (3 . nil) = (1 . { (2 . nil) + (3 . nil) })
+
+HValue hvalue_list_concat(HValue a, HValue b) {
+    if (a.type == V_NIL) return b;
+    if (b.type == V_NIL) return a;
+
+    const HCons *cons;
+    debug_assert(hvalue_get_cons(&a, &cons));
+
+    if (cons->tail.type == V_CONS) b = hvalue_list_concat(hvalue_ref(&cons->tail), b);
+
+    HValue result = hvalue_make_cons(hvalue_ref(&cons->head), b);
+    hvalue_drop(a);
+    return result;
 }

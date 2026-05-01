@@ -17,6 +17,7 @@
     _(OP_STORE, 0x11)     /* store local */                                                        \
     _(OP_DUP, 0x12)       /* duplicate top value on the stack */                                   \
     _(OP_POP, 0x13)       /* remove top value off the stack */                                     \
+    _(OP_SWAP, 0x14)      /* swap 2 top operands on the stack */                                   \
     _(OP_PUSHINT, 0x20)   /* push int value to the stack */                                        \
     _(OP_PUSHSTR, 0x21)   /* push string value to the stack */                                     \
     _(OP_PUSHTRUE, 0x22)  /* push the value `true` to the stack */                                 \

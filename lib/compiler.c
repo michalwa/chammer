@@ -462,6 +462,8 @@ static void visit_match(Compiler *c, Block **b, Scope *s, node *n) {
     buffer_putc(&(*b)->bytecode, (char)OP_HALT); // TODO: raise error
 
     *b = cont_block;
+    buffer_putc(&(*b)->bytecode, OP_SWAP); // swap scrutinee and result
+    buffer_putc(&(*b)->bytecode, OP_POP);
 }
 
 /*

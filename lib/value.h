@@ -3,6 +3,8 @@
 
 #include <inttypes.h>
 
+#include "buffer.h"
+#include "bytecode.h"
 #include "string.h"
 
 #define EACH_HVALUE_TYPE(_)                    \
@@ -149,6 +151,12 @@ HValue hvalue_uniq(HValue);
  */
 bool   hvalue_is_uniq(const HValue *);
 
+/*
+ * Prints a string representation of the value to the buffer. `const program *`
+ * is required for function metadata lookups
+ */
+void hvalue_print_repr(const HValue *, Buffer *, const program *);
+
 HValue hvalue_make(hvalue_type);
 HValue hvalue_make_bool(bool);
 HValue hvalue_make_int(int64_t);
@@ -188,5 +196,7 @@ HValue hvalue_native_call(const HValue *);
 HTupleBuilder htuple_begin(uint16_t len);
 void          htuple_put(HTupleBuilder *, HValue);
 HValue        htuple_end(HTupleBuilder);
+
+HValue hvalue_list_concat(HValue, HValue);
 
 #endif // HAMMER_VALUE_H_
