@@ -65,7 +65,7 @@ static inline void pop_frame(Machine *m) {
 }
 
 static inline void load_local(Machine *m, uint8_t i) {
-    *(HValue *)vector_push(&m->opstack) = hvalue_ref(*get_local(m, i));
+    *(HValue *)vector_push(&m->opstack) = hvalue_ref(get_local(m, i));
 }
 
 static inline void store_local(Machine *m, uint8_t i) {
@@ -73,7 +73,7 @@ static inline void store_local(Machine *m, uint8_t i) {
 }
 
 static inline void opstack_dup(Machine *m) {
-    *(HValue *)vector_push(&m->opstack) = hvalue_ref(*(HValue *)vector_last(&m->opstack));
+    *(HValue *)vector_push(&m->opstack) = hvalue_ref((HValue *)vector_last(&m->opstack));
 }
 
 static inline void opstack_push(Machine *m, HValue value) {
@@ -94,16 +94,45 @@ static HValue make_closure(Machine *m, uint32_t fnindex) {
     func_meta fn;
     program_func_meta(m->prog, fnindex, &fn);
 
-    // TODO
+    HValue hv_closure = hvalue_make_closure(fnindex, fn.captures + fn.args);
+
+    for (uint8_t i = 0; i < fn.captures; i++) {
+        HValue arg;
+        debug_assert(vector_pop(&m->opstack, &arg));
+        hvalue_closure_put_arg_mut(&hv_closure, arg);
+    }
+
+    return hv_closure;
 }
 
 static void call_closure(Machine *m, uint8_t args) {
-    HValue closure;
-    debug_assert(vector_pop(&m->opstack, &closure));
+    HValue hv_closure;
+    debug_assert(vector_pop(&m->opstack, &hv_closure));
+    hv_closure = hvalue_uniq(hv_closure);
 
-    // TODO
+    const HClosure *closure;
+    debug_assert(hvalue_get_closure(&hv_closure, &closure));
 
-    hvalue_drop(closure);
+    func_meta fn;
+    program_func_meta(m->prog, closure->fnindex, &fn);
+
+    debug_assert(closure->args_len + args <= fn.captures + fn.args);
+
+    if (closure->args_len + args < fn.captures + fn.args) {
+        for (uint8_t i = 0; i < args; i++) {
+            HValue arg;
+            debug_assert(vector_pop(&m->opstack, &arg));
+            hvalue_closure_put_arg_mut(&hv_closure, arg);
+        }
+
+        opstack_push(m, hv_closure);
+    } else {
+        HValue arg;
+        while (hvalue_closure_take_arg_mut(&hv_closure, &arg)) opstack_push(m, arg);
+
+        push_frame(m, closure->fnindex);
+        hvalue_drop(hv_closure);
+    }
 }
 
 bool machine_step(Machine *m) {
