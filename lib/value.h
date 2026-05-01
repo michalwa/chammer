@@ -79,9 +79,14 @@ struct HCons {
 
 struct HTuple {
     hvalue_header header;
-    uint8_t       len;
+    uint16_t      len;
     HValue        data[];
 };
+
+typedef struct {
+    HTuple  *tuple;
+    uint16_t len;
+} HTupleBuilder;
 
 const char *hvalue_type_name(hvalue_type);
 
@@ -114,9 +119,11 @@ HValue hvalue_uniq(HValue);
 bool   hvalue_is_uniq(const HValue *);
 
 HValue hvalue_make(hvalue_type);
+HValue hvalue_make_bool(bool);
 HValue hvalue_make_int(int64_t);
 HValue hvalue_make_string(string);
 HValue hvalue_make_closure(uint32_t fnindex, uint8_t args);
+HValue hvalue_make_cons(HValue head, HValue tail);
 
 bool hvalue_get_string(const HValue *, const HString **);
 bool hvalue_get_closure(const HValue *, const HClosure **);
@@ -136,5 +143,9 @@ void hvalue_closure_put_arg_mut(const HValue *, HValue);
  * (`hvalue_is_uniq`). Returns `false` if no more arguments are left.
  */
 bool hvalue_closure_take_arg_mut(const HValue *, HValue *);
+
+HTupleBuilder htuple_begin(uint16_t len);
+void          htuple_put(HTupleBuilder *, HValue);
+HValue        htuple_end(HTupleBuilder);
 
 #endif // HAMMER_VALUE_H_

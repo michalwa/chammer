@@ -94,10 +94,10 @@ void bytecode_put_pushint(Buffer *, int64_t value);
 void bytecode_put_pushstr(Buffer *, uint32_t offset, uint32_t len);
 void bytecode_put_makecls(Buffer *, uint32_t fnindex);
 void bytecode_put_callcls(Buffer *, uint8_t args);
-void bytecode_put_istuple(Buffer *, uint8_t len);
-void bytecode_put_tupleget(Buffer *, uint8_t index);
-void bytecode_put_maketuple(Buffer *, uint8_t len);
-void bytecode_put_makelist(Buffer *, uint8_t len);
+void bytecode_put_istuple(Buffer *, uint16_t len);
+void bytecode_put_tupleget(Buffer *, uint16_t index);
+void bytecode_put_maketuple(Buffer *, uint16_t len);
+void bytecode_put_makelist(Buffer *, uint16_t len);
 
 void bytecode_put_func_meta(Buffer *, func_meta *);
 

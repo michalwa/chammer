@@ -305,18 +305,18 @@ static void visit_int(Compiler *c, Block **b, Scope *s, node *n) {
 }
 
 static void visit_tuple(Compiler *c, Block **b, Scope *s, node *n) {
-    uint8_t len = 0;
+    size_t len = 0;
     for (node *child = n->first_child; child; child = child->next_sibling) {
         visit_expr(c, b, s, child);
         len++;
     }
 
-    bytecode_put_maketuple(&(*b)->bytecode, len);
+    bytecode_put_maketuple(&(*b)->bytecode, CHECKED_U16(len));
 }
 
 static void visit_list(Compiler *c, Block **b, Scope *s, node *n) {
-    size_t  parts = 1;
-    uint8_t part_len = 0;
+    size_t parts = 1;
+    size_t part_len = 0;
 
     if (!n->first_child) {
         bytecode_put_makelist(&(*b)->bytecode, 0);
@@ -334,7 +334,7 @@ static void visit_list(Compiler *c, Block **b, Scope *s, node *n) {
 
         if (!child->next_sibling || child->next_sibling->type == N_SPREAD) {
             if (child->type != N_SPREAD) {
-                bytecode_put_makelist(&(*b)->bytecode, part_len);
+                bytecode_put_makelist(&(*b)->bytecode, CHECKED_U16(part_len));
                 parts++;
                 part_len = 0;
             }
@@ -619,17 +619,17 @@ static void visit_papply(Compiler *c, Block **b, Block **fail, Scope *s, node *l
 static void visit_ptuple(Compiler *c, Block **b, Block **fail, Scope *s, node *lhs, node *rhs) {
     if (rhs) visit_expr(c, b, s, rhs);
 
-    uint8_t len = 0;
+    size_t len = 0;
     for (node *child = lhs->first_child; child; child = child->next_sibling) len++;
 
     if (!*fail) *fail = insert_block_after(c, *b);
 
-    bytecode_put_istuple(&(*b)->bytecode, len);
+    bytecode_put_istuple(&(*b)->bytecode, CHECKED_U16(len));
     put_jump(c, OP_JUMPIFN, *b, *fail);
 
-    uint8_t index = 0;
+    size_t index = 0;
     for (node *child = lhs->first_child; child; child = child->next_sibling) {
-        bytecode_put_tupleget(&(*b)->bytecode, index);
+        bytecode_put_tupleget(&(*b)->bytecode, CHECKED_U16(index));
         visit_pattern(c, b, fail, s, child, NULL);
         index++;
     }

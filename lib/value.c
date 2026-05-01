@@ -65,6 +65,10 @@ inline HValue hvalue_make(hvalue_type type) {
     }
 }
 
+inline HValue hvalue_make_bool(bool b) {
+    return hvalue_make(b ? V_TRUE : V_FALSE);
+}
+
 inline HValue hvalue_make_int(int64_t value) {
     return (HValue){ .type = V_INT, .data.v_int = value };
 }
@@ -85,6 +89,15 @@ HValue hvalue_make_closure(uint32_t fnindex, uint8_t args) {
     data->args_len = 0;
 
     return (HValue){ .type = V_CLOSURE, .data.v_closure = data };
+}
+
+HValue hvalue_make_cons(HValue head, HValue tail) {
+    HCons *data = malloc(sizeof(HCons));
+    data->header.rc = 1;
+    data->head = head;
+    data->tail = tail;
+
+    return (HValue){ .type = V_CONS, .data.v_cons = data };
 }
 
 #define HVALUE_GET(h, t, d, v)  \
@@ -113,6 +126,8 @@ inline bool hvalue_get_tuple(const HValue *hv, const HTuple **value) {
     HVALUE_GET(hv, V_TUPLE, v_tuple, value);
 }
 
+#undef HVALUE_GET
+
 void hvalue_closure_put_arg_mut(const HValue *hv, HValue arg) {
     const HClosure *closure;
     debug_assert(hvalue_is_uniq(hv));
@@ -134,4 +149,20 @@ bool hvalue_closure_take_arg_mut(const HValue *hv, HValue *arg) {
     HClosure *closure_mut = (HClosure *)closure;
     *arg = closure_mut->args[--closure_mut->args_len];
     return true;
+}
+
+HTupleBuilder htuple_begin(uint16_t len) {
+    HTuple *tuple = malloc(sizeof(HTuple) + sizeof(HValue) * len);
+    tuple->len = len;
+    return (HTupleBuilder){ .tuple = tuple, .len = 0 };
+}
+
+void htuple_put(HTupleBuilder *tb, HValue item) {
+    debug_assert(tb->len < tb->tuple->len);
+    tb->tuple->data[tb->len++] = item;
+}
+
+HValue htuple_end(HTupleBuilder tb) {
+    debug_assert(tb.len == tb.tuple->len);
+    return (HValue){ .type = V_TUPLE, .data.v_tuple = tb.tuple };
 }

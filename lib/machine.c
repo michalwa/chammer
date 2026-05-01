@@ -135,6 +135,76 @@ static void call_closure(Machine *m, uint8_t args) {
     }
 }
 
+static void check_tuple(Machine *m, uint16_t len) {
+    HValue hv_tuple;
+    debug_assert(vector_pop(&m->opstack, &hv_tuple));
+
+    if (hv_tuple.type == V_TUPLE) {
+        const HTuple *tuple;
+        debug_assert(hvalue_get_tuple(&hv_tuple, &tuple));
+
+        opstack_push(m, hvalue_make_bool(tuple->len == len));
+    } else {
+        opstack_push(m, hvalue_make(V_FALSE));
+    }
+
+    hvalue_drop(hv_tuple);
+}
+
+static void tuple_get(Machine *m, uint16_t i) {
+    HValue hv_tuple;
+    debug_assert(vector_pop(&m->opstack, &hv_tuple));
+
+    const HTuple *tuple;
+    debug_assert(hvalue_get_tuple(&hv_tuple, &tuple));
+
+    opstack_push(m, hvalue_ref(&tuple->data[i]));
+
+    hvalue_drop(hv_tuple);
+}
+
+static void make_tuple(Machine *m, uint16_t len) {
+    HTupleBuilder tb = htuple_begin(len);
+
+    for (uint16_t i = 0; i < len; i++) {
+        HValue item;
+        debug_assert(vector_pop(&m->opstack, &item));
+        htuple_put(&tb, item);
+    }
+
+    opstack_push(m, htuple_end(tb));
+}
+
+static void make_list(Machine *m, uint16_t len) {
+    opstack_push(m, hvalue_make(V_NIL));
+
+    for (uint16_t i = 0; i < len; i++) {
+        HValue tail, head;
+        debug_assert(vector_pop(&m->opstack, &tail));
+        debug_assert(vector_pop(&m->opstack, &head));
+
+        opstack_push(m, hvalue_make_cons(head, tail));
+    }
+}
+
+static void uncons(Machine *m) {
+    HValue hv_cons;
+    debug_assert(vector_pop(&m->opstack, &hv_cons));
+
+    const HCons *cons;
+    debug_assert(hvalue_get_cons(&hv_cons, &cons));
+
+    opstack_push(m, hvalue_ref(&cons->tail));
+    opstack_push(m, hvalue_ref(&cons->head));
+
+    hvalue_drop(hv_cons);
+}
+
+static void check_type(Machine *m, hvalue_type type) {
+    const HValue *value = vector_last(&m->opstack);
+    opstack_push(m, hvalue_make_bool(value->type == type));
+}
+
 bool machine_step(Machine *m) {
     HValue value;
 
@@ -173,6 +243,13 @@ bool machine_step(Machine *m) {
     case OP_PUSHFALSE: opstack_push(m, hvalue_make(V_FALSE)); return true;
     case OP_MAKECLS: opstack_push(m, make_closure(m, read_u32be(&m->ip))); return true;
     case OP_CALLCLS: call_closure(m, *m->ip++); return true;
+    case OP_ISTUPLE: check_tuple(m, read_u16be(&m->ip)); return true;
+    case OP_TUPLEGET: tuple_get(m, read_u16be(&m->ip)); return true;
+    case OP_MAKETUPLE: make_tuple(m, read_u16be(&m->ip)); return true;
+    case OP_MAKELIST: make_list(m, read_u16be(&m->ip)); return true;
+    case OP_ISNIL: check_type(m, V_NIL); return true;
+    case OP_ISCONS: check_type(m, V_CONS); return true;
+    case OP_UNCONS: uncons(m); return true;
     case OP_HALT: return false;
     default:
         panic(
