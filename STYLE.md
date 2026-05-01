@@ -88,6 +88,19 @@ typedef struct Foo Foo;
 struct Foo { /* ... */ };
 ```
 
+### Constructor/initializer functions
+
+Use pointer arguments to initialize objects instead of returning by value.
+
+```c
+// good
+void object_init(Object *);
+// bad
+Object object_new(void);
+```
+
+This allows initializers to construct self-references and should be done everywhere for consistency.
+
 ## Macros
 
 ### Expression safety
