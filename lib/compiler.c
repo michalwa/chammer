@@ -356,7 +356,7 @@ static void visit_unary(Compiler *c, Block **b, Scope *s, node *n) {
 
     visit_expr(c, b, s, n->first_child);
     visit_ident(c, b, s, n);
-    bytecode_put_callcls(&(*b)->bytecode, 1);
+    bytecode_put_callval(&(*b)->bytecode, 1);
 }
 
 static void visit_binary(Compiler *c, Block **b, Scope *s, node *n) {
@@ -370,7 +370,7 @@ static void visit_binary(Compiler *c, Block **b, Scope *s, node *n) {
     }
 
     visit_ident(c, b, s, n);
-    bytecode_put_callcls(&(*b)->bytecode, 2);
+    bytecode_put_callval(&(*b)->bytecode, 2);
 }
 
 static void visit_apply(Compiler *c, Block **b, Scope *s, node *n) {
@@ -385,7 +385,7 @@ static void visit_apply(Compiler *c, Block **b, Scope *s, node *n) {
         visit_expr(c, b, s, nth);
     }
 
-    bytecode_put_callcls(&(*b)->bytecode, (uint8_t)(items - 1));
+    bytecode_put_callval(&(*b)->bytecode, (uint8_t)(items - 1));
 }
 
 static void visit_if(Compiler *c, Block **b, Scope *s, node *n) {
@@ -486,7 +486,7 @@ static void visit_function(
         uint8_t self_local = scope_put_local(&inner_scope, *name);
 
         buffer_putc(&body_block->bytecode, OP_DUP);
-        bytecode_put_callcls(&body_block->bytecode, 1);
+        bytecode_put_callval(&body_block->bytecode, 1);
         bytecode_put_store(&body_block->bytecode, self_local);
 
         args++;
@@ -517,7 +517,7 @@ static void visit_function(
 
     if (rec) {
         buffer_putc(&(*b)->bytecode, OP_DUP);
-        bytecode_put_callcls(&(*b)->bytecode, 1);
+        bytecode_put_callval(&(*b)->bytecode, 1);
     }
 }
 
@@ -694,7 +694,11 @@ void compiler_visit_program(Compiler *c, node *n) {
     Block *block = insert_block_after(c, prelude);
     visit_expr(c, &block, &global_scope, n);
     buffer_putc(&block->bytecode, (char)OP_HALT);
-    put_load_externs(c, prelude, &global_scope);
+
+    Block *init = insert_block_after(c, prelude);
+    put_load_externs(c, init, &global_scope);
+    uint32_t init_fnindex = push_func(c, init, &global_scope, 0, FN_GLOBAL, NULL);
+    bytecode_put_call(&prelude->bytecode, init_fnindex);
 
     scope_free(&global_scope);
 }

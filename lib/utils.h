@@ -42,8 +42,11 @@
 
 #ifdef HAMMER_DEBUG
 #define debug_assert(expr) DO(if (!(expr)) panic("assertion failed: " #expr))
+#define debug_assert_msg(expr, fmsg, ...)                                         \
+    DO(if (!(expr)) panic("assertion failed: " #expr " (" fmsg ")", __VA_ARGS__))
 #else
-#define debug_assert(expr) (void)0
+#define debug_assert(expr)                (void)0
+#define debug_assert_msg(expr, fmsg, ...) (void)0
 #endif
 
 _Noreturn void panic_(const char *file, int line, const char *fmt, ...);

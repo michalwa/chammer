@@ -20,7 +20,7 @@ ifeq ($(TEST_ASAN), 1)
 	CFLAGS_TEST += -fsanitize=address -fsanitize=undefined
 endif
 
-SRC_LIB   = lib/*.c lib/*.h
+SRC_LIB   = lib/*.c lib/*.h lib/**/*.c lib/**/*.h
 SRC_BIN   = src/*.c
 SRC_TEST  = test/*.c test/**/*.c test/**/*.h
 SRC_BENCH = bench/*.c bench/**/*.c

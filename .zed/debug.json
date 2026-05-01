@@ -4,6 +4,16 @@
 // see: https://zed.dev/docs/debugger
 [
   {
+    "label": "Debug",
+    "adapter": "CodeLLDB",
+    "request": "launch",
+    "program": "bin/hammer-debug",
+    "build": {
+      "command": "make",
+      "args": ["bin/hammer-debug"],
+    },
+  },
+  {
     "label": "Debug tests",
     "adapter": "CodeLLDB",
     "request": "launch",

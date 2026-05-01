@@ -15,7 +15,8 @@
     _(V_FALSE, h_unit, v_false, false)         \
     _(V_NIL, h_unit, v_nil, false)             \
     _(V_CONS, HCons *, v_cons, true)           \
-    _(V_TUPLE, HTuple *, v_tuple, true)
+    _(V_TUPLE, HTuple *, v_tuple, true)        \
+    _(V_NATIVE, HNative *, v_native, true)
 
 #define ENUM_MEMBER(name, data_type, data_name, is_rc) name,
 typedef enum { EACH_HVALUE_TYPE(ENUM_MEMBER) } hvalue_type;
@@ -28,6 +29,7 @@ typedef struct HString  HString;
 typedef struct HClosure HClosure;
 typedef struct HCons    HCons;
 typedef struct HTuple   HTuple;
+typedef struct HNative  HNative;
 
 /*
  * A Hammer value
@@ -40,10 +42,11 @@ typedef struct HTuple   HTuple;
 typedef struct {
     hvalue_type type;
     union {
+        void *v_any;
 #define UNION_MEMBER(name, data_type, data_name, is_rc) data_type data_name;
         EACH_HVALUE_TYPE(UNION_MEMBER)
 #undef UNION_MEMBER
-    } data;
+    };
 } HValue;
 
 /*
@@ -63,9 +66,11 @@ struct HClosure {
     hvalue_header header;
     uint32_t      fnindex;
     /*
-     * Number of arguments applied so far. Total number of args to the function
-     * must be looked up by `fnindex`. `args` in this context includes captures,
-     * meaning the total number is `func_meta.captures + func_meta.args`.
+     * Total number of required arguments (captures + args)
+     */
+    uint8_t       argc;
+    /*
+     * Arguments applied so far, stored in `args`
      */
     uint8_t       args_len;
     HValue        args[];
@@ -88,7 +93,33 @@ typedef struct {
     uint16_t len;
 } HTupleBuilder;
 
+typedef struct {
+    size_t argc;
+    /*
+     * Optional
+     */
+    HValue (*call)(const void *data, const HValue *argv);
+    /*
+     * Optional
+     */
+    void   (*free)(void *);
+    /*
+     * Optional: if not specified, pointer will be copied
+     */
+    void  *(*clone)(void *);
+} hnative_meta;
+
+struct HNative {
+    hvalue_header       header;
+    const hnative_meta *meta;
+    void               *data;
+    size_t              args_len;
+    HValue              args[];
+};
+
 const char *hvalue_type_name(hvalue_type);
+
+hvalue_header *hvalue_header_(const HValue *);
 
 /*
  * Checks whether the value contains reference-counted allocations
@@ -124,11 +155,15 @@ HValue hvalue_make_int(int64_t);
 HValue hvalue_make_string(string);
 HValue hvalue_make_closure(uint32_t fnindex, uint8_t args);
 HValue hvalue_make_cons(HValue head, HValue tail);
+HValue hvalue_make_native(const hnative_meta *, void *);
 
 bool hvalue_get_string(const HValue *, const HString **);
 bool hvalue_get_closure(const HValue *, const HClosure **);
 bool hvalue_get_cons(const HValue *, const HCons **);
 bool hvalue_get_tuple(const HValue *, const HTuple **);
+bool hvalue_get_native(const HValue *, const HNative **);
+
+string hvalue_string_get(const HValue *);
 
 /*
  * Appends an argument to a closure. The closure must be unique (`hvalue_is_uniq`).
@@ -143,6 +178,12 @@ void hvalue_closure_put_arg_mut(const HValue *, HValue);
  * (`hvalue_is_uniq`). Returns `false` if no more arguments are left.
  */
 bool hvalue_closure_take_arg_mut(const HValue *, HValue *);
+
+/*
+ * Same as `hvalue_closure_put_arg_mut` but for `V_NATIVE` values
+ */
+void   hvalue_native_put_arg_mut(const HValue *, HValue);
+HValue hvalue_native_call(const HValue *);
 
 HTupleBuilder htuple_begin(uint16_t len);
 void          htuple_put(HTupleBuilder *, HValue);
