@@ -4,7 +4,7 @@ The following are code style guidelines that have not yet been translated to com
 
 ## Naming
 
-## Abbreviations
+### Abbreviations
 
 Abbreviations are permitted so long as they're unambiguous. Short names are preferred to overly verbose ones, so long as they remain practical.
 
@@ -18,7 +18,7 @@ typedef struct { /* ... */ } Object;
 void object_do_something(Object *o) { /* ... */ }
 ```
 
-## Type name case
+### Type name case
 
 Use `snake_case` for primitive/copyable types and `PascalCase` for non-copyable types, i.e. types which allocate resources.
 
@@ -28,7 +28,7 @@ typedef struct { int i, j; } vec2i;
 typedef struct { char *data; size_t len; } String;
 ```
 
-## Macro name case
+### Macro name case
 
 Macros should generally use `UPPER_CASE`. Permissible exceptions are function-like macros which are wrappers around functions, e.g. for passing variadic argument count or type information.
 
