@@ -304,12 +304,16 @@ static void visit_int(Compiler *c, Block **b, Scope *s, node *n) {
     bytecode_put_pushint(&(*b)->bytecode, compile_int(token_string(n->token)));
 }
 
+static void visit_reverse_siblings(Compiler *c, Block **b, Scope *s, node *n, size_t *len) {
+    if (n->next_sibling) visit_reverse_siblings(c, b, s, n->next_sibling, len);
+
+    visit_expr(c, b, s, n);
+    (*len)++;
+}
+
 static void visit_tuple(Compiler *c, Block **b, Scope *s, node *n) {
     size_t len = 0;
-    for (node *child = n->first_child; child; child = child->next_sibling) {
-        visit_expr(c, b, s, child);
-        len++;
-    }
+    visit_reverse_siblings(c, b, s, n->first_child, &len);
 
     bytecode_put_maketuple(&(*b)->bytecode, CHECKED_U16(len));
 }
@@ -374,18 +378,10 @@ static void visit_binary(Compiler *c, Block **b, Scope *s, node *n) {
 }
 
 static void visit_apply(Compiler *c, Block **b, Scope *s, node *n) {
-    int items = 0;
-    for (node *child = n->first_child; child; child = child->next_sibling) items++;
+    size_t len = 0;
+    visit_reverse_siblings(c, b, s, n->first_child, &len);
 
-    // FIXME: Unfortunate O(n^2) solution in order to iterate backwards
-    for (int i = items - 1; i >= 0; i--) {
-        node *nth = n->first_child;
-        for (int j = 0; j < i; j++) nth = nth->next_sibling;
-
-        visit_expr(c, b, s, nth);
-    }
-
-    bytecode_put_callval(&(*b)->bytecode, (uint8_t)(items - 1));
+    bytecode_put_callval(&(*b)->bytecode, CHECKED_U8(len - 1));
 }
 
 static void visit_if(Compiler *c, Block **b, Scope *s, node *n) {
