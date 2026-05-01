@@ -73,7 +73,7 @@ make bench BENCH=<bench-name>
 
 The project is configured to work with [clangd](https://clangd.llvm.org) and `clang-format`. Run `make format` to auto-format the entire project.
 
-Other code style guidelines which cannot be enforced via tooling are described [here](STYLE.md). Most of these are reasonable good practice, plus some opinionated stuff.
+Other code style guidelines which cannot be enforced via tooling are described [here](STYLE.md).
 
 ### Third-party libraries
 
