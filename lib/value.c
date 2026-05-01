@@ -1,5 +1,6 @@
 #include "value.h"
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -29,14 +30,30 @@ inline HValue hvalue_ref(const HValue *hv) {
     return *hv;
 }
 
+static void hvalue_free(HValue hv) {
+    switch (hv.type) {
+    case V_CLOSURE:
+        for (uint8_t i = 0; i < hv.v_closure->args_len; i++) hvalue_drop(hv.v_closure->args[i]);
+        break;
+    case V_CONS:
+        hvalue_drop(hv.v_cons->head);
+        hvalue_drop(hv.v_cons->tail);
+        break;
+    case V_TUPLE:
+        for (uint8_t i = 0; i < hv.v_tuple->len; i++) hvalue_drop(hv.v_tuple->data[i]);
+        break;
+    case V_NATIVE:
+        if (hv.v_native->meta->free) hv.v_native->meta->free(hv.v_native->data);
+        break;
+    default: break;
+    }
+
+    free(hv.v_any);
+}
+
 void hvalue_drop(HValue hv) {
     if (hvalue_is_rc(&hv)) {
-        if (!--hvalue_header_(&hv)->rc) {
-            if (hv.type == V_NATIVE && hv.v_native->meta->free)
-                hv.v_native->meta->free(hv.v_native->data);
-
-            free(hv.v_any);
-        }
+        if (--hvalue_header_(&hv)->rc == 0) hvalue_free(hv);
     }
 }
 
@@ -142,10 +159,18 @@ static void htuple_print_repr(const HTuple *tuple, Buffer *b, const program *pro
     buffer_putc(b, ')');
 }
 
-static void hnative_print_repr(const HNative *native, Buffer *b) {
-    // TODO
-    (void)native;
-    buffer_puts(b, STRING("<native>"));
+static void hnative_print_repr(const HNative *native, Buffer *b, const program *prog) {
+    if (native->meta->print_repr) {
+        native->meta->print_repr(native->data, native->args, native->args_len, b, prog);
+        return;
+    }
+
+    buffer_printf(b, "(%s", native->meta->name);
+    for (uint8_t i = 0; i < native->args_len; i++) {
+        buffer_putc(b, ' ');
+        hvalue_print_repr(&native->args[i], b, prog);
+    }
+    buffer_putc(b, ')');
 }
 
 void hvalue_print_repr(const HValue *hv, Buffer *b, const program *prog) {
@@ -159,7 +184,7 @@ void hvalue_print_repr(const HValue *hv, Buffer *b, const program *prog) {
     case V_NIL: buffer_puts(b, STRING("[]")); break;
     case V_CONS: hcons_print_repr(hv->v_cons, b, prog); break;
     case V_TUPLE: htuple_print_repr(hv->v_tuple, b, prog); break;
-    case V_NATIVE: hnative_print_repr(hv->v_native, b); break;
+    case V_NATIVE: hnative_print_repr(hv->v_native, b, prog); break;
     }
 }
 
@@ -316,9 +341,6 @@ HValue htuple_end(HTupleBuilder tb) {
     debug_assert(tb.len == tb.tuple->len);
     return (HValue){ .type = V_TUPLE, .v_tuple = tb.tuple };
 }
-
-// (1 . nil)       + (2 . nil) = (1 . (2 . nil))
-// (1 . (2 . nil)) + (3 . nil) = (1 . { (2 . nil) + (3 . nil) })
 
 HValue hvalue_list_concat(HValue a, HValue b) {
     if (a.type == V_NIL) return b;

@@ -124,11 +124,6 @@ static void call_closure(Machine *m, HValue hv_closure, uint8_t args) {
 
     vm_debug_assert(m, closure->args_len + args <= fn.captures + fn.args);
 
-    printf(
-        "call_closure args_len=%" PRIu8 ", args=%" PRIu8 ", captures=%" PRIu8 ", args=%" PRIu8 "\n",
-        closure->args_len, args, fn.captures, fn.args
-    );
-
     if (closure->args_len + args < fn.captures + fn.args) {
         for (uint8_t i = 0; i < args; i++) {
             HValue arg;
@@ -282,17 +277,6 @@ bool machine_step(Machine *m) {
     int16_t jump;
 
     const uint8_t *op = m->ip++;
-
-    Buffer stack_repr;
-    buffer_init(&stack_repr);
-    for (EACH_IN_VECTOR(m->opstack, HValue, value)) {
-        buffer_puts(&stack_repr, STRING("  "));
-        hvalue_print_repr(value, &stack_repr, m->prog);
-        buffer_putc(&stack_repr, '\n');
-    }
-    printf("\nstack:\n" F_BUFFER "\n", FA_BUFFER(stack_repr));
-    buffer_free(&stack_repr);
-    printf("%08" PRIX32 "  %s\n", (uint32_t)(op - m->prog->bytecode), opcode_name(*op));
 
     switch (*op) {
     case OP_JUMP: m->ip = op + read_i16be(&m->ip); return true;

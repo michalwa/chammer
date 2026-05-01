@@ -96,19 +96,26 @@ typedef struct {
 } HTupleBuilder;
 
 typedef struct {
-    size_t argc;
+    const char *name;
+    size_t      argc;
     /*
      * Optional
      */
-    HValue (*call)(const void *data, const HValue *argv);
+    HValue      (*call)(const void *data, const HValue *args);
     /*
      * Optional
      */
-    void   (*free)(void *);
+    void        (*free)(void *);
     /*
      * Optional: if not specified, pointer will be copied
      */
-    void  *(*clone)(void *);
+    void       *(*clone)(const void *);
+    /*
+     * Optional: defaults to `(name ...args)`
+     */
+    void        (*print_repr)(
+        const void *data, const HValue *args, size_t argc, Buffer *, const program *
+    );
 } hnative_meta;
 
 struct HNative {

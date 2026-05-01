@@ -1,7 +1,9 @@
 42
 
-  00000000  OP_CALL 0 (<block> @ 00000006)
-  00000005  OP_HALT
+  00000000  OP_CALL 1 (<global> @ 00000005)
+<global>  0 locals, 0 captures, 0 args
+  00000005  OP_CALL 0 (<block> @ 0000000B)
+  0000000A  OP_HALT
 <block>  0 locals, 0 captures, 0 args
-  00000006  OP_PUSHINT 42
-  0000000F  OP_RETURN
+  0000000B  OP_PUSHINT 42
+  00000014  OP_RETURN
