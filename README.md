@@ -4,6 +4,9 @@ an ML/Haskell/Rust-inspired interpreted functional programming language
 
 This is a C reimplementation of an original Rust project.
 
+> [!WARNING]
+> This is a work in progress, not really usable yet.
+
 ## Features
 
 See [html.ham](examples/html.ham) for a syntax example. A more complete example or specification might come later at some point.
