@@ -28,14 +28,14 @@ static void *print_clone(const void *data) {
 }
 
 static void print_print_repr(
-    const void *data, const HValue *args, size_t argc, Buffer *out, const program *prog
+    const void *data, const HValue *args, size_t argc, Buffer *out, const machine_ctx *ctx
 ) {
     (void)args, (void)argc;
     buffer_puts(out, STRING("(print"));
 
     if (data) {
         buffer_putc(out, ' ');
-        hvalue_print_repr((HValue *)data, out, prog);
+        hvalue_print_repr((HValue *)data, out, ctx);
     }
 
     buffer_putc(out, ')');

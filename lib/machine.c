@@ -24,6 +24,10 @@ typedef struct {
     char     padding_[4]; // HValue array requires 8-byte alignment
 } frame;
 
+struct machine_ctx {
+    const program *prog;
+};
+
 static inline void pop_frame(Machine *);
 
 void machine_init(Machine *m, const program *prog) {
@@ -113,51 +117,44 @@ static HValue make_closure(Machine *m, uint32_t fnindex) {
     return hv_closure;
 }
 
-static void call_closure(Machine *m, HValue hv_closure, uint8_t args) {
-    hv_closure = hvalue_uniq(hv_closure);
+static void call_closure(Machine *m, HValue closure, uint8_t args) {
+    closure = hvalue_uniq(closure);
 
-    const HClosure *closure;
-    vm_debug_assert(m, hvalue_get_closure(&hv_closure, &closure));
-
-    func_meta fn;
-    program_func_meta(m->prog, closure->fnindex, &fn);
-
-    vm_debug_assert(m, closure->args_len + args <= fn.captures + fn.args);
-
-    if (closure->args_len + args < fn.captures + fn.args) {
+    if (args < hvalue_closure_args_left(&closure)) {
         for (uint8_t i = 0; i < args; i++) {
             HValue arg;
             vm_debug_assert(m, vector_pop(&m->opstack, &arg));
-            hvalue_closure_put_arg_mut(&hv_closure, arg);
+            hvalue_closure_put_arg_mut(&closure, arg);
         }
 
-        opstack_push(m, hv_closure);
+        opstack_push(m, closure);
     } else {
-        HValue arg;
-        while (hvalue_closure_take_arg_mut(&hv_closure, &arg)) opstack_push(m, arg);
+        debug_assert(args == hvalue_closure_args_left(&closure));
 
-        push_frame(m, closure->fnindex);
-        hvalue_drop(hv_closure);
+        // If after pushing `args` the closure would be ready to call, don't bother
+        // storing args in it, but rather pop the rest onto the stack and call it
+        HValue arg;
+        while (hvalue_closure_take_arg_mut(&closure, &arg)) opstack_push(m, arg);
+
+        push_frame(m, hvalue_closure_fnindex(&closure));
+        hvalue_drop(closure);
     }
 }
 
-static void call_native(Machine *m, HValue hv_native, uint8_t args) {
-    hv_native = hvalue_uniq(hv_native);
-
-    const HNative *native;
-    vm_debug_assert(m, hvalue_get_native(&hv_native, &native));
+static void call_native(Machine *m, HValue native, uint8_t args) {
+    native = hvalue_uniq(native);
 
     for (uint8_t i = 0; i < args; i++) {
         HValue arg;
         vm_debug_assert(m, vector_pop(&m->opstack, &arg));
-        hvalue_native_put_arg_mut(&hv_native, arg);
+        hvalue_native_put_arg_mut(&native, arg);
     }
 
-    if (native->args_len < native->meta->argc) {
-        opstack_push(m, hv_native);
+    if (hvalue_native_args_left(&native)) {
+        opstack_push(m, native);
     } else {
-        opstack_push(m, hvalue_native_call(&hv_native));
-        hvalue_drop(hv_native);
+        opstack_push(m, hvalue_native_call(&native));
+        hvalue_drop(native);
     }
 }
 
@@ -173,25 +170,16 @@ static void call_value(Machine *m, uint8_t args) {
 }
 
 static void check_tuple(Machine *m, uint16_t len) {
-    HValue *hv_tuple = (HValue *)vector_last(&m->opstack);
+    HValue *tuple = (HValue *)vector_last(&m->opstack);
 
-    if (hv_tuple->type == V_TUPLE) {
-        const HTuple *tuple;
-        vm_debug_assert(m, hvalue_get_tuple(hv_tuple, &tuple));
-
-        opstack_push(m, hvalue_make_bool(tuple->len == len));
-    } else {
+    if (tuple->type == V_TUPLE)
+        opstack_push(m, hvalue_make_bool(hvalue_tuple_len(tuple) == len));
+    else
         opstack_push(m, hvalue_make(V_FALSE));
-    }
 }
 
 static void tuple_get(Machine *m, uint16_t i) {
-    HValue *hv_tuple = (HValue *)vector_last(&m->opstack);
-
-    const HTuple *tuple;
-    vm_debug_assert(m, hvalue_get_tuple(hv_tuple, &tuple));
-
-    opstack_push(m, hvalue_ref(&tuple->data[i]));
+    opstack_push(m, hvalue_tuple_get((HValue *)vector_last(&m->opstack), i));
 }
 
 static void make_tuple(Machine *m, uint16_t len) {
@@ -219,16 +207,13 @@ static void make_list(Machine *m, uint16_t len) {
 }
 
 static void uncons(Machine *m) {
-    HValue hv_cons;
-    vm_debug_assert(m, vector_pop(&m->opstack, &hv_cons));
+    HValue cons, head, tail;
+    vm_debug_assert(m, vector_pop(&m->opstack, &cons));
 
-    const HCons *cons;
-    vm_debug_assert(m, hvalue_get_cons(&hv_cons, &cons));
+    hvalue_uncons(cons, &head, &tail);
 
-    opstack_push(m, hvalue_ref(&cons->tail));
-    opstack_push(m, hvalue_ref(&cons->head));
-
-    hvalue_drop(hv_cons);
+    opstack_push(m, tail);
+    opstack_push(m, head);
 }
 
 static void check_type(Machine *m, hvalue_type type) {
@@ -340,4 +325,14 @@ bool machine_step(Machine *m) {
             "unsupported opcode: %02" PRIX8 " @ %08" PRIX32, *op, (uint32_t)(op - m->prog->bytecode)
         );
     }
+}
+
+void machine_ctx_init(machine_ctx *ctx, const Machine *m) {
+    ctx->prog = m->prog;
+}
+
+string machine_ctx_func_name(const machine_ctx *ctx, uint32_t fnindex) {
+    func_meta fn;
+    program_func_meta(ctx->prog, fnindex, &fn);
+    return program_func_name(ctx->prog, &fn);
 }

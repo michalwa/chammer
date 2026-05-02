@@ -57,9 +57,11 @@ int main(void) {
 
     printf("\nexecuted in %zu steps\n", steps);
 
+    machine_ctx ctx;
+    machine_ctx_init(&ctx, &machine);
     for (EACH_IN_VECTOR(machine.opstack, HValue, value)) {
         buffer_puts(&out, STRING("  "));
-        hvalue_print_repr(value, &out, &prog);
+        hvalue_print_repr(value, &out, &ctx);
         buffer_putc(&out, '\n');
     }
 
