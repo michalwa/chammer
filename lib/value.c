@@ -370,6 +370,7 @@ static void htuple_print_repr(const HTuple *tuple, Buffer *b, const machine_ctx 
 
 HTupleBuilder htuple_begin(uint16_t len) {
     HTuple *tuple = malloc(sizeof(HTuple) + sizeof(HValue) * len);
+    tuple->header.rc = 1;
     tuple->len = len;
     return (HTupleBuilder){ .tuple = tuple, .len = 0 };
 }
