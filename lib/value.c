@@ -157,6 +157,9 @@ inline bool hvalue_get_native(const HValue *hv, const HNative **value) {
 
 #undef HVALUE_GET
 
+#define hvalue_expect(getter, h, v)                                    \
+    assert_msg(getter(h, v), "got `%s`", hvalue_type_name((h)->type));
+
 struct HString {
     hvalue_header header;
     uint32_t      len;
@@ -178,7 +181,7 @@ static HValue hstring_clone(const HString *str) {
 
 string hvalue_string_get(const HValue *hv) {
     const HString *str;
-    debug_assert(hvalue_get_string(hv, &str));
+    hvalue_expect(hvalue_get_string, hv, &str);
 
     return (string){ .data = str->data, .len = str->len };
 }
@@ -237,20 +240,20 @@ static void hclosure_print_repr(const HClosure *closure, Buffer *b, const machin
 
 uint8_t hvalue_closure_args_left(const HValue *hv) {
     const HClosure *closure;
-    debug_assert(hvalue_get_closure(hv, &closure));
+    hvalue_expect(hvalue_get_closure, hv, &closure);
     return closure->argc - closure->args_len;
 }
 
 uint32_t hvalue_closure_fnindex(const HValue *hv) {
     const HClosure *closure;
-    debug_assert(hvalue_get_closure(hv, &closure));
+    hvalue_expect(hvalue_get_closure, hv, &closure);
     return closure->fnindex;
 }
 
 void hvalue_closure_put_arg_mut(const HValue *hv, HValue arg) {
     const HClosure *closure;
+    hvalue_expect(hvalue_get_closure, hv, &closure);
     debug_assert(hvalue_is_uniq(hv));
-    debug_assert(hvalue_get_closure(hv, &closure));
 
     // SAFETY: Ensured unique, safe to mutate
     HClosure *closure_mut = (HClosure *)closure;
@@ -259,8 +262,8 @@ void hvalue_closure_put_arg_mut(const HValue *hv, HValue arg) {
 
 bool hvalue_closure_take_arg_mut(const HValue *hv, HValue *arg) {
     const HClosure *closure;
+    hvalue_expect(hvalue_get_closure, hv, &closure);
     debug_assert(hvalue_is_uniq(hv));
-    debug_assert(hvalue_get_closure(hv, &closure));
 
     if (closure->args_len == 0) return false;
 
@@ -314,13 +317,13 @@ static void hcons_print_repr(const HCons *cons, Buffer *b, const machine_ctx *ct
     }
 }
 
-void hvalue_uncons(HValue hv_cons, HValue *head, HValue *tail) {
+void hvalue_uncons(HValue hv, HValue *head, HValue *tail) {
     const HCons *cons;
-    debug_assert(hvalue_get_cons(&hv_cons, &cons));
+    hvalue_expect(hvalue_get_cons, &hv, &cons);
 
     *head = hvalue_ref(&cons->head);
     *tail = hvalue_ref(&cons->tail);
-    hvalue_drop(hv_cons);
+    hvalue_drop(hv);
 }
 
 HValue hvalue_list_concat(HValue a, HValue b) {
@@ -328,7 +331,7 @@ HValue hvalue_list_concat(HValue a, HValue b) {
     if (b.type == V_NIL) return a;
 
     const HCons *cons;
-    debug_assert(hvalue_get_cons(&a, &cons));
+    hvalue_expect(hvalue_get_cons, &a, &cons);
 
     if (cons->tail.type == V_CONS) b = hvalue_list_concat(hvalue_ref(&cons->tail), b);
 
@@ -383,13 +386,13 @@ HValue htuple_end(HTupleBuilder tb) {
 
 uint16_t hvalue_tuple_len(const HValue *hv) {
     const HTuple *tuple;
-    debug_assert(hvalue_get_tuple(hv, &tuple));
+    hvalue_expect(hvalue_get_tuple, hv, &tuple);
     return tuple->len;
 }
 
 HValue hvalue_tuple_get(const HValue *hv, uint16_t index) {
     const HTuple *tuple;
-    debug_assert(hvalue_get_tuple(hv, &tuple));
+    hvalue_expect(hvalue_get_tuple, hv, &tuple);
     return hvalue_ref(&tuple->data[index]);
 }
 
@@ -441,14 +444,14 @@ static void hnative_print_repr(const HNative *native, Buffer *b, const machine_c
 
 size_t hvalue_native_args_left(const HValue *hv) {
     const HNative *native;
-    debug_assert(hvalue_get_native(hv, &native));
+    hvalue_expect(hvalue_get_native, hv, &native);
     return native->meta->argc - native->args_len;
 }
 
 void hvalue_native_put_arg_mut(const HValue *hv, HValue arg) {
     const HNative *native;
+    hvalue_expect(hvalue_get_native, hv, &native);
     debug_assert(hvalue_is_uniq(hv));
-    debug_assert(hvalue_get_native(hv, &native));
 
     debug_assert(native->args_len < native->meta->argc);
 
@@ -459,7 +462,7 @@ void hvalue_native_put_arg_mut(const HValue *hv, HValue arg) {
 
 HValue hvalue_native_call(const HValue *hv) {
     const HNative *native;
-    debug_assert(hvalue_get_native(hv, &native));
+    hvalue_expect(hvalue_get_native, hv, &native);
     debug_assert(native->args_len == native->meta->argc);
     debug_assert(native->meta->call);
 

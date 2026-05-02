@@ -155,6 +155,12 @@ bool hvalue_get_cons(const HValue *, const HCons **);
 bool hvalue_get_tuple(const HValue *, const HTuple **);
 bool hvalue_get_native(const HValue *, const HNative **);
 
+HString  *hvalue_expect_string(const HValue *);
+HClosure *hvalue_expect_closure(const HValue *);
+HCons    *hvalue_expect_cons(const HValue *);
+HTuple   *hvalue_expect_tuple(const HValue *);
+HNative  *hvalue_expect_native(const HValue *);
+
 string hvalue_string_get(const HValue *);
 
 /*

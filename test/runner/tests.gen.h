@@ -25,4 +25,7 @@
     _(stack)                            \
     _(string_pool)                      \
     _(buffer_print_c_string_literal)    \
+    _(hvalue_ownership)                 \
+    _(hvalue_clone)                     \
+    _(hvalue_uniq)                      \
     _(vector)

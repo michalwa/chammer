@@ -1,3 +1,5 @@
+#pragma clang diagnostic ignored "-Wempty-translation-unit"
+
 #ifndef HAMMER_UTILS_H_
 #define HAMMER_UTILS_H_
 
@@ -40,10 +42,13 @@
 
 #define panic(...) panic_(__FILE__, __LINE__, __VA_ARGS__)
 
+#define assert(expr) DO(if (!(expr)) panic("assertion failed: " #expr))
+#define assert_msg(expr, fmt, ...)                                               \
+    DO(if (!(expr)) panic("assertion failed: " #expr " (" fmt ")", __VA_ARGS__))
+
 #ifdef HAMMER_DEBUG
-#define debug_assert(expr) DO(if (!(expr)) panic("assertion failed: " #expr))
-#define debug_assert_msg(expr, fmsg, ...)                                         \
-    DO(if (!(expr)) panic("assertion failed: " #expr " (" fmsg ")", __VA_ARGS__))
+#define debug_assert(expr)               assert(expr)
+#define debug_assert_msg(expr, fmt, ...) assert_msg(expr, fmt, __VA_ARGS__)
 #else
 #define debug_assert(expr)                (void)0
 #define debug_assert_msg(expr, fmsg, ...) (void)0
