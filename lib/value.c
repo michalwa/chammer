@@ -17,8 +17,9 @@ const char *hvalue_type_name(hvalue_type type) {
 
 bool hvalue_is_rc(const HValue *hv) {
     switch (hv->type) {
-#define TYPE_CASE(name, data_type, data, is_rc, ...) \
-    case name: return is_rc;
+#define TYPE_CASE(name, data_type, data, is_rc, ...)                      \
+    /* unit tuples are represented by a NULL pointer and don't need RC */ \
+    case name: return is_rc && hv->data;
 
         EACH_HVALUE_TYPE(TYPE_CASE)
 #undef TYPE_CASE
@@ -369,6 +370,8 @@ static void htuple_print_repr(const HTuple *tuple, Buffer *b, const machine_ctx 
 }
 
 HTupleBuilder htuple_begin(uint16_t len) {
+    if (len == 0) return (HTupleBuilder){ .tuple = NULL, .len = 0 };
+
     HTuple *tuple = malloc(sizeof(HTuple) + sizeof(HValue) * len);
     tuple->header.rc = 1;
     tuple->len = len;
@@ -376,24 +379,27 @@ HTupleBuilder htuple_begin(uint16_t len) {
 }
 
 void htuple_put(HTupleBuilder *tb, HValue item) {
+    debug_assert(tb->tuple);
     debug_assert(tb->len < tb->tuple->len);
     tb->tuple->data[tb->len++] = item;
 }
 
 HValue htuple_end(HTupleBuilder tb) {
-    debug_assert(tb.len == tb.tuple->len);
+    if (tb.tuple) debug_assert(tb.len == tb.tuple->len);
     return (HValue){ .type = V_TUPLE, .v_tuple = tb.tuple };
 }
 
 uint16_t hvalue_tuple_len(const HValue *hv) {
     const HTuple *tuple;
     hvalue_expect(hvalue_get_tuple, hv, &tuple);
-    return tuple->len;
+    return tuple ? tuple->len : 0;
 }
 
 HValue hvalue_tuple_get(const HValue *hv, uint16_t index) {
     const HTuple *tuple;
     hvalue_expect(hvalue_get_tuple, hv, &tuple);
+    debug_assert(tuple);
+    debug_assert(index < tuple->len);
     return hvalue_ref(&tuple->data[index]);
 }
 

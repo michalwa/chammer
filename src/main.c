@@ -7,7 +7,7 @@
 #include "../lib/utils.h"
 #include "../lib/value.h"
 
-int main(void) {
+int main(int argc, char **argv) {
     token        t;
     Parser       p;
     parse_result presult;
@@ -18,7 +18,12 @@ int main(void) {
     program      prog;
     Machine      machine;
 
-    FILE *example = fopen("examples/html.ham", "rb");
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <input.ham>", argv[0]);
+        return 1;
+    }
+
+    FILE *example = fopen(argv[1], "rb");
     buffer_init(&input);
     buffer_read_file(&input, example);
     fclose(example);

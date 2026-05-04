@@ -202,6 +202,7 @@ TEST(hvalue_tuple) {
 
     ASSERT_ENUM_EQ(hv.type, V_TUPLE, hvalue_type_name);
     ASSERT_INT_EQ(hvalue_tuple_len(&hv), 3);
+    ASSERT(hvalue_is_rc(&hv));
 
     for (int i = 0; i < 3; i++) {
         const HValue item = hvalue_tuple_get(&hv, i);
@@ -221,6 +222,13 @@ TEST(hvalue_tuple) {
     hvalue_drop(hv);
 
     ASSERT_INT_EQ(test_dummy_free_count, 2);
+
+    tb = htuple_begin(0);
+    hv = htuple_end(tb);
+    ASSERT_ENUM_EQ(hv.type, V_TUPLE, hvalue_type_name);
+    ASSERT_INT_EQ(hvalue_tuple_len(&hv), 0);
+    ASSERT(!hvalue_is_rc(&hv));
+    hvalue_drop(hv);
 
     return TEST_OK;
 }
