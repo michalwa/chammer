@@ -74,19 +74,19 @@ void compiler_init(Compiler *c) {
     buffer_init(&c->string_buffer);
     string_pool_init(&c->strings);
     string_pool_init(&c->idents);
-    stack_init(&c->blocks, Block);
+    arena_init(&c->blocks, Block);
     vector_init(&c->jumps, jump);
     vector_init(&c->funcs, func);
 }
 
 void compiler_free(Compiler *c) {
-    for (stack_iter i = stack_iter_begin(&c->blocks); stack_iter_next(&i);)
+    for (arena_iter i = arena_iter_begin(&c->blocks); arena_iter_next(&i);)
         block_free((Block *)i.item);
 
     buffer_free(&c->string_buffer);
     string_pool_free(&c->strings);
     string_pool_free(&c->idents);
-    stack_free(&c->blocks);
+    arena_free(&c->blocks);
     vector_free(&c->jumps);
     vector_free(&c->funcs);
 }
@@ -169,7 +169,7 @@ static void scope_debug_print(Compiler *c, Scope *s, FILE *f) {
 }
 
 static inline Block *insert_block_after(Compiler *c, Block *prev) {
-    Block *b = (Block *)stack_push_zeroed(&c->blocks);
+    Block *b = (Block *)arena_push_zeroed(&c->blocks);
     block_init(b);
     b->next = prev->next;
     prev->next = b;
@@ -723,7 +723,7 @@ void compiler_visit_program(Compiler *c, node *n) {
     Scope global_scope;
     scope_init(&global_scope, NULL);
 
-    Block *prelude = (Block *)stack_push_zeroed(&c->blocks);
+    Block *prelude = (Block *)arena_push_zeroed(&c->blocks);
     block_init(prelude);
 
     Block *block = insert_block_after(c, prelude);
@@ -745,7 +745,7 @@ void compiler_write_program(Compiler *c, Buffer *b) {
     buffer_puts(b, buffer_string(&c->strings.buffer));
     buffer_put_u32be(b, CHECKED_U32(c->funcs.len));
 
-    Block *prelude_block = (Block *)stack_get(&c->blocks, 0);
+    Block *prelude_block = (Block *)arena_head(&c->blocks);
 
     size_t block_offset = 0;
     for (Block *block = prelude_block; block; block = block->next) {

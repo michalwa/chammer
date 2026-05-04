@@ -1,9 +1,9 @@
 #ifndef HAMMER_COMPILER_H_
 #define HAMMER_COMPILER_H_
 
+#include "arena.h"
 #include "ast.h"
 #include "buffer.h"
-#include "stack.h"
 #include "string_pool.h"
 #include "vector.h"
 
@@ -11,7 +11,7 @@ typedef struct {
     Buffer     string_buffer;
     StringPool strings;
     StringPool idents;
-    Stack      blocks;
+    Arena      blocks;
     Vector     jumps;
     Vector     funcs;
 } Compiler;

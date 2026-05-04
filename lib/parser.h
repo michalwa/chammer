@@ -1,9 +1,9 @@
 #ifndef HAMMER_PARSER_H_
 #define HAMMER_PARSER_H_
 
+#include "arena.h"
 #include "ast.h"
 #include "lexer.h"
-#include "stack.h"
 
 #define MAX_OPERATORS    0x100
 #define OPERATOR_MAX_LEN 8
@@ -31,7 +31,7 @@ typedef struct opdef opdef;
 typedef struct {
     opdef     *operators;
     size_t     operators_len;
-    Stack      stack;
+    Arena      nodes;
     /*
      * Holds the root node in case of a successful `PARSE_OK` result
      */
