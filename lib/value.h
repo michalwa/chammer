@@ -18,7 +18,8 @@
     _(V_NIL, h_unit, v_nil, false, (void), HVALUE_COPY)                      \
     _(V_CONS, HCons *, v_cons, true, hcons_free, hcons_clone)                \
     _(V_TUPLE, HTuple *, v_tuple, true, htuple_free, htuple_clone)           \
-    _(V_NATIVE, HNative *, v_native, true, hnative_free, hnative_clone)
+    _(V_NATIVE, HNative *, v_native, true, hnative_free, hnative_clone)      \
+    _(V_BINDING, HBinding *, v_binding, true, hbinding_free, hbinding_clone)
 
 #define ENUM_MEMBER(name, ...) name,
 typedef enum { EACH_HVALUE_TYPE(ENUM_MEMBER) } hvalue_type;
@@ -36,6 +37,12 @@ typedef struct HBinding HBinding;
 typedef struct HCons    HCons;
 typedef struct HTuple   HTuple;
 typedef struct HNative  HNative;
+/*
+ * A generic effect binding. Defined as a built-in type to avoid having to
+ * implement manual callback management for native effects. This is the result
+ * of binding a `HNative` with the `HNATIVE_GENERIC_EFFECT` flag set.
+ */
+typedef struct HBinding HBinding;
 
 /*
  * A Hammer value
@@ -77,15 +84,54 @@ typedef struct {
     uint16_t len;
 } HTupleBuilder;
 
+#define EACH_HNATIVE_FLAG(_) _(HNATIVE_GENERIC_EFFECT, 1) /* use generic binding implementation */
+
+#define ENUM_MEMBER(name, value) name = value,
+typedef enum { EACH_HNATIVE_FLAG(ENUM_MEMBER) } hnative_flags;
+#undef ENUM_MEMBER
+
 typedef struct {
-    const char *name;
-    size_t      argc;
-    void        (*free)(void *);
-    void       *(*clone)(const void *);
-    HValue      (*call)(const void *data, const HValue *args, Machine *);
-    HValue      (*bind)(const void *data, const HValue *then, Machine *);
-    HValue      (*yield)(const void *data, Machine *);
-    void        (*print_repr)(
+    hnative_flags flags;
+    const char   *name;
+    /*
+     * Arity of a callable/function-like value, set to `0` if value is not
+     * callable.
+     */
+    size_t        argc;
+    /*
+     * Optional. If the native value stores any `HValue` references, it should
+     * call `hvalue_drop` on them. Defaults to no-op.
+     */
+    void          (*free)(void *data);
+    /*
+     * Optional. If the native value stores any `HValue` references, it should
+     * clone them with `hvalue_ref`. Defaults to just copying the pointer.
+     */
+    void         *(*clone)(const void *data);
+    /*
+     * Optional. Implementation for callable/function-like values. The `args`
+     * array is ensured to be filled with `argc` arguments.
+     */
+    HValue        (*call)(const void *data, const HValue *args, Machine *);
+    /*
+     * Implementation for custom bindings. If the native value is some kind of
+     * data structure, then it can return the appropriate result here instead of
+     * a generic deferred effect binding. Unused if `HNATIVE_GENERIC_EFFECT` is
+     * set.
+     */
+    HValue        (*bind)(const void *data, const HValue *then, Machine *);
+    /*
+     * Implementation for generic effects. Executes the effect and calls `then`
+     * with the result. `then` may be null, in which case non-mutating effects
+     * e.g. data-reading effects may choose not to execute at all. Used only if
+     * `HNATIVE_GENERIC_EFFECT` is set.
+     */
+    HValue        (*yield)(const void *data, const HValue *then, Machine *);
+    /*
+     * Optional. Prints a string representation of the value to the buffer.
+     * Defaults to `(<name> <...args>)`.
+     */
+    void          (*print_repr)(
         const void *data, const HValue *args, size_t argc, Buffer *, const Machine *
     );
 } hnative_meta;
@@ -133,6 +179,11 @@ void hvalue_print_repr(const HValue *, Buffer *, const Machine *);
  * should be a callable value expecting 1 argument.
  */
 HValue hvalue_bind(HValue, HValue, Machine *);
+/*
+ * Executes a monadic effect, writes the result to `result` and returns `true`;
+ * or returns `false` if the value is not a monadic effect.
+ */
+bool   hvalue_yield(HValue, Machine *, HValue *result);
 
 /*
  * Returns a primitive unit value
@@ -148,12 +199,14 @@ HValue hvalue_make_string(string);
 HValue hvalue_make_closure(uint32_t fnindex, uint8_t args);
 HValue hvalue_make_cons(HValue head, HValue tail);
 HValue hvalue_make_native(const hnative_meta *, void *);
+HValue hvalue_make_binding(HValue effect, HValue then);
 
 bool hvalue_get_string(const HValue *, const HString **);
 bool hvalue_get_closure(const HValue *, const HClosure **);
 bool hvalue_get_cons(const HValue *, const HCons **);
 bool hvalue_get_tuple(const HValue *, const HTuple **);
 bool hvalue_get_native(const HValue *, const HNative **);
+bool hvalue_get_binding(const HValue *, const HBinding **);
 
 string hvalue_string_get(const HValue *);
 
@@ -194,6 +247,5 @@ size_t hvalue_native_args_left(const HValue *);
  */
 void   hvalue_native_put_arg_mut(const HValue *, HValue);
 HValue hvalue_native_call(const HValue *, Machine *);
-HValue hvalue_native_yield(const HValue *, Machine *);
 
 #endif // HAMMER_VALUE_H_

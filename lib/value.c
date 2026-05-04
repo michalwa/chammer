@@ -39,6 +39,7 @@ static void hclosure_free(HClosure *);
 static void hcons_free(HCons *);
 static void htuple_free(HTuple *);
 static void hnative_free(HNative *);
+static void hbinding_free(HBinding *);
 
 static void hvalue_free(HValue hv) {
     switch (hv.type) {
@@ -62,6 +63,7 @@ static HValue hclosure_clone(const HClosure *);
 static HValue hcons_clone(const HCons *);
 static HValue htuple_clone(const HTuple *);
 static HValue hnative_clone(const HNative *);
+static HValue hbinding_clone(const HBinding *);
 
 /*
  * `clone` function name placeholder for bit-copy types
@@ -93,6 +95,7 @@ static void hclosure_print_repr(const HClosure *, Buffer *, const Machine *);
 static void hcons_print_repr(const HCons *, Buffer *, const Machine *);
 static void htuple_print_repr(const HTuple *, Buffer *, const Machine *);
 static void hnative_print_repr(const HNative *, Buffer *, const Machine *);
+static void hbinding_print_repr(const HBinding *, Buffer *, const Machine *);
 
 void hvalue_print_repr(const HValue *hv, Buffer *b, const Machine *m) {
     switch (hv->type) {
@@ -106,6 +109,7 @@ void hvalue_print_repr(const HValue *hv, Buffer *b, const Machine *m) {
     case V_CONS: hcons_print_repr(hv->v_cons, b, m); break;
     case V_TUPLE: htuple_print_repr(hv->v_tuple, b, m); break;
     case V_NATIVE: hnative_print_repr(hv->v_native, b, m); break;
+    case V_BINDING: hbinding_print_repr(hv->v_binding, b, m); break;
     }
 }
 
@@ -119,6 +123,28 @@ HValue hvalue_bind(HValue effect, HValue then, Machine *m) {
     case V_NATIVE: return hvalue_native_bind(effect, then, m);
     default: panic("%s does not support monadic binding", hvalue_type_name(effect.type));
     }
+}
+
+static HValue hnative_yield(const HNative *, Machine *);
+static HValue hbinding_yield(const HBinding *, Machine *);
+
+bool hvalue_yield(HValue effect, Machine *m, HValue *result) {
+    bool ok = false;
+
+    switch (effect.type) {
+    case V_NATIVE:
+        *result = hnative_yield(effect.v_native, m);
+        ok = true;
+        break;
+    case V_BINDING:
+        *result = hbinding_yield(effect.v_binding, m);
+        ok = true;
+        break;
+    default: break;
+    }
+
+    hvalue_drop(effect);
+    return ok;
 }
 
 inline HValue hvalue_make(hvalue_type type) {
@@ -482,6 +508,8 @@ static HValue hvalue_native_bind(HValue hv, HValue then, Machine *m) {
     const HNative *native;
     hvalue_expect(hvalue_get_native, &hv, &native);
 
+    if (native->meta->flags & HNATIVE_GENERIC_EFFECT) return hvalue_make_binding(hv, then);
+
     if (!native->meta->bind)
         panic("native value `%s` does not support monadic binding", native->meta->name);
     return native->meta->bind(native->data, &then, m);
@@ -514,11 +542,49 @@ HValue hvalue_native_call(const HValue *hv, Machine *m) {
     return native->meta->call(native->data, native->args, m);
 }
 
-HValue hvalue_native_yield(const HValue *hv, Machine *m) {
+static HValue hnative_yield(const HNative *native, Machine *m) {
+    if (!native->meta->yield)
+        panic("native value `%s` is not a monadic effect", native->meta->name);
+    return native->meta->yield(native->data, NULL, m);
+}
+
+struct HBinding {
+    hvalue_header header;
+    HValue        effect;
+    HValue        then;
+};
+
+HValue hvalue_make_binding(HValue effect, HValue then) {
+    HBinding *binding = malloc(sizeof(HBinding));
+    binding->header.rc = 1;
+    binding->effect = effect;
+    binding->then = then;
+
+    return (HValue){ .type = V_BINDING, .v_binding = binding };
+}
+
+static void hbinding_free(HBinding *binding) {
+    hvalue_drop(binding->effect);
+    hvalue_drop(binding->then);
+}
+
+static HValue hbinding_clone(const HBinding *binding) {
+    return hvalue_make_binding(hvalue_ref(&binding->effect), hvalue_ref(&binding->then));
+}
+
+static void hbinding_print_repr(const HBinding *binding, Buffer *b, const Machine *m) {
+    buffer_puts(b, STRING("<binding "));
+    hvalue_print_repr(&binding->effect, b, m);
+    buffer_putc(b, ' ');
+    hvalue_print_repr(&binding->then, b, m);
+    buffer_putc(b, '>');
+}
+
+static HValue hbinding_yield(const HBinding *binding, Machine *m) {
     const HNative *native;
-    hvalue_expect(hvalue_get_native, hv, &native);
+    hvalue_expect(hvalue_get_native, &binding->effect, &native);
 
     if (!native->meta->yield)
         panic("native value `%s` is not a monadic effect", native->meta->name);
-    return native->meta->yield(native->data, m);
+    return native->meta->yield(native->data, &binding->then, m);
 }

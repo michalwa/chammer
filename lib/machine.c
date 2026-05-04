@@ -258,8 +258,9 @@ static bool do_yield(Machine *m) {
     HValue effect;
     vm_debug_assert(m, vector_pop(&m->opstack, &effect));
 
-    if (effect.type == V_NATIVE) {
-        opstack_push(m, hvalue_native_yield(&effect, m));
+    HValue result;
+    if (hvalue_yield(effect, m, &result)) {
+        opstack_push(m, result);
         return true;
     } else {
         return false;

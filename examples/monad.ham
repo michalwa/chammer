@@ -15,6 +15,9 @@ print mapped; -- ["foo", "foo!", "bar", "bar!", "baz", "baz!"]
 let time <- get_time;
 let (year, month, day, hour, minute, second) = time;
 print time;
+
+-- some bullshit just to test things
 print (const year 123);
 print (id month);
-print day
+print day;
+print do { print "foo"; print "bar" }
