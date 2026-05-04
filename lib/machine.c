@@ -248,7 +248,7 @@ static void make_bind(Machine *m) {
     vm_debug_assert(m, vector_pop(&m->opstack, &monad));
     vm_debug_assert(m, vector_pop(&m->opstack, &then));
 
-    opstack_push(m, hvalue_make_binding(monad, then));
+    opstack_push(m, hvalue_bind(monad, then, m));
 }
 
 /*
@@ -258,10 +258,11 @@ static bool do_yield(Machine *m) {
     HValue effect;
     vm_debug_assert(m, vector_pop(&m->opstack, &effect));
 
-    switch (effect.type) {
-    case V_BINDING: opstack_push(m, hvalue_binding_yield(effect, m)); return true;
-    case V_NATIVE: opstack_push(m, hvalue_native_yield(&effect, NULL, m)); return true;
-    default: return false;
+    if (effect.type == V_NATIVE) {
+        opstack_push(m, hvalue_native_yield(&effect, m));
+        return true;
+    } else {
+        return false;
     }
 }
 
@@ -366,12 +367,12 @@ string machine_func_name(const Machine *m, uint32_t fnindex) {
     return program_func_name(m->prog, &fn);
 }
 
-HValue machine_call_(Machine *m, const HValue *callee, size_t argc, HValue *args) {
+HValue machine_call_(Machine *m, HValue callee, size_t argc, HValue *args) {
     for (size_t i = 0; i < argc; i++) opstack_push(m, args[argc - 1 - i]);
 
     size_t initial_sp = m->fnstack.len;
 
-    opstack_push(m, hvalue_ref(callee));
+    opstack_push(m, callee);
     call_value(m, argc);
 
     while (m->fnstack.len > initial_sp && machine_step(m));

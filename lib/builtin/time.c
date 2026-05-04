@@ -1,11 +1,22 @@
 #include "time.h"
 
+#include <stdlib.h>
 #include <time.h>
 
 #include "../utils.h"
 
-static HValue get_time_yield(const void *self, const HValue *then, Machine *m) {
-    (void)self;
+static HValue get_time_bind(const void *data, const HValue *then, Machine *m) {
+    (void)data, (void)m;
+
+    HValue *then_ref = malloc(sizeof(*then_ref));
+    *then_ref = hvalue_ref(then);
+
+    return hvalue_make_native(&HNATIVE_META_GET_TIME, then_ref);
+}
+
+static HValue get_time_yield(const void *self, Machine *m) {
+    HValue *then = (HValue *)self;
+    if (!then) return hvalue_make_unit();
 
     time_t     raw_time = time(NULL);
     struct tm *time_info = localtime(&raw_time);
@@ -19,12 +30,13 @@ static HValue get_time_yield(const void *self, const HValue *then, Machine *m) {
     htuple_put(&tb, hvalue_make_int(time_info->tm_sec));
     HValue result = htuple_end(tb);
 
-    return then ? machine_call(m, then, result) : result;
+    return machine_call(m, hvalue_ref(then), result);
 }
 
 hnative_meta HNATIVE_META_GET_TIME = {
     .name = "get_time",
     .argc = 0,
+    .bind = get_time_bind,
     .yield = get_time_yield,
 };
 

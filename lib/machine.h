@@ -33,6 +33,6 @@ string machine_func_name(const Machine *, uint32_t);
  * Initiates a call of the given callable value and advances the machine until
  * the call returns. Pops the result off the stack and returns it.
  */
-HValue machine_call_(Machine *, const HValue *callee, size_t argc, HValue *args);
+HValue machine_call_(Machine *, HValue callee, size_t argc, HValue *args);
 
 #endif // HAMMER_MACHINE_H_

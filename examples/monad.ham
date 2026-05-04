@@ -1,0 +1,20 @@
+let suffix x = x + "!";
+
+{-
+  -- TODO: Function as monad over result type
+  let composed = do { let with_suffix <- suffix; \original -> (original, with_suffix) };
+  print (composed "Hello"); -- ("Hello", "Hello!")
+-}
+
+let mapped = do {
+  let x <- ["foo", "bar", "baz"];
+  [x, suffix x]
+};
+print mapped; -- ["foo", "foo!", "bar", "bar!", "baz", "baz!"]
+
+let time <- get_time;
+let (year, month, day, hour, minute, second) = time;
+print time;
+print (const year 123);
+print (id month);
+print day

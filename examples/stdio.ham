@@ -1,7 +1,0 @@
-let time <- get_time;
-let (year, month, day, hour, minute, second) = time;
-let unit <- print time;
-print (const year 123);
-print (id month);
-print day;
-print unit
