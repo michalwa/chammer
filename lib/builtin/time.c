@@ -2,8 +2,6 @@
 
 #include <time.h>
 
-#include "../utils.h"
-
 static HValue get_time_yield(const void *self, const HValue *then, Machine *m) {
     (void)self;
     if (!then) return hvalue_make_unit();

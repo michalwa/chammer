@@ -229,6 +229,7 @@ void     hvalue_closure_put_arg_mut(const HValue *, HValue);
  */
 bool     hvalue_closure_take_arg_mut(const HValue *, HValue *);
 
+bool   hvalue_is_list(const HValue *);
 void   hvalue_uncons(HValue cons, HValue *head, HValue *tail);
 HValue hvalue_list_concat(HValue, HValue);
 

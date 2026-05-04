@@ -20,4 +20,9 @@ print time;
 print (const year 123);
 print (id month);
 print day;
-print do { print "foo"; print "bar" }
+print do { print "foo"; print "bar" };
+
+let iter = each [hour, minute, second];
+let a <- iter;
+let b <- iter;
+print (a, b)

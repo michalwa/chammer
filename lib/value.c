@@ -370,6 +370,10 @@ static HValue hvalue_cons_bind(HValue hv, HValue then, Machine *m) {
     return hvalue_list_concat(first, rest);
 }
 
+inline bool hvalue_is_list(const HValue *hv) {
+    return hv->type == V_NIL || hv->type == V_CONS;
+}
+
 void hvalue_uncons(HValue hv, HValue *head, HValue *tail) {
     const HCons *cons;
     hvalue_expect(hvalue_get_cons, &hv, &cons);

@@ -2,8 +2,6 @@
 
 #include <stdlib.h>
 
-#include "../utils.h"
-
 /*
  * The result of calling `print` with an argument. This is the actual effect
  * which accepts yields
