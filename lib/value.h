@@ -183,7 +183,7 @@ HValue hvalue_bind(HValue, HValue, Machine *);
  * Executes a monadic effect, writes the result to `result` and returns `true`;
  * or returns `false` if the value is not a monadic effect.
  */
-bool   hvalue_yield(HValue, Machine *, HValue *result);
+bool   hvalue_yield(const HValue *, Machine *, HValue *result);
 
 /*
  * Returns a primitive unit value

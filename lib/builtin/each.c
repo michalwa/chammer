@@ -33,7 +33,8 @@ static HValue each_effect_yield(const void *self, const HValue *then, Machine *m
         HValue effect = machine_call(m, hvalue_ref(then), head);
 
         HValue result;
-        debug_assert(hvalue_yield(effect, m, &result));
+        debug_assert(hvalue_yield(&effect, m, &result));
+        hvalue_drop(effect);
         hvalue_drop(result);
     }
 

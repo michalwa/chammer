@@ -254,20 +254,11 @@ static void make_bind(Machine *m) {
     opstack_push(m, hvalue_bind(monad, then, m));
 }
 
-/*
- * Executes effects on the top of the stack or returns `false` if none are left
- */
-static bool do_yield(Machine *m) {
+static void do_yield(Machine *m) {
     HValue effect;
     vm_debug_assert(m, vector_pop(&m->opstack, &effect));
 
-    HValue result;
-    if (hvalue_yield(effect, m, &result)) {
-        opstack_push(m, result);
-        return true;
-    } else {
-        return false;
-    }
+    hvalue_yield(&effect, m, NULL);
 }
 
 // TODO: Make this a native/builtin, this is for debugging only
@@ -354,9 +345,7 @@ bool machine_step(Machine *m) {
         load_extern(m, hvalue_string_get(&value));
         hvalue_drop(value);
         return true;
-    case OP_YIELD:
-        m->ip--; // remain on this instruction
-        return do_yield(m);
+    case OP_YIELD: do_yield(m); return false;
     case OP_HALT: return false;
     default:
         panic(
