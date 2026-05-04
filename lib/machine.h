@@ -3,7 +3,13 @@
 
 #include "buffer.h"
 #include "bytecode.h"
+#include "utils.h"
 #include "vector.h"
+
+#define machine_call(ctx, callee, ...)                                       \
+    machine_call_(ctx, callee, ARGC(__VA_ARGS__), (HValue[]){ __VA_ARGS__ })
+
+typedef struct HValue HValue; // forward declaration, `HValue` is defined in `value.h`
 
 typedef struct {
     const program *prog;
@@ -18,15 +24,15 @@ typedef struct {
     const uint8_t *ip;
 } Machine;
 
-typedef struct {
-    const program *prog;
-} machine_ctx;
-
 void machine_init(Machine *, const program *);
 void machine_free(Machine *);
 bool machine_step(Machine *);
 
-void   machine_ctx_init(machine_ctx *, const Machine *);
-string machine_ctx_func_name(const machine_ctx *, uint32_t);
+string machine_func_name(const Machine *, uint32_t);
+/*
+ * Initiates a call of the given callable value and advances the machine until
+ * the call returns. Pops the result off the stack and returns it.
+ */
+HValue machine_call_(Machine *, const HValue *callee, size_t argc, HValue *args);
 
 #endif // HAMMER_MACHINE_H_

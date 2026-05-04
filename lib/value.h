@@ -13,6 +13,7 @@
     _(V_FLOAT, h_float, v_float, false, (void), HVALUE_COPY)                 \
     _(V_STRING, HString *, v_string, true, (void), hstring_clone)            \
     _(V_CLOSURE, HClosure *, v_closure, true, hclosure_free, hclosure_clone) \
+    _(V_BINDING, HBinding *, v_binding, true, hbinding_free, hbinding_clone) \
     _(V_TRUE, h_unit, v_true, false, (void), HVALUE_COPY)                    \
     _(V_FALSE, h_unit, v_false, false, (void), HVALUE_COPY)                  \
     _(V_NIL, h_unit, v_nil, false, (void), HVALUE_COPY)                      \
@@ -32,6 +33,7 @@ typedef int64_t         h_int;
 typedef double          h_float;
 typedef struct HString  HString;
 typedef struct HClosure HClosure;
+typedef struct HBinding HBinding;
 typedef struct HCons    HCons;
 typedef struct HTuple   HTuple;
 typedef struct HNative  HNative;
@@ -51,7 +53,9 @@ typedef struct HNative  HNative;
  * To ensure a value is unique or otherwise obtain a unique clone, use
  * `hvalue_uniq`.
  */
-typedef struct {
+// NOTE: Struct declared with a name to allow forward definitions to resolve
+// circular dependencies
+typedef struct HValue {
     hvalue_type type;
     union {
         void *v_any;
@@ -80,7 +84,11 @@ typedef struct {
     /*
      * Optional
      */
-    HValue      (*call)(const void *data, const HValue *args);
+    HValue      (*call)(const void *data, const HValue *args, Machine *);
+    /*
+     * Optional
+     */
+    HValue      (*yield)(const void *data, const HValue *then, Machine *);
     /*
      * Optional
      */
@@ -93,7 +101,7 @@ typedef struct {
      * Optional: defaults to `(name ...args)`
      */
     void        (*print_repr)(
-        const void *data, const HValue *args, size_t argc, Buffer *, const machine_ctx *
+        const void *data, const HValue *args, size_t argc, Buffer *, const Machine *
     );
 } hnative_meta;
 
@@ -133,12 +141,13 @@ HValue hvalue_uniq(HValue);
  */
 bool   hvalue_is_uniq(const HValue *);
 
-void hvalue_print_repr(const HValue *, Buffer *, const machine_ctx *);
+void hvalue_print_repr(const HValue *, Buffer *, const Machine *);
 
 /*
  * Returns a primitive unit value
  */
 HValue hvalue_make(hvalue_type);
+HValue hvalue_make_unit(void);
 /*
  * Shorthand for `hvalue_make(b ? V_TRUE : V_FALSE)`
  */
@@ -148,12 +157,14 @@ HValue hvalue_make_string(string);
 HValue hvalue_make_closure(uint32_t fnindex, uint8_t args);
 HValue hvalue_make_cons(HValue head, HValue tail);
 HValue hvalue_make_native(const hnative_meta *, void *);
+HValue hvalue_make_binding(HValue lhs, HValue rhs);
 
 bool hvalue_get_string(const HValue *, const HString **);
 bool hvalue_get_closure(const HValue *, const HClosure **);
 bool hvalue_get_cons(const HValue *, const HCons **);
 bool hvalue_get_tuple(const HValue *, const HTuple **);
 bool hvalue_get_native(const HValue *, const HNative **);
+bool hvalue_get_binding(const HValue *, const HBinding **);
 
 string hvalue_string_get(const HValue *);
 
@@ -193,6 +204,12 @@ size_t hvalue_native_args_left(const HValue *);
  * Same as `hvalue_closure_put_arg_mut` but for `V_NATIVE` values
  */
 void   hvalue_native_put_arg_mut(const HValue *, HValue);
-HValue hvalue_native_call(const HValue *);
+HValue hvalue_native_call(const HValue *, Machine *);
+HValue hvalue_native_yield(const HValue *, const HValue *then, Machine *);
+
+/*
+ * Consumes the binding, executes the effect with the callback and returns the result
+ */
+HValue hvalue_binding_yield(HValue, Machine *);
 
 #endif // HAMMER_VALUE_H_

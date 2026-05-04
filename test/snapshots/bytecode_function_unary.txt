@@ -3,7 +3,7 @@ let f x = (x,); f 1
   00000000  OP_CALL 2 (<global> @ 00000005)
 <global>  0 locals, 0 captures, 0 args
   00000005  OP_CALL 1 (<block> @ 0000000B)
-  0000000A  OP_HALT
+  0000000A  OP_YIELD
 <block>  1 locals, 0 captures, 0 args
   0000000B  OP_MAKECLS 0 (f @ 00000020)
   00000010  OP_STORE 0

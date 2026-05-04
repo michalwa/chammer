@@ -1,10 +1,10 @@
 #include "machine.h"
 
 #include "builtin/stdio.h"
+#include "builtin/time.h"
 #include "bytecode.h"
 #include "bytes.h"
 #include "utils.h"
-#include "value.h"
 #include "vector.h"
 
 #define vm_debug_assert(m, expr)                                                               \
@@ -68,8 +68,8 @@ static inline HValue *get_local(Machine *m, uint8_t i) {
 static inline void pop_frame(Machine *m) {
     frame *f = (frame *)(m->fnstack.data + m->fnstack.len - sizeof(frame));
 
-    for (HValue *local = get_local(m, 0); local - (HValue *)m->fnstack.data > f->return_sp; local++)
-        hvalue_drop(*local);
+    size_t num_locals = (m->fnstack.len - f->return_sp - sizeof(frame)) / sizeof(HValue);
+    for (size_t i = 0; i < num_locals; i++) hvalue_drop(*get_local(m, i));
 
     m->ip = m->prog->bytecode + f->return_ip;
     buffer_truncate(&m->fnstack, f->return_sp);
@@ -153,7 +153,7 @@ static void call_native(Machine *m, HValue native, uint8_t args) {
     if (hvalue_native_args_left(&native)) {
         opstack_push(m, native);
     } else {
-        opstack_push(m, hvalue_native_call(&native));
+        opstack_push(m, hvalue_native_call(&native, m));
         hvalue_drop(native);
     }
 }
@@ -224,6 +224,8 @@ static void check_type(Machine *m, hvalue_type type) {
 static void load_extern(Machine *m, string name) {
     if (string_eq(name, STRING("print")))
         opstack_push(m, hnative_make_print());
+    else if (string_eq(name, STRING("get_time")))
+        opstack_push(m, hnative_make_get_time());
     else
         panic("unresolved symbol: " F_STRING, FA_STRING(name));
 }
@@ -234,6 +236,28 @@ static void concat(Machine *m) {
     vm_debug_assert(m, vector_pop(&m->opstack, &b));
 
     opstack_push(m, hvalue_list_concat(a, b));
+}
+
+static void make_bind(Machine *m) {
+    HValue monad, then;
+    vm_debug_assert(m, vector_pop(&m->opstack, &monad));
+    vm_debug_assert(m, vector_pop(&m->opstack, &then));
+
+    opstack_push(m, hvalue_make_binding(monad, then));
+}
+
+/*
+ * Executes effects on the top of the stack or returns `false` if none are left
+ */
+static bool do_yield(Machine *m) {
+    HValue effect;
+    vm_debug_assert(m, vector_pop(&m->opstack, &effect));
+
+    switch (effect.type) {
+    case V_BINDING: opstack_push(m, hvalue_binding_yield(effect, m)); return true;
+    case V_NATIVE: opstack_push(m, hvalue_native_yield(&effect, NULL, m)); return true;
+    default: return false;
+    }
 }
 
 // TODO: Make this a native/builtin, this is for debugging only
@@ -305,6 +329,7 @@ bool machine_step(Machine *m) {
     case OP_PUSHFALSE: opstack_push(m, hvalue_make(V_FALSE)); return true;
     case OP_MAKECLS: opstack_push(m, make_closure(m, read_u32be(&m->ip))); return true;
     case OP_CALLVAL: call_value(m, *m->ip++); return true;
+    case OP_BIND: make_bind(m); return true;
     case OP_ADD: add_operands(m); return true;
     case OP_ISTUPLE: check_tuple(m, read_u16be(&m->ip)); return true;
     case OP_TUPLEGET: tuple_get(m, read_u16be(&m->ip)); return true;
@@ -319,6 +344,9 @@ bool machine_step(Machine *m) {
         load_extern(m, hvalue_string_get(&value));
         hvalue_drop(value);
         return true;
+    case OP_YIELD:
+        m->ip--; // remain on this instruction
+        return do_yield(m);
     case OP_HALT: return false;
     default:
         panic(
@@ -327,12 +355,23 @@ bool machine_step(Machine *m) {
     }
 }
 
-void machine_ctx_init(machine_ctx *ctx, const Machine *m) {
-    ctx->prog = m->prog;
+string machine_func_name(const Machine *m, uint32_t fnindex) {
+    func_meta fn;
+    program_func_meta(m->prog, fnindex, &fn);
+    return program_func_name(m->prog, &fn);
 }
 
-string machine_ctx_func_name(const machine_ctx *ctx, uint32_t fnindex) {
-    func_meta fn;
-    program_func_meta(ctx->prog, fnindex, &fn);
-    return program_func_name(ctx->prog, &fn);
+HValue machine_call_(Machine *m, const HValue *callee, size_t argc, HValue *args) {
+    for (size_t i = 0; i < argc; i++) opstack_push(m, args[argc - 1 - i]);
+
+    size_t initial_sp = m->fnstack.len;
+
+    opstack_push(m, hvalue_ref(callee));
+    call_value(m, argc);
+
+    while (m->fnstack.len > initial_sp && machine_step(m));
+
+    HValue result;
+    vm_debug_assert(m, vector_pop(&m->opstack, &result));
+    return result;
 }

@@ -5,7 +5,6 @@
 #include "../lib/machine.h"
 #include "../lib/parser.h"
 #include "../lib/utils.h"
-#include "../lib/value.h"
 
 int main(int argc, char **argv) {
     token        t;
@@ -61,16 +60,6 @@ int main(int argc, char **argv) {
     while (machine_step(&machine)) steps++;
 
     printf("\nexecuted in %zu steps\n", steps);
-
-    machine_ctx ctx;
-    machine_ctx_init(&ctx, &machine);
-    for (EACH_IN_VECTOR(machine.opstack, HValue, value)) {
-        buffer_puts(&out, STRING("  "));
-        hvalue_print_repr(value, &out, &ctx);
-        buffer_putc(&out, '\n');
-    }
-
-    printf("stack:\n" F_BUFFER "\n", FA_BUFFER(out));
 
     machine_free(&machine);
 

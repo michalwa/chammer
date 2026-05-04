@@ -24,6 +24,7 @@
     _(OP_PUSHFALSE, 0x23) /* push the value `false` to the stack */                                \
     _(OP_MAKECLS, 0x30)  /* look up function, store N captures, and push closure onto the stack */ \
     _(OP_CALLVAL, 0x31)  /* call value (e.g. closure) with N args */                               \
+    _(OP_BIND, 0x32)     /* bind a monadic value to a closure */                                   \
     _(OP_ADD, 0x40)      /* pop two values off the stack and push their sum */                     \
     _(OP_ISTUPLE, 0x50)  /* check if top value on the stack is a N-tuple (don't pop) */            \
     _(OP_TUPLEGET, 0x51) /* push N-th element of tuple on top of the stack (don't pop) */          \
@@ -34,6 +35,7 @@
     _(OP_UNCONS, 0x56)   /* pop top `cons` and push `tail` and `head` separately */                \
     _(OP_CONCAT, 0x57)   /* pop 2 lists off the stack and push a concatenation */                  \
     _(OP_LOADEXT, 0x80)  /* pop string off the stack and load an external symbol with that name */ \
+    _(OP_YIELD, 0xF0)    /* yield control to the effect on the top of the stack */                 \
     _(OP_HALT, 0xFF)     /* stop execution */
 
 #define ENUM_MEMBER(name, byte) name = byte,

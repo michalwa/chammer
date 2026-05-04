@@ -26,7 +26,8 @@ static void *test_dummy_clone(const void *data) {
     return memcpy(malloc(sizeof(HNativeTestDummy)), data, sizeof(HNativeTestDummy));
 }
 
-static HValue test_dummy_call(const void *data, const HValue *args) {
+static HValue test_dummy_call(const void *data, const HValue *args, Machine *ctx) {
+    (void)ctx;
     assert(args[0].type == V_INT);
     int64_t result = ((HNativeTestDummy *)data)->value + args[0].v_int;
     return hvalue_make_int(result);
@@ -241,7 +242,7 @@ TEST(hvalue_native) {
     hvalue_native_put_arg_mut(&hv, hvalue_make_int(2));
     ASSERT_INT_EQ(hvalue_native_args_left(&hv), 0);
 
-    HValue result = hvalue_native_call(&hv);
+    HValue result = hvalue_native_call(&hv, NULL);
     ASSERT_ENUM_EQ(result.type, V_INT, hvalue_type_name);
     ASSERT_INT_EQ(result.v_int, 42);
 

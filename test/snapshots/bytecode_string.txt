@@ -1,9 +1,6 @@
 "foo"
 
-  00000000  OP_CALL 1 (<global> @ 00000005)
+  00000000  OP_CALL 0 (<global> @ 00000005)
 <global>  0 locals, 0 captures, 0 args
-  00000005  OP_CALL 0 (<block> @ 0000000B)
-  0000000A  OP_HALT
-<block>  0 locals, 0 captures, 0 args
-  0000000B  OP_PUSHSTR 0 3 ("foo")
-  00000014  OP_RETURN
+  00000005  OP_PUSHSTR 0 3 ("foo")
+  0000000E  OP_YIELD
