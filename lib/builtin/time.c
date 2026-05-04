@@ -33,11 +33,28 @@ static HValue get_time_yield(const void *self, Machine *m) {
     return machine_call(m, hvalue_ref(then), result);
 }
 
+static void get_time_free(void *self) {
+    if (self) {
+        hvalue_drop(*(HValue *)self);
+        free(self);
+    }
+}
+
+static void *get_time_clone(const void *self) {
+    if (!self) return NULL;
+
+    HValue *clone = malloc(sizeof(HValue));
+    *clone = hvalue_ref((HValue *)self);
+    return clone;
+}
+
 hnative_meta HNATIVE_META_GET_TIME = {
     .name = "get_time",
     .argc = 0,
     .bind = get_time_bind,
     .yield = get_time_yield,
+    .free = get_time_free,
+    .clone = get_time_clone,
 };
 
 HValue hnative_make_get_time(void) {

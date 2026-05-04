@@ -482,7 +482,8 @@ static HValue hvalue_native_bind(HValue hv, HValue then, Machine *m) {
     const HNative *native;
     hvalue_expect(hvalue_get_native, &hv, &native);
 
-    if (!native->meta->bind) panic("native value `%s` does not support monadic binding");
+    if (!native->meta->bind)
+        panic("native value `%s` does not support monadic binding", native->meta->name);
     return native->meta->bind(native->data, &then, m);
 }
 
@@ -514,9 +515,10 @@ HValue hvalue_native_call(const HValue *hv, Machine *m) {
 }
 
 HValue hvalue_native_yield(const HValue *hv, Machine *m) {
-    const HNative *effect;
-    hvalue_expect(hvalue_get_native, hv, &effect);
+    const HNative *native;
+    hvalue_expect(hvalue_get_native, hv, &native);
 
-    if (!effect->meta->yield) panic("value is not a monadic effect");
-    return effect->meta->yield(effect->data, m);
+    if (!native->meta->yield)
+        panic("native value `%s` is not a monadic effect", native->meta->name);
+    return native->meta->yield(native->data, m);
 }
