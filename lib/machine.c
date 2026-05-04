@@ -1,5 +1,6 @@
 #include "machine.h"
 
+#include "builtin/function.h"
 #include "builtin/stdio.h"
 #include "builtin/time.h"
 #include "bytecode.h"
@@ -226,6 +227,10 @@ static void load_extern(Machine *m, string name) {
         opstack_push(m, hnative_make_print());
     else if (string_eq(name, STRING("get_time")))
         opstack_push(m, hnative_make_get_time());
+    else if (string_eq(name, STRING("id")))
+        opstack_push(m, hnative_make_id());
+    else if (string_eq(name, STRING("const")))
+        opstack_push(m, hnative_make_const());
     else
         panic("unresolved symbol: " F_STRING, FA_STRING(name));
 }
