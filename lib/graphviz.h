@@ -1,7 +1,7 @@
 #ifndef HAMMER_GRAPHVIZ_H_
 #define HAMMER_GRAPHVIZ_H_
 
-#include "parser.h"
+#include "ast.h"
 
 /*
  * Prints a representation of the AST as a DOT language graph description

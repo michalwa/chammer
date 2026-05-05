@@ -1,7 +1,5 @@
 #include "graphviz.h"
 
-#include "parser.h"
-
 static void node_print_dot_(node *n, Buffer *b) {
     buffer_printf(b, "  node_%p [label=\"%s", n, node_type_name(n->type));
 
