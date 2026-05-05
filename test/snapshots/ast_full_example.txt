@@ -10,15 +10,15 @@ N_DOBLK
       N_PLIST 
         N_PIDENT  (T_IDENT `x`)
         N_PLTAIL NF_NAMED (T_IDENT `rest`)
-      N_BINARY  (T_OP `+`)
-        N_LIST 
-          N_APPLY 
-            N_IDENT  (T_IDENT `f`)
-            N_IDENT  (T_IDENT `x`)
+      N_LIST 
         N_APPLY 
-          N_IDENT  (T_IDENT `map`)
           N_IDENT  (T_IDENT `f`)
-          N_IDENT  (T_IDENT `rest`)
+          N_IDENT  (T_IDENT `x`)
+        N_SPREAD 
+          N_APPLY 
+            N_IDENT  (T_IDENT `map`)
+            N_IDENT  (T_IDENT `f`)
+            N_IDENT  (T_IDENT `rest`)
   N_ASSIGN 
     N_PAPPLY NF_REC (T_IDENT `concat`)
       N_PIDENT  (T_IDENT `strings`)

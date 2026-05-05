@@ -48,29 +48,29 @@ void bytecode_put_makecls(Buffer *b, uint32_t fnindex) {
     buffer_put_u32be(b, fnindex);
 }
 
-void bytecode_put_callcls(Buffer *b, uint8_t args) {
-    buffer_putc(b, OP_CALLCLS);
+void bytecode_put_callval(Buffer *b, uint8_t args) {
+    buffer_putc(b, OP_CALLVAL);
     buffer_putc(b, args);
 }
 
-void bytecode_put_istuple(Buffer *b, uint8_t len) {
+void bytecode_put_istuple(Buffer *b, uint16_t len) {
     buffer_putc(b, OP_ISTUPLE);
-    buffer_putc(b, len);
+    buffer_put_u16be(b, len);
 }
 
-void bytecode_put_tupleget(Buffer *b, uint8_t index) {
+void bytecode_put_tupleget(Buffer *b, uint16_t index) {
     buffer_putc(b, OP_TUPLEGET);
-    buffer_putc(b, index);
+    buffer_put_u16be(b, index);
 }
 
-void bytecode_put_maketuple(Buffer *b, uint8_t len) {
+void bytecode_put_maketuple(Buffer *b, uint16_t len) {
     buffer_putc(b, OP_MAKETUPLE);
-    buffer_putc(b, len);
+    buffer_put_u16be(b, len);
 }
 
-void bytecode_put_makelist(Buffer *b, uint8_t len) {
+void bytecode_put_makelist(Buffer *b, uint16_t len) {
     buffer_putc(b, OP_MAKELIST);
-    buffer_putc(b, len);
+    buffer_put_u16be(b, len);
 }
 
 bool program_read(program *p, const uint8_t *bytes, size_t len) {
@@ -138,6 +138,7 @@ string program_func_name(const program *prog, func_meta *fn) {
     case FN_BLOCK: return STRING("<block>");
     case FN_LAMBDA: return STRING("<lambda>");
     case FN_CASE: return STRING("<case>");
+    case FN_GLOBAL: return STRING("<global>");
     }
 }
 
@@ -187,11 +188,11 @@ void program_debug_print(const program *prog, Buffer *output) {
             break;
         case OP_LOAD:
         case OP_STORE:
-        case OP_CALLCLS:
+        case OP_CALLVAL: buffer_printf(output, " %" PRIu8, *cursor++); break;
         case OP_ISTUPLE:
         case OP_TUPLEGET:
         case OP_MAKETUPLE:
-        case OP_MAKELIST: buffer_printf(output, " %" PRIu8, *cursor++); break;
+        case OP_MAKELIST: buffer_printf(output, " %" PRIu16, read_u16be(&cursor)); break;
         case OP_PUSHINT: buffer_printf(output, " %" PRIi64, read_i64be(&cursor)); break;
         case OP_PUSHSTR:
             str_offset = read_u32be(&cursor);

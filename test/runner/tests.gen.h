@@ -1,4 +1,5 @@
 #define EACH_TEST(_)                    \
+    _(arena)                            \
     _(buffer_putc)                      \
     _(buffer_printf)                    \
     _(buffer_alloc)                     \
@@ -22,7 +23,14 @@
     _(snapshot_diff)                    \
     _(snapshot_diff_empty_lines)        \
     _(snapshot_diff_line_endings)       \
-    _(stack)                            \
     _(string_pool)                      \
     _(buffer_print_c_string_literal)    \
+    _(hvalue_ownership)                 \
+    _(hvalue_clone)                     \
+    _(hvalue_uniq)                      \
+    _(hvalue_string)                    \
+    _(hvalue_closure)                   \
+    _(hvalue_cons)                      \
+    _(hvalue_tuple)                     \
+    _(hvalue_native)                    \
     _(vector)

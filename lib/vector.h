@@ -1,6 +1,7 @@
 #ifndef HAMMER_VECTOR_H_
 #define HAMMER_VECTOR_H_
 
+#include <stdbool.h>
 #include <stddef.h>
 
 /*
@@ -29,7 +30,7 @@ void  vector_init_capacity_(Vector *, size_t item_size, size_t capacity_items);
 void  vector_free(Vector *);
 void *vector_push(Vector *);
 void *vector_push_zeroed(Vector *);
-void  vector_pop(Vector *);
+bool  vector_pop(Vector *, void *);
 void *vector_last(Vector *);
 void  vector_clear(Vector *);
 void *vector_get(Vector *, size_t index);

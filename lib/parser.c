@@ -2,8 +2,8 @@
 
 #include <string.h>
 
+#include "arena.h"
 #include "lexer.h"
-#include "stack.h"
 #include "utils.h"
 
 /*
@@ -55,19 +55,19 @@ static inline void node_double_ended_append(node **first, node **last, node *n) 
 }
 
 void parser_init(Parser *p) {
-    stack_init(&p->stack, frame);
+    arena_init(&p->nodes, frame);
     p->operators = calloc(MAX_OPERATORS, sizeof(opdef));
     p->operators_len = 0;
     p->node = NULL;
 }
 
 void parser_free(Parser *p) {
-    stack_free(&p->stack);
+    arena_free(&p->nodes);
     free(p->operators);
 }
 
 void parser_reset(Parser *p) {
-    stack_clear(&p->stack);
+    arena_clear(&p->nodes);
     p->node = NULL;
 }
 
@@ -102,7 +102,7 @@ void parser_define_operator(
 static inline frame begin(Parser *p, token *ts) {
     return (frame){
         .parser = p,
-        .stack_begin = p->stack.size,
+        .stack_begin = p->nodes.len,
         .token_stream = ts,
         .current_token = *ts,
         .result = PARSE_OK,
@@ -110,7 +110,7 @@ static inline frame begin(Parser *p, token *ts) {
 }
 
 static inline parse_result discard(frame f) {
-    stack_truncate(&f.parser->stack, f.stack_begin);
+    arena_truncate(&f.parser->nodes, f.stack_begin);
     return f.result;
 }
 
@@ -167,7 +167,7 @@ static inline bool expect_token(frame *f, token_type t) {
 parse_result parse_atom(Parser *p, token *ts, token_type t, node_type n) {
     frame f = begin(p, ts);
     THEN_TOKEN_(f, t);
-    p->node = (node *)stack_push_zeroed(&p->stack);
+    p->node = (node *)arena_push_zeroed(&p->nodes);
     p->node->type = n;
     p->node->token = f.current_token;
     COMMIT(f);
@@ -214,7 +214,7 @@ parse_result parse_assign(Parser *p, token *ts) {
     THEN_V(f, rhs, parse_expr, EXPR_ALL);
     THEN_TOKEN_(f, T_SEMI);
 
-    p->node = (node *)stack_push_zeroed(&p->stack);
+    p->node = (node *)arena_push_zeroed(&p->nodes);
     p->node->type = N_ASSIGN;
     node_add_children(p->node, lhs, rhs);
 
@@ -231,7 +231,7 @@ parse_result parse_dobind(Parser *p, token *ts) {
     THEN_V(f, rhs, parse_expr, EXPR_ALL);
     THEN_TOKEN_(f, T_SEMI);
 
-    p->node = (node *)stack_push_zeroed(&p->stack);
+    p->node = (node *)arena_push_zeroed(&p->nodes);
     p->node->type = N_DOBIND;
     node_add_children(p->node, lhs, rhs);
 
@@ -245,7 +245,7 @@ parse_result parse_void(Parser *p, token *ts) {
     THEN_V(f, expr, parse_expr, EXPR_ALL);
     THEN_TOKEN_(f, T_SEMI);
 
-    p->node = (node *)stack_push_zeroed(&p->stack);
+    p->node = (node *)arena_push_zeroed(&p->nodes);
     p->node->type = N_VOID;
     node_add_children(p->node, expr);
 
@@ -295,7 +295,7 @@ parse_result parse_tuple_or_parens(Parser *p, token *ts) {
                 COMMIT(f);
             }
 
-            p->node = (node *)stack_push_zeroed(&p->stack);
+            p->node = (node *)arena_push_zeroed(&p->nodes);
             p->node->type = N_TUPLE;
 
             if (first_item) p->node->first_child = first_item;
@@ -315,7 +315,7 @@ parse_result parse_tuple_or_parens(Parser *p, token *ts) {
             if (peek.type == T_PCLOSE) {
                 f.current_token = peek;
 
-                p->node = (node *)stack_push_zeroed(&p->stack);
+                p->node = (node *)arena_push_zeroed(&p->nodes);
                 p->node->type = N_TUPLE;
                 p->node->first_child = first_item;
 
@@ -348,7 +348,7 @@ parse_result parse_list(Parser *p, token *ts) {
         case T_SCLOSE:
             f.current_token = peek;
 
-            p->node = (node *)stack_push_zeroed(&p->stack);
+            p->node = (node *)arena_push_zeroed(&p->nodes);
             p->node->type = N_LIST;
 
             if (first_item) p->node->first_child = first_item;
@@ -368,7 +368,7 @@ parse_result parse_list(Parser *p, token *ts) {
             if (peek.type == T_SCLOSE) {
                 f.current_token = peek;
 
-                p->node = (node *)stack_push_zeroed(&p->stack);
+                p->node = (node *)arena_push_zeroed(&p->nodes);
                 p->node->type = N_LIST;
                 p->node->first_child = first_item;
 
@@ -410,7 +410,7 @@ parse_result parse_spread(Parser *p, token *ts) {
     THEN_TOKEN_(f, T_ELLIPS);
     THEN_V(f, expr, parse_expr, EXPR_ALL);
 
-    p->node = (node *)stack_push_zeroed(&p->stack);
+    p->node = (node *)arena_push_zeroed(&p->nodes);
     p->node->type = N_SPREAD;
     node_add_children(p->node, expr);
 
@@ -432,7 +432,7 @@ parse_result parse_block(Parser *p, token *ts) {
 
     THEN_TOKEN_(f, T_CCLOSE);
 
-    p->node = (node *)stack_push_zeroed(&p->stack);
+    p->node = (node *)arena_push_zeroed(&p->nodes);
     p->node->type = N_BLOCK;
     p->node->first_child = first_child;
 
@@ -461,7 +461,7 @@ parse_result parse_doblk_body(Parser *p, token *ts) {
     if (TRY_V(f, parse_expr, EXPR_ALL))
         node_double_ended_append(&first_child, &last_child, p->node);
 
-    p->node = (node *)stack_push_zeroed(&p->stack);
+    p->node = (node *)arena_push_zeroed(&p->nodes);
     p->node->type = N_DOBLK;
     p->node->first_child = first_child;
 
@@ -480,7 +480,7 @@ parse_result parse_if(Parser *p, token *ts) {
     THEN_TOKEN_(f, T_ELSE);
     THEN_V(f, elze, parse_expr, EXPR_ALL);
 
-    p->node = (node *)stack_push_zeroed(&p->stack);
+    p->node = (node *)arena_push_zeroed(&p->nodes);
     p->node->type = N_IF;
     node_add_children(p->node, cond, then, elze);
 
@@ -534,7 +534,7 @@ parse_result parse_match(Parser *p, token *ts) {
     }
 
 done:
-    p->node = (node *)stack_push_zeroed(&p->stack);
+    p->node = (node *)arena_push_zeroed(&p->nodes);
     p->node->type = N_MATCH;
     p->node->first_child = first_child;
 
@@ -558,7 +558,7 @@ parse_result parse_lambda(Parser *p, token *ts) {
     THEN_V(f, body, parse_expr, EXPR_ALL);
     node_double_ended_append(&first_child, &last_child, body);
 
-    p->node = (node *)stack_push_zeroed(&p->stack);
+    p->node = (node *)arena_push_zeroed(&p->nodes);
     p->node->type = N_LAMBDA;
     p->node->first_child = first_child;
 
@@ -579,7 +579,7 @@ parse_result parse_apply(Parser *p, token *ts) {
 
     if (first_child == last_child) DISCARD(f);
 
-    p->node = (node *)stack_push_zeroed(&p->stack);
+    p->node = (node *)arena_push_zeroed(&p->nodes);
     p->node->type = N_APPLY;
     p->node->first_child = first_child;
 
@@ -595,7 +595,7 @@ parse_result parse_unary(Parser *p, token *ts) {
     THEN_TOKEN(f, op, T_OP);
     THEN_V(f, expr, parse_expr, ~EXPR_BINARY);
 
-    p->node = (node *)stack_push_zeroed(&p->stack);
+    p->node = (node *)arena_push_zeroed(&p->nodes);
     p->node->type = N_UNARY;
     p->node->token = op;
     node_add_children(p->node, expr);
@@ -635,7 +635,7 @@ static parse_result parse_binary_(Parser *p, token *ts, int min_prec, node *lhs)
             THEN_V(f, rhs, parse_binary_, (prec1 < prec2) ? prec1 + 1 : prec1, rhs);
         }
 
-        p->node = (node *)stack_push_zeroed(&p->stack);
+        p->node = (node *)arena_push_zeroed(&p->nodes);
         p->node->type = N_BINARY;
         p->node->token = op_token;
         node_add_children(p->node, lhs, rhs);
@@ -680,7 +680,7 @@ parse_result parse_palias(Parser *p, token *ts) {
     THEN_TOKEN_(f, T_AT);
     THEN_V(f, inner, parse_pattern, ~PAT_APPLY);
 
-    p->node = (node *)stack_push_zeroed(&p->stack);
+    p->node = (node *)arena_push_zeroed(&p->nodes);
     p->node->type = N_PALIAS;
     p->node->token = ident;
     p->node->first_child = inner;
@@ -708,7 +708,7 @@ parse_result parse_papply(Parser *p, token *ts) {
 
     if (!first_arg) DISCARD(f);
 
-    p->node = (node *)stack_push_zeroed(&p->stack);
+    p->node = (node *)arena_push_zeroed(&p->nodes);
     p->node->type = N_PAPPLY;
     p->node->flags = flags;
     p->node->token = ident;
@@ -739,7 +739,7 @@ parse_result parse_ptuple_or_parens(Parser *p, token *ts) {
                 COMMIT(f);
             }
 
-            p->node = (node *)stack_push_zeroed(&p->stack);
+            p->node = (node *)arena_push_zeroed(&p->nodes);
             p->node->type = N_PTUPLE;
 
             if (first_item) p->node->first_child = first_item;
@@ -759,7 +759,7 @@ parse_result parse_ptuple_or_parens(Parser *p, token *ts) {
             if (peek.type == T_PCLOSE) {
                 f.current_token = peek;
 
-                p->node = (node *)stack_push_zeroed(&p->stack);
+                p->node = (node *)arena_push_zeroed(&p->nodes);
                 p->node->type = N_PTUPLE;
                 p->node->first_child = first_item;
 
@@ -793,7 +793,7 @@ parse_result parse_plist(Parser *p, token *ts) {
         case T_SCLOSE:
             f.current_token = peek;
 
-            p->node = (node *)stack_push_zeroed(&p->stack);
+            p->node = (node *)arena_push_zeroed(&p->nodes);
             p->node->type = N_PLIST;
 
             if (first_item) p->node->first_child = first_item;
@@ -849,7 +849,7 @@ parse_result parse_pltail(Parser *p, token *ts) {
 
     THEN_TOKEN_(f, T_ELLIPS);
 
-    p->node = (node *)stack_push_zeroed(&p->stack);
+    p->node = (node *)arena_push_zeroed(&p->nodes);
     p->node->type = N_PLTAIL;
 
     peek = f.current_token;
@@ -869,7 +869,7 @@ parse_result parse_pconst(Parser *p, token *ts) {
 
     THEN_V(f, expr, parse_expr, EXPR_ALL);
 
-    p->node = (node *)stack_push_zeroed(&p->stack);
+    p->node = (node *)arena_push_zeroed(&p->nodes);
     p->node->type = N_PCONST;
     p->node->first_child = expr;
 

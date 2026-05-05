@@ -1,6 +1,6 @@
 let rec map f xs = match xs
   case [] then []
-  case [x, ...rest] then [f x] + map f rest;
+  case [x, ...rest] then [f x, ...map f rest];
 
 let rec concat strings = match strings
   case [] then ""

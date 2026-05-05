@@ -74,19 +74,19 @@ void compiler_init(Compiler *c) {
     buffer_init(&c->string_buffer);
     string_pool_init(&c->strings);
     string_pool_init(&c->idents);
-    stack_init(&c->blocks, Block);
+    arena_init(&c->blocks, Block);
     vector_init(&c->jumps, jump);
     vector_init(&c->funcs, func);
 }
 
 void compiler_free(Compiler *c) {
-    for (stack_iter i = stack_iter_begin(&c->blocks); stack_iter_next(&i);)
+    for (arena_iter i = arena_iter_begin(&c->blocks); arena_iter_next(&i);)
         block_free((Block *)i.item);
 
     buffer_free(&c->string_buffer);
     string_pool_free(&c->strings);
     string_pool_free(&c->idents);
-    stack_free(&c->blocks);
+    arena_free(&c->blocks);
     vector_free(&c->jumps);
     vector_free(&c->funcs);
 }
@@ -169,7 +169,7 @@ static void scope_debug_print(Compiler *c, Scope *s, FILE *f) {
 }
 
 static inline Block *insert_block_after(Compiler *c, Block *prev) {
-    Block *b = (Block *)stack_push_zeroed(&c->blocks);
+    Block *b = (Block *)arena_push_zeroed(&c->blocks);
     block_init(b);
     b->next = prev->next;
     prev->next = b;
@@ -304,19 +304,24 @@ static void visit_int(Compiler *c, Block **b, Scope *s, node *n) {
     bytecode_put_pushint(&(*b)->bytecode, compile_int(token_string(n->token)));
 }
 
-static void visit_tuple(Compiler *c, Block **b, Scope *s, node *n) {
-    uint8_t len = 0;
-    for (node *child = n->first_child; child; child = child->next_sibling) {
-        visit_expr(c, b, s, child);
-        len++;
-    }
+static void visit_reverse_siblings(Compiler *c, Block **b, Scope *s, node *n, size_t *len) {
+    if (!n) return;
 
-    bytecode_put_maketuple(&(*b)->bytecode, len);
+    visit_reverse_siblings(c, b, s, n->next_sibling, len);
+    visit_expr(c, b, s, n);
+    (*len)++;
+}
+
+static void visit_tuple(Compiler *c, Block **b, Scope *s, node *n) {
+    size_t len = 0;
+    visit_reverse_siblings(c, b, s, n->first_child, &len);
+
+    bytecode_put_maketuple(&(*b)->bytecode, CHECKED_U16(len));
 }
 
 static void visit_list(Compiler *c, Block **b, Scope *s, node *n) {
-    size_t  parts = 1;
-    uint8_t part_len = 0;
+    size_t parts = 1;
+    size_t part_len = 0;
 
     if (!n->first_child) {
         bytecode_put_makelist(&(*b)->bytecode, 0);
@@ -334,7 +339,7 @@ static void visit_list(Compiler *c, Block **b, Scope *s, node *n) {
 
         if (!child->next_sibling || child->next_sibling->type == N_SPREAD) {
             if (child->type != N_SPREAD) {
-                bytecode_put_makelist(&(*b)->bytecode, part_len);
+                bytecode_put_makelist(&(*b)->bytecode, CHECKED_U16(part_len));
                 parts++;
                 part_len = 0;
             }
@@ -356,7 +361,7 @@ static void visit_unary(Compiler *c, Block **b, Scope *s, node *n) {
 
     visit_expr(c, b, s, n->first_child);
     visit_ident(c, b, s, n);
-    bytecode_put_callcls(&(*b)->bytecode, 1);
+    bytecode_put_callval(&(*b)->bytecode, 1);
 }
 
 static void visit_binary(Compiler *c, Block **b, Scope *s, node *n) {
@@ -370,22 +375,14 @@ static void visit_binary(Compiler *c, Block **b, Scope *s, node *n) {
     }
 
     visit_ident(c, b, s, n);
-    bytecode_put_callcls(&(*b)->bytecode, 2);
+    bytecode_put_callval(&(*b)->bytecode, 2);
 }
 
 static void visit_apply(Compiler *c, Block **b, Scope *s, node *n) {
-    int items = 0;
-    for (node *child = n->first_child; child; child = child->next_sibling) items++;
+    size_t len = 0;
+    visit_reverse_siblings(c, b, s, n->first_child, &len);
 
-    // FIXME: Unfortunate O(n^2) solution in order to iterate backwards
-    for (int i = items - 1; i >= 0; i--) {
-        node *nth = n->first_child;
-        for (int j = 0; j < i; j++) nth = nth->next_sibling;
-
-        visit_expr(c, b, s, nth);
-    }
-
-    bytecode_put_callcls(&(*b)->bytecode, (uint8_t)(items - 1));
+    bytecode_put_callval(&(*b)->bytecode, CHECKED_U8(len - 1));
 }
 
 static void visit_if(Compiler *c, Block **b, Scope *s, node *n) {
@@ -462,6 +459,8 @@ static void visit_match(Compiler *c, Block **b, Scope *s, node *n) {
     buffer_putc(&(*b)->bytecode, (char)OP_HALT); // TODO: raise error
 
     *b = cont_block;
+    buffer_putc(&(*b)->bytecode, OP_SWAP); // swap scrutinee and result
+    buffer_putc(&(*b)->bytecode, OP_POP);
 }
 
 /*
@@ -486,7 +485,7 @@ static void visit_function(
         uint8_t self_local = scope_put_local(&inner_scope, *name);
 
         buffer_putc(&body_block->bytecode, OP_DUP);
-        bytecode_put_callcls(&body_block->bytecode, 1);
+        bytecode_put_callval(&body_block->bytecode, 1);
         bytecode_put_store(&body_block->bytecode, self_local);
 
         args++;
@@ -517,7 +516,7 @@ static void visit_function(
 
     if (rec) {
         buffer_putc(&(*b)->bytecode, OP_DUP);
-        bytecode_put_callcls(&(*b)->bytecode, 1);
+        bytecode_put_callval(&(*b)->bytecode, 1);
     }
 }
 
@@ -531,41 +530,77 @@ static void visit_lambda(Compiler *c, Block **b, Scope *s, node *n, symbol *name
     visit_function(c, b, s, n->first_child, body, name, false);
 }
 
-static void visit_block(Compiler *c, Block **b, Scope *s, node *n) {
+static void visit_block_body(Compiler *c, Block **b, Scope *s, node *head) {
+    if (!head->next_sibling) {
+        visit_expr(c, b, s, head);
+        return;
+    }
+
     Scope inner_scope;
     scope_init(&inner_scope, s);
 
-    Block *prelude = insert_block_after(c, *b);
-    Block *body = insert_block_after(c, prelude);
-    Block *fail = NULL;
+    Block   *prelude = insert_block_after(c, *b);
+    Block   *body = insert_block_after(c, prelude);
+    Block   *fail = NULL;
+    node    *lhs, *rhs;
+    uint32_t fnindex;
 
-    for (node *child = n->first_child; child; child = child->next_sibling) {
-        if (!child->next_sibling) {
-            visit_expr(c, &body, &inner_scope, child);
-            break;
+    // Avoid nested function calls for consecutive assignments
+    if (head->type == N_ASSIGN) {
+        for (; head->type == N_ASSIGN; head = head->next_sibling) {
+            lhs = head->first_child, rhs = lhs->next_sibling;
+            visit_pattern(c, &body, &fail, &inner_scope, lhs, rhs);
         }
 
-        node *lhs;
+        visit_block_body(c, &body, &inner_scope, head);
+        buffer_putc(&body->bytecode, OP_RETURN);
 
-        switch (child->type) {
-        case N_ASSIGN:
-            lhs = child->first_child;
-            visit_pattern(c, &body, &fail, &inner_scope, lhs, lhs->next_sibling);
+        put_store_captures(c, prelude, &inner_scope);
+        uint32_t fnindex = push_func(c, prelude, &inner_scope, 0, FN_BLOCK, NULL);
+        put_load_captures(c, *b, &inner_scope, s);
+        bytecode_put_call(&(*b)->bytecode, fnindex);
+    } else {
+        switch (head->type) {
+        case N_DOBIND:
+            lhs = head->first_child, rhs = lhs->next_sibling;
+            visit_pattern(c, &body, &fail, &inner_scope, lhs, NULL);
+            visit_block_body(c, &body, &inner_scope, head->next_sibling);
+            buffer_putc(&body->bytecode, OP_RETURN);
+
+            put_store_captures(c, prelude, &inner_scope);
+            fnindex = push_func(c, prelude, &inner_scope, 1, FN_BLOCK, NULL);
+            put_load_captures(c, *b, &inner_scope, s);
+            bytecode_put_makecls(&(*b)->bytecode, fnindex);
+
+            visit_expr(c, b, s, rhs);
+            buffer_putc(&(*b)->bytecode, OP_BIND);
+
             break;
-        default: panic("unsupported node: %s", node_type_name(child->type));
+        case N_VOID:
+            buffer_putc(&body->bytecode, OP_POP);
+            visit_block_body(c, &body, &inner_scope, head->next_sibling);
+            buffer_putc(&body->bytecode, OP_RETURN);
+
+            put_store_captures(c, prelude, &inner_scope);
+            fnindex = push_func(c, prelude, &inner_scope, 1, FN_BLOCK, NULL);
+            put_load_captures(c, *b, &inner_scope, s);
+            bytecode_put_makecls(&(*b)->bytecode, fnindex);
+
+            visit_expr(c, b, s, head->first_child);
+            buffer_putc(&(*b)->bytecode, OP_BIND);
+
+            break;
+        default: panic("unsupported node type: %s", node_type_name(head->type));
         }
     }
 
-    buffer_putc(&body->bytecode, OP_RETURN);
-
-    put_store_captures(c, prelude, &inner_scope);
-    put_load_captures(c, *b, &inner_scope, s);
-    uint32_t fnindex = push_func(c, prelude, &inner_scope, 0, FN_BLOCK, NULL);
-    bytecode_put_call(&(*b)->bytecode, fnindex);
-
-    if (fail) buffer_putc(&fail->bytecode, (char)OP_HALT); // TODO: raise error
+    if (fail) buffer_putc(&fail->bytecode, (char)OP_HALT); // TODO: Raise error
 
     scope_free(&inner_scope);
+}
+
+static inline void visit_block(Compiler *c, Block **b, Scope *s, node *n) {
+    visit_block_body(c, b, s, n->first_child);
 }
 
 static void visit_expr(Compiler *c, Block **b, Scope *s, node *n) {
@@ -619,17 +654,17 @@ static void visit_papply(Compiler *c, Block **b, Block **fail, Scope *s, node *l
 static void visit_ptuple(Compiler *c, Block **b, Block **fail, Scope *s, node *lhs, node *rhs) {
     if (rhs) visit_expr(c, b, s, rhs);
 
-    uint8_t len = 0;
+    size_t len = 0;
     for (node *child = lhs->first_child; child; child = child->next_sibling) len++;
 
     if (!*fail) *fail = insert_block_after(c, *b);
 
-    bytecode_put_istuple(&(*b)->bytecode, len);
+    bytecode_put_istuple(&(*b)->bytecode, CHECKED_U16(len));
     put_jump(c, OP_JUMPIFN, *b, *fail);
 
-    uint8_t index = 0;
+    size_t index = 0;
     for (node *child = lhs->first_child; child; child = child->next_sibling) {
-        bytecode_put_tupleget(&(*b)->bytecode, index);
+        bytecode_put_tupleget(&(*b)->bytecode, CHECKED_U16(index));
         visit_pattern(c, b, fail, s, child, NULL);
         index++;
     }
@@ -688,13 +723,17 @@ void compiler_visit_program(Compiler *c, node *n) {
     Scope global_scope;
     scope_init(&global_scope, NULL);
 
-    Block *prelude = (Block *)stack_push_zeroed(&c->blocks);
+    Block *prelude = (Block *)arena_push_zeroed(&c->blocks);
     block_init(prelude);
 
     Block *block = insert_block_after(c, prelude);
     visit_expr(c, &block, &global_scope, n);
-    buffer_putc(&block->bytecode, (char)OP_HALT);
-    put_load_externs(c, prelude, &global_scope);
+    buffer_putc(&block->bytecode, (char)OP_YIELD);
+
+    Block *init = insert_block_after(c, prelude);
+    put_load_externs(c, init, &global_scope);
+    uint32_t init_fnindex = push_func(c, init, &global_scope, 0, FN_GLOBAL, NULL);
+    bytecode_put_call(&prelude->bytecode, init_fnindex);
 
     scope_free(&global_scope);
 }
@@ -706,7 +745,7 @@ void compiler_write_program(Compiler *c, Buffer *b) {
     buffer_puts(b, buffer_string(&c->strings.buffer));
     buffer_put_u32be(b, CHECKED_U32(c->funcs.len));
 
-    Block *prelude_block = (Block *)stack_get(&c->blocks, 0);
+    Block *prelude_block = (Block *)arena_head(&c->blocks);
 
     size_t block_offset = 0;
     for (Block *block = prelude_block; block; block = block->next) {

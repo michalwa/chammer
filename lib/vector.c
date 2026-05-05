@@ -36,8 +36,11 @@ void *vector_push_zeroed(Vector *v) {
     return item;
 }
 
-void vector_pop(Vector *v) {
+bool vector_pop(Vector *v, void *item) {
+    if (v->len == 0) return false;
+    if (item) memcpy(item, (uint8_t *)v->data + (v->len - 1) * v->item_size, v->item_size);
     v->len--;
+    return true;
 }
 
 void *vector_last(Vector *v) {
