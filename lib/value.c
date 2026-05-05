@@ -588,7 +588,7 @@ static void hbinding_print_repr(const HBinding *binding, Buffer *b, const Machin
 static HValue hbinding_yield(const HBinding *binding, const HValue *then, Machine *m) {
     HValue result;
     debug_assert(hvalue_yield_impl(&binding->effect, &binding->then, m, &result));
-    hvalue_yield_impl(&result, then, m, &result);
+    if (hvalue_yield_impl(&result, then, m, &result)) return result;
     return then ? machine_call(m, hvalue_ref(then), result) : result;
 }
 
