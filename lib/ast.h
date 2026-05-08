@@ -5,7 +5,6 @@
 #include "lexer.h"
 
 #define EACH_NODE_TYPE(_)                   \
-    _(N_ASSIGN) /* assignment            */ \
     _(N_IDENT)  /* identifier expression */ \
     _(N_STRING) /* string literal        */ \
     _(N_INT)    /* integer literal       */ \
@@ -20,8 +19,8 @@
     _(N_MATCH)  /* match expression      */ \
     _(N_LAMBDA) /* lambda expression     */ \
     _(N_BLOCK)  /* block expression      */ \
-    _(N_DOBLK)  /* do-block expression   */ \
-    _(N_DOBIND) /* monadic binding       */ \
+    _(N_ASSIGN) /* assignment            */ \
+    _(N_BIND)   /* monadic binding       */ \
     _(N_VOID)   /* expression statement  */ \
     _(N_PIDENT) /* identifier pattern    */ \
     _(N_PWILD)  /* wildcard pattern      */ \

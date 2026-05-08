@@ -15,7 +15,6 @@ static const char *OP_CHARSET = "~!@#$%^&*-+=|:<>./?";
 
 static const keyword KEYWORDS[] = {
     { STRING("let"),   T_LET   },
-    { STRING("do"),    T_DO    },
     { STRING("if"),    T_IF    },
     { STRING("then"),  T_THEN  },
     { STRING("else"),  T_ELSE  },

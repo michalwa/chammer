@@ -11,7 +11,6 @@
     _(T_BCOMM)  /* block comment   */ \
     _(T_LCOMM)  /* line comment    */ \
     _(T_LET)    /* `let`           */ \
-    _(T_DO)     /* `do`            */ \
     _(T_IF)     /* `if`            */ \
     _(T_THEN)   /* `then`          */ \
     _(T_ELSE)   /* `else`          */ \

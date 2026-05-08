@@ -54,11 +54,6 @@ typedef enum {
 } parse_expr_flags;
 
 typedef enum {
-    STMT_ALL = -1,
-    STMT_DOBIND = 1,
-} parse_stmt_flags;
-
-typedef enum {
     PAT_ALL = -1,
     PAT_APPLY = 1,
 } parse_pattern_flags;
@@ -76,9 +71,9 @@ parse_result parse_ident(Parser *, token *);
 parse_result parse_string(Parser *, token *);
 parse_result parse_int(Parser *, token *);
 parse_result parse_dec(Parser *, token *);
-parse_result parse_stmt(Parser *, token *, parse_stmt_flags);
+parse_result parse_stmt(Parser *, token *);
 parse_result parse_assign(Parser *, token *);
-parse_result parse_dobind(Parser *, token *);
+parse_result parse_bind(Parser *, token *);
 parse_result parse_void(Parser *, token *);
 parse_result parse_expr(Parser *, token *, parse_expr_flags);
 parse_result parse_tuple_or_parens(Parser *, token *);
@@ -86,8 +81,7 @@ parse_result parse_list(Parser *, token *);
 parse_result parse_list_or_tuple_item(Parser *, token *);
 parse_result parse_spread(Parser *, token *);
 parse_result parse_block(Parser *, token *);
-parse_result parse_doblk(Parser *, token *);
-parse_result parse_doblk_body(Parser *, token *);
+parse_result parse_block_body(Parser *, token *);
 parse_result parse_if(Parser *, token *);
 parse_result parse_match(Parser *, token *);
 parse_result parse_lambda(Parser *, token *);

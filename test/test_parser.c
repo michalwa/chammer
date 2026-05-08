@@ -66,7 +66,7 @@ TEST(parser_full_example) {
     _("elaborate_expr", parse_expr(p, t, EXPR_ALL),                                     \
       "(1, 2, \"foo\", foo, [42, bar, 3.14], (), [], if 1 then 2 else 3)")              \
     _("assign", parse_assign(p, t), "let x = 1;")                                       \
-    _("dobind", parse_dobind(p, t), "let x <- 1;")                                      \
+    _("bind", parse_bind(p, t), "let x <- 1;")                                          \
     _("tuple_singleton_unpack", parse_assign(p, t), "let (a,) = (1,);")                 \
     _("tuple_pair_unpack", parse_assign(p, t), "let (a, b) = (1, 2);")                  \
     _("list_pair_unpack", parse_assign(p, t), "let [a, b] = [1, 2];")                   \

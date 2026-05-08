@@ -561,7 +561,7 @@ static void visit_block_body(Compiler *c, Block **b, Scope *s, node *head) {
         bytecode_put_call(&(*b)->bytecode, fnindex);
     } else {
         switch (head->type) {
-        case N_DOBIND:
+        case N_BIND:
             lhs = head->first_child, rhs = lhs->next_sibling;
             visit_pattern(c, &body, &fail, &inner_scope, lhs, NULL);
             visit_block_body(c, &body, &inner_scope, head->next_sibling);
@@ -616,8 +616,6 @@ static void visit_expr(Compiler *c, Block **b, Scope *s, node *n) {
     case N_IF: visit_if(c, b, s, n); break;
     case N_MATCH: visit_match(c, b, s, n); break;
     case N_LAMBDA: visit_lambda(c, b, s, n, NULL); break;
-    // TODO: Remove do-blocks?
-    case N_DOBLK: visit_block(c, b, s, n); break;
     case N_BLOCK: visit_block(c, b, s, n); break;
     default: panic("unsupported node: %s", node_type_name(n->type));
     }

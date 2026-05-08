@@ -174,7 +174,7 @@ parse_result parse_atom(Parser *p, token *ts, token_type t, node_type n) {
 }
 
 inline parse_result parse_program(Parser *p, token *ts) {
-    parse_result r = parse_doblk_body(p, ts);
+    parse_result r = parse_block_body(p, ts);
     token        t = *ts;
     if (r == PARSE_OK && token_next(&t, 0) != LEX_NONE) return PARSE_LEFTOVER_TOKENS;
     return r;
@@ -194,10 +194,10 @@ PARSER_ATOM(parse_pwild, T_UNDER, N_PWILD)
 
 #undef PARSER_ATOM
 
-parse_result parse_stmt(Parser *p, token *ts, parse_stmt_flags flags) {
+parse_result parse_stmt(Parser *p, token *ts) {
     frame f = begin(p, ts);
 
-    if (flags & STMT_DOBIND && TRY(f, parse_dobind)) COMMIT(f);
+    if (TRY(f, parse_bind)) COMMIT(f);
     if (TRY(f, parse_assign)) COMMIT(f);
     if (TRY(f, parse_void)) COMMIT(f);
 
@@ -221,7 +221,7 @@ parse_result parse_assign(Parser *p, token *ts) {
     COMMIT(f);
 }
 
-parse_result parse_dobind(Parser *p, token *ts) {
+parse_result parse_bind(Parser *p, token *ts) {
     frame f = begin(p, ts);
     node *lhs, *rhs;
 
@@ -232,7 +232,7 @@ parse_result parse_dobind(Parser *p, token *ts) {
     THEN_TOKEN_(f, T_SEMI);
 
     p->node = (node *)arena_push_zeroed(&p->nodes);
-    p->node->type = N_DOBIND;
+    p->node->type = N_BIND;
     node_add_children(p->node, lhs, rhs);
 
     COMMIT(f);
@@ -261,7 +261,6 @@ parse_result parse_expr(Parser *p, token *ts, parse_expr_flags flags) {
     if (TRY(f, parse_tuple_or_parens)) COMMIT(f);
     if (TRY(f, parse_list)) COMMIT(f);
     if (TRY(f, parse_block)) COMMIT(f);
-    if (TRY(f, parse_doblk)) COMMIT(f);
     if (TRY(f, parse_if)) COMMIT(f);
     if (TRY(f, parse_match)) COMMIT(f);
     if (TRY(f, parse_lambda)) COMMIT(f);
@@ -420,49 +419,25 @@ parse_result parse_spread(Parser *p, token *ts) {
 parse_result parse_block(Parser *p, token *ts) {
     frame f = begin(p, ts);
 
+    THEN_TOKEN_(f, T_COPEN);
+    THEN_(f, parse_block_body);
+    THEN_TOKEN_(f, T_CCLOSE);
+
+    COMMIT(f);
+}
+
+parse_result parse_block_body(Parser *p, token *ts) {
+    frame f = begin(p, ts);
+
     node *first_child = NULL, *last_child = NULL;
 
-    THEN_TOKEN_(f, T_COPEN);
-
-    while (TRY_V(f, parse_stmt, ~STMT_DOBIND))
-        node_double_ended_append(&first_child, &last_child, p->node);
+    while (TRY(f, parse_stmt)) node_double_ended_append(&first_child, &last_child, p->node);
 
     if (TRY_V(f, parse_expr, EXPR_ALL))
         node_double_ended_append(&first_child, &last_child, p->node);
-
-    THEN_TOKEN_(f, T_CCLOSE);
 
     p->node = (node *)arena_push_zeroed(&p->nodes);
     p->node->type = N_BLOCK;
-    p->node->first_child = first_child;
-
-    COMMIT(f);
-}
-
-parse_result parse_doblk(Parser *p, token *ts) {
-    frame f = begin(p, ts);
-
-    THEN_TOKEN_(f, T_DO);
-    THEN_TOKEN_(f, T_COPEN);
-    THEN_(f, parse_doblk_body);
-    THEN_TOKEN_(f, T_CCLOSE);
-
-    COMMIT(f);
-}
-
-parse_result parse_doblk_body(Parser *p, token *ts) {
-    frame f = begin(p, ts);
-
-    node *first_child = NULL, *last_child = NULL;
-
-    while (TRY_V(f, parse_stmt, STMT_ALL))
-        node_double_ended_append(&first_child, &last_child, p->node);
-
-    if (TRY_V(f, parse_expr, EXPR_ALL))
-        node_double_ended_append(&first_child, &last_child, p->node);
-
-    p->node = (node *)arena_push_zeroed(&p->nodes);
-    p->node->type = N_DOBLK;
     p->node->first_child = first_child;
 
     COMMIT(f);
