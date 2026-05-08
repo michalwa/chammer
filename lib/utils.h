@@ -50,8 +50,8 @@
 #define debug_assert(expr)               assert(expr)
 #define debug_assert_msg(expr, fmt, ...) assert_msg(expr, fmt, __VA_ARGS__)
 #else
-#define debug_assert(expr)                (void)0
-#define debug_assert_msg(expr, fmsg, ...) (void)0
+#define debug_assert(expr)                (void)(expr)
+#define debug_assert_msg(expr, fmsg, ...) (void)(expr)
 #endif
 
 _Noreturn void panic_(const char *file, int line, const char *fmt, ...);
