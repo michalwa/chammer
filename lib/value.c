@@ -91,6 +91,29 @@ inline bool hvalue_is_uniq(const HValue *hv) {
     return !hvalue_is_rc(hv) || hvalue_header_(hv)->rc <= 1;
 }
 
+static bool hstring_eq(const HString *, const HString *);
+static bool hcons_eq(const HCons *, const HCons *);
+static bool htuple_eq(const HTuple *, const HTuple *);
+static bool hnative_eq(const HNative *, const HNative *);
+
+bool hvalue_eq(const HValue *a, const HValue *b) {
+    if (a->type != b->type) return false;
+
+    switch (a->type) {
+    case V_INT: return a->v_int == b->v_int;
+    case V_FLOAT: return a->v_float == b->v_float;
+    case V_STRING: return hstring_eq(a->v_string, b->v_string);
+    case V_CONS: return hcons_eq(a->v_cons, b->v_cons);
+    case V_TUPLE: return htuple_eq(a->v_tuple, b->v_tuple);
+    case V_NATIVE: return hnative_eq(a->v_native, b->v_native);
+    case V_CLOSURE:
+    case V_BINDING: return false;
+    case V_TRUE:
+    case V_FALSE:
+    case V_NIL: return true;
+    }
+}
+
 static void hclosure_print_repr(const HClosure *, Buffer *, const Machine *);
 static void hcons_print_repr(const HCons *, Buffer *, const Machine *);
 static void htuple_print_repr(const HTuple *, Buffer *, const Machine *);
@@ -220,6 +243,10 @@ static HValue hstring_clone(const HString *str) {
     return hvalue_make_string((string){ .data = str->data, .len = str->len });
 }
 
+static bool hstring_eq(const HString *a, const HString *b) {
+    return a->len == b->len && memcmp(a->data, b->data, a->len) == 0;
+}
+
 string hvalue_string_get(const HValue *hv) {
     const HString *str;
     hvalue_expect(hvalue_get_string, hv, &str);
@@ -338,6 +365,10 @@ static HValue hcons_clone(const HCons *cons) {
     return hvalue_make_cons(hvalue_ref(&cons->head), hvalue_ref(&cons->tail));
 }
 
+static bool hcons_eq(const HCons *a, const HCons *b) {
+    return hvalue_eq(&a->head, &b->head) && hvalue_eq(&a->tail, &b->tail);
+}
+
 static void hcons_print_repr(const HCons *cons, Buffer *b, const Machine *m) {
     buffer_putc(b, '[');
 
@@ -409,6 +440,15 @@ static HValue htuple_clone(const HTuple *tuple) {
     HTupleBuilder clone = htuple_begin(tuple->len);
     for (uint16_t i = 0; i < tuple->len; i++) htuple_put(&clone, hvalue_ref(&tuple->data[i]));
     return htuple_end(clone);
+}
+
+static bool htuple_eq(const HTuple *a, const HTuple *b) {
+    if (a->len != b->len) return false;
+
+    for (uint16_t i = 0; i < a->len; i++)
+        if (!hvalue_eq(&a->data[i], &b->data[i])) return false;
+
+    return true;
 }
 
 static void htuple_print_repr(const HTuple *tuple, Buffer *b, const Machine *ctx) {
@@ -490,6 +530,11 @@ static HValue hnative_clone(const HNative *native) {
         clone.v_native->args[i] = hvalue_ref(&native->args[i]);
 
     return clone;
+}
+
+static bool hnative_eq(const HNative *a, const HNative *b) {
+    // TODO: Implementation-defined
+    return false;
 }
 
 static void hnative_print_repr(const HNative *native, Buffer *b, const Machine *m) {

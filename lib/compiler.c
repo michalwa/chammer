@@ -700,6 +700,22 @@ static void visit_plist(Compiler *c, Block **b, Block **fail, Scope *s, node *lh
     buffer_putc(&(*b)->bytecode, OP_POP);
 }
 
+static void visit_pconst(Compiler *c, Block **b, Block **fail, Scope *s, node *lhs, node *rhs) {
+    if (rhs) visit_expr(c, b, s, rhs);
+
+    if (!*fail) *fail = insert_block_after(c, *b);
+
+    visit_expr(c, b, s, lhs->first_child);
+    buffer_putc(&(*b)->bytecode, OP_EQ);
+    put_jump(c, OP_JUMPIFN, *b, *fail);
+}
+
+static void visit_pwild(Compiler *c, Block **b, Block **fail, Scope *s, node *lhs, node *rhs) {
+    (void)c, (void)fail, (void)s, (void)lhs;
+
+    if (!rhs) buffer_putc(&(*b)->bytecode, OP_POP);
+}
+
 /*
  * For a pattern match `lhs = rhs`:
  *   `lhs` is the pattern,
@@ -715,6 +731,8 @@ static void visit_pattern(Compiler *c, Block **b, Block **fail, Scope *s, node *
     case N_PAPPLY: visit_papply(c, b, fail, s, lhs, rhs); break;
     case N_PTUPLE: visit_ptuple(c, b, fail, s, lhs, rhs); break;
     case N_PLIST: visit_plist(c, b, fail, s, lhs, rhs); break;
+    case N_PCONST: visit_pconst(c, b, fail, s, lhs, rhs); break;
+    case N_PWILD: visit_pwild(c, b, fail, s, lhs, rhs); break;
     default: panic("unsupported node: %s", node_type_name(lhs->type));
     }
 }

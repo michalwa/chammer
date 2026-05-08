@@ -282,6 +282,17 @@ static void add_operands(Machine *m) {
     }
 }
 
+static void op_eq(Machine *m) {
+    HValue a, b;
+    vm_debug_assert(m, vector_pop(&m->opstack, &a));
+    vm_debug_assert(m, vector_pop(&m->opstack, &b));
+
+    opstack_push(m, hvalue_make_bool(hvalue_eq(&a, &b)));
+
+    hvalue_drop(a);
+    hvalue_drop(b);
+}
+
 bool machine_step(Machine *m) {
     HValue  value;
     int16_t jump;
@@ -340,6 +351,7 @@ bool machine_step(Machine *m) {
     case OP_ISCONS: check_type(m, V_CONS); return true;
     case OP_UNCONS: uncons(m); return true;
     case OP_CONCAT: concat(m); return true;
+    case OP_EQ: op_eq(m); return true;
     case OP_LOADEXT:
         vm_debug_assert(m, vector_pop(&m->opstack, &value));
         load_extern(m, hvalue_string_get(&value));

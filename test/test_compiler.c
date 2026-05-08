@@ -28,6 +28,8 @@
     _("function_tuple_unpack", "let f (x, y) = (y, x); f (1, 2)")                              \
     _("lambda", "let f = \\x y -> (x, y); f 1 2")                                              \
     _("lambda_tuple_unpack", "let f = \\(x, y) -> (y, x); f (1, 2)")                           \
+    _("pconst", "match (\"foo\", 1) case (\"foo\", x) then x case (\"bar\", x) then (x,)")     \
+    _("pwild", "let (x, _) = (1, 2); x")                                                       \
     _(                                                                                       \
         "let_rec",                                                                           \
         "let rec map f xs = match xs case [] then [] case [x, ...rest] then [f x, ...map f " \

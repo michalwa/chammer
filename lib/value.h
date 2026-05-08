@@ -172,6 +172,7 @@ HValue hvalue_uniq(HValue);
  */
 bool   hvalue_is_uniq(const HValue *);
 
+bool hvalue_eq(const HValue *, const HValue *);
 void hvalue_print_repr(const HValue *, Buffer *, const Machine *);
 
 /*
