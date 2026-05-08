@@ -9,11 +9,11 @@ TEST(string_pool) {
     symbol bar = string_pool_intern(&sp, STRING("bar"));
     symbol foo2 = string_pool_intern(&sp, STRING("foo"));
     ASSERT(foo != bar);
-    ASSERT_INT_EQ(foo, foo2);
+    ASSERT_INT_EQ((intptr_t)foo, (intptr_t)foo2);
 
-    ASSERT_STRING_EQ(string_pool_get(&sp, foo), STRING("foo"));
-    ASSERT_STRING_EQ(string_pool_get(&sp, bar), STRING("bar"));
-    ASSERT_STRING_EQ(string_pool_get(&sp, foo2), STRING("foo"));
+    ASSERT_STRING_EQ(symbol_string(foo), STRING("foo"));
+    ASSERT_STRING_EQ(symbol_string(bar), STRING("bar"));
+    ASSERT_STRING_EQ(symbol_string(foo2), STRING("foo"));
 
     string_pool_free(&sp);
     return TEST_OK;

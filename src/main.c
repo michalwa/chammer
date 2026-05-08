@@ -1,4 +1,5 @@
 #include "../lib/buffer.h"
+#include "../lib/builtin/prelude.h"
 #include "../lib/bytecode.h"
 #include "../lib/compiler.h"
 #include "../lib/lexer.h"
@@ -34,6 +35,7 @@ int main(int argc, char **argv) {
 
     parser_init(&p);
 
+    // TODO: Move to module
     parser_define_operator(&p, STRING("+"), 500, ASSOC_LEFT);
     parser_define_operator(&p, STRING("-"), 500, ASSOC_LEFT);
     parser_define_operator(&p, STRING("*"), 600, ASSOC_LEFT);
@@ -70,7 +72,13 @@ int main(int argc, char **argv) {
     size_t steps = 0;
 #endif
 
+    Module prelude;
+    module_init(&prelude);
+    module_make_prelude(&prelude);
+
     machine_init(&machine, &prog);
+    machine_add_module(&machine, prelude);
+
     while (machine_step(&machine)) {
 #ifdef HAMMER_DEBUG
         steps++;

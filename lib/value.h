@@ -240,14 +240,15 @@ HValue        htuple_end(HTupleBuilder);
 uint16_t      hvalue_tuple_len(const HValue *);
 HValue        hvalue_tuple_get(const HValue *, uint16_t);
 
+const char *hvalue_native_name(const HValue *);
 /*
  * Same as `hvalue_closure_args_left` but for `V_NATIVE` values
  */
-size_t hvalue_native_args_left(const HValue *);
+size_t      hvalue_native_args_left(const HValue *);
 /*
  * Same as `hvalue_closure_put_arg_mut` but for `V_NATIVE` values
  */
-void   hvalue_native_put_arg_mut(const HValue *, HValue);
-HValue hvalue_native_call(const HValue *, Machine *);
+void        hvalue_native_put_arg_mut(const HValue *, HValue);
+HValue      hvalue_native_call(const HValue *, Machine *);
 
 #endif // HAMMER_VALUE_H_

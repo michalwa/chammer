@@ -3,6 +3,7 @@
 
 #include "buffer.h"
 #include "bytecode.h"
+#include "module.h"
 #include "utils.h"
 #include "vector.h"
 
@@ -22,10 +23,12 @@ typedef struct {
      */
     Vector         opstack;
     const uint8_t *ip;
+    Vector         modules;
 } Machine;
 
 void machine_init(Machine *, const program *);
 void machine_free(Machine *);
+void machine_add_module(Machine *, Module);
 bool machine_step(Machine *);
 
 string machine_func_name(const Machine *, uint32_t);

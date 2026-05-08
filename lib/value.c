@@ -572,6 +572,12 @@ static HValue hnative_yield(const HNative *native, const HValue *then, Machine *
     return native->meta->yield(native->data, then, m);
 }
 
+const char *hvalue_native_name(const HValue *hv) {
+    const HNative *native;
+    hvalue_expect(hvalue_get_native, hv, &native);
+    return native->meta->name;
+}
+
 size_t hvalue_native_args_left(const HValue *hv) {
     const HNative *native;
     hvalue_expect(hvalue_get_native, hv, &native);

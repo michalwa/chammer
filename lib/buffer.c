@@ -46,8 +46,9 @@ void buffer_putc(Buffer *b, char c) {
     b->data[b->len] = '\0';
 }
 
-inline void buffer_puts(Buffer *b, string str) {
-    memcpy(buffer_alloc(b, str.len), str.data, str.len);
+inline string buffer_puts(Buffer *b, string str) {
+    void *data = memcpy(buffer_alloc(b, str.len), str.data, str.len);
+    return (string){ .data = data, .len = str.len };
 }
 
 void buffer_printf(Buffer *b, const char *format, ...) {
