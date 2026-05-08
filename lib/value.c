@@ -534,6 +534,7 @@ static HValue hnative_clone(const HNative *native) {
 
 static bool hnative_eq(const HNative *a, const HNative *b) {
     // TODO: Implementation-defined
+    (void)a, (void)b;
     return false;
 }
 
