@@ -220,6 +220,15 @@ inline string token_string(token t) {
     return (string){ .data = t.str, .len = t.len };
 }
 
+inline string token_ident(token t) {
+    switch (t.type) {
+    case T_IDENT:
+    case T_OP: return token_string(t);
+    case T_INFIX: return (string){ .data = t.str + 1, .len = t.len - 1 }; // ignore '`'
+    default: panic("token of type %s is not an identifier", token_type_name(t.type));
+    }
+}
+
 loc token_loc(token t, const char *buffer) {
     loc l = { 0 };
 

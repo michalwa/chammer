@@ -1,1 +1,3 @@
+let rem x y = x - x / y * y;
 print (1 + 2 * 9 / 3 - 2); -- 5
+print (15 `rem 4);

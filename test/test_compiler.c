@@ -37,7 +37,8 @@
         "rest]; map (\\x -> x + 1) [1, 2, 3]"                                                \
     ) \
     _("block_empty", "{}")                                                                     \
-    _("block_no_tail_expr", "{ print 1; print 2; }")
+    _("block_no_tail_expr", "{ print 1; print 2; }")                                           \
+    _("infix", "15 `rem 4")
 
 static int run_example(
     Buffer *output_, const char *name, const char *snapshot_name, const char *source,

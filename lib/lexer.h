@@ -78,6 +78,7 @@ const char *lex_result_name(lex_result);
 void       token_begin(token *, const char *);
 lex_result token_next(token *, lex_flags);
 string     token_string(token);
+string     token_ident(token);
 loc        token_loc(token, const char *);
 bool       token_is_comment(token);
 bool       token_is_binary_op(token);

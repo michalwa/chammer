@@ -275,7 +275,7 @@ static void visit_expr(Compiler *, Block **, Scope *, node *);
 static void visit_pattern(Compiler *, Block **, Block **fail, Scope *, node *lhs, node *rhs);
 
 static void visit_ident(Compiler *c, Block **b, Scope *s, node *n) {
-    string name = token_string(n->token);
+    string name = token_ident(n->token);
     symbol sym = string_pool_intern(&c->idents, name);
 
     uint8_t id;
