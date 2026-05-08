@@ -2,7 +2,7 @@
 #include "lib/test.h"
 
 static int test_string_map(StringMap *m, Buffer *output_) {
-    int value, old_value;
+    int value, old_value, sum;
 
     value = 42;
     ASSERT(!string_map_put(m, STRING("foo"), &value, NULL));
@@ -18,6 +18,11 @@ static int test_string_map(StringMap *m, Buffer *output_) {
 
     ASSERT(string_map_get(m, STRING("bar"), &value));
     ASSERT_INT_EQ(value, 1);
+
+    sum = 0;
+    for (string_map_iter i = string_map_iter_begin(m); string_map_iter_next(&i);)
+        sum += *(int *)i.entry->value;
+    ASSERT_INT_EQ(sum, 43);
 
     string_map_free(m);
     return TEST_OK;

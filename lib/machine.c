@@ -1,14 +1,10 @@
 #include "machine.h"
 
-#include "builtin/each.h"
-#include "builtin/function.h"
-#include "builtin/math.h"
-#include "builtin/stdio.h"
-#include "builtin/string.h"
-#include "builtin/time.h"
 #include "bytecode.h"
 #include "bytes.h"
+#include "module.h"
 #include "utils.h"
+#include "value.h"
 #include "vector.h"
 
 #define vm_debug_assert(m, expr)                                                               \
@@ -38,6 +34,7 @@ void machine_init(Machine *m, const program *prog) {
     m->prog = prog;
     buffer_init(&m->fnstack);
     vector_init(&m->opstack, HValue);
+    vector_init(&m->modules, Module);
     m->ip = prog->bytecode;
 }
 
@@ -45,9 +42,15 @@ void machine_free(Machine *m) {
     while (m->fnstack.len > 0) pop_frame(m);
 
     for (EACH_IN_VECTOR(m->opstack, HValue, value)) hvalue_drop(*value);
+    for (EACH_IN_VECTOR(m->modules, Module, module)) module_free(module);
 
     buffer_free(&m->fnstack);
     vector_free(&m->opstack);
+    vector_free(&m->modules);
+}
+
+void machine_add_module(Machine *m, Module module) {
+    *(Module *)vector_push(&m->modules) = module;
 }
 
 static inline void push_frame(Machine *m, uint32_t fnindex) {
@@ -226,28 +229,16 @@ static void op_check_type(Machine *m, hvalue_type type) {
 }
 
 static void load_extern(Machine *m, string name) {
-    if (string_eq(name, STRING("print")))
-        opstack_push(m, hnative_make_print());
-    else if (string_eq(name, STRING("get_time")))
-        opstack_push(m, hnative_make_get_time());
-    else if (string_eq(name, STRING("id")))
-        opstack_push(m, hnative_make_id());
-    else if (string_eq(name, STRING("const")))
-        opstack_push(m, hnative_make_const());
-    else if (string_eq(name, STRING("each")))
-        opstack_push(m, hnative_make_each());
-    else if (string_eq(name, STRING("++")))
-        opstack_push(m, hnative_make_string_concat());
-    else if (string_eq(name, STRING("+")))
-        opstack_push(m, hnative_make_add());
-    else if (string_eq(name, STRING("-")))
-        opstack_push(m, hnative_make_sub());
-    else if (string_eq(name, STRING("*")))
-        opstack_push(m, hnative_make_mul());
-    else if (string_eq(name, STRING("/")))
-        opstack_push(m, hnative_make_div());
-    else
-        panic("unresolved symbol: " F_STRING, FA_STRING(name));
+    const HValue *value;
+
+    for (EACH_IN_VECTOR(m->modules, Module, module)) {
+        if (module_get(module, name, &value)) {
+            opstack_push(m, hvalue_ref(value));
+            return;
+        }
+    }
+
+    panic("unresolved symbol: " F_STRING, FA_STRING(name));
 }
 
 static void op_concat(Machine *m) {

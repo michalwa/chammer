@@ -30,6 +30,12 @@ typedef struct {
     Arena              entries;
 } StringMap;
 
+typedef struct {
+    const StringMap  *map;
+    size_t            bucket;
+    string_map_entry *entry;
+} string_map_iter;
+
 void string_map_init_(StringMap *, size_t value_size);
 void string_map_init_buckets_(StringMap *, size_t value_size, size_t num_buckets);
 void string_map_free(StringMap *);
@@ -50,5 +56,8 @@ bool string_map_get(const StringMap *, string key, void *value);
  * `NULL` if not found.
  */
 const string_map_entry *string_map_get_entry(const StringMap *, string key);
+
+string_map_iter string_map_iter_begin(const StringMap *);
+bool            string_map_iter_next(string_map_iter *);
 
 #endif // HAMEMR_STRING_MAP_H_

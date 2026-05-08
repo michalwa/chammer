@@ -89,3 +89,24 @@ bool string_map_get(const StringMap *m, string key, void *value) {
 const string_map_entry *string_map_get_entry(const StringMap *m, string key) {
     return *string_map_get_entry_(m, key, NULL, NULL);
 }
+
+string_map_iter string_map_iter_begin(const StringMap *m) {
+    return (string_map_iter){
+        .map = m,
+        .bucket = 0,
+        .entry = NULL,
+    };
+}
+
+bool string_map_iter_next(string_map_iter *iter) {
+    if (iter->entry && iter->entry->next) {
+        iter->entry = iter->entry->next;
+        return true;
+    }
+
+    iter->entry = NULL;
+    while (!iter->entry && iter->bucket < iter->map->num_buckets)
+        iter->entry = iter->map->bucket_heads[iter->bucket++];
+
+    return !!iter->entry;
+}
