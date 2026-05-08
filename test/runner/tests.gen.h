@@ -23,6 +23,8 @@
     _(snapshot_diff)                    \
     _(snapshot_diff_empty_lines)        \
     _(snapshot_diff_line_endings)       \
+    _(string_map_single_bucket)         \
+    _(string_map_ten_buckets)           \
     _(string_pool)                      \
     _(buffer_print_c_string_literal)    \
     _(hvalue_ownership)                 \

@@ -146,7 +146,7 @@ static bool scope_resolve_symbol(Scope *s, symbol name, uint8_t *id) {
     return false;
 }
 
-static void scope_debug_print(Compiler *c, Scope *s, FILE *f) {
+static void scope_debug_print(Scope *s, FILE *f) {
     fprintf(f, "scope stack, inner-most first:\n");
 
     for (size_t i = 0; s; s = s->outer, i++) {
@@ -154,14 +154,14 @@ static void scope_debug_print(Compiler *c, Scope *s, FILE *f) {
 
         for (size_t j = 0; j < s->locals.len; j++) {
             symbol *sym = (symbol *)vector_get(&s->locals, j);
-            fprintf(f, " " F_STRING, FA_STRING(string_pool_get(&c->idents, *sym)));
+            fprintf(f, " " F_STRING, FA_STRING(symbol_string(*sym)));
         }
 
         fprintf(f, "\n  captures:");
 
         for (size_t j = 0; j < s->captures.len; j++) {
             symbol *sym = (symbol *)vector_get(&s->captures, j);
-            fprintf(f, " " F_STRING, FA_STRING(string_pool_get(&c->idents, *sym)));
+            fprintf(f, " " F_STRING, FA_STRING(symbol_string(*sym)));
         }
 
         fprintf(f, "\n");
@@ -188,12 +188,12 @@ static uint32_t push_func(
 
     if (name) {
         // Make function name accessible at runtime for debug traces
-        string             name_str = string_pool_get(&c->idents, *name);
-        symbol             sym = string_pool_intern(&c->strings, name_str);
-        string_pool_entry *name_entry = (string_pool_entry *)vector_get(&c->strings.entries, sym);
+        string            name_str = symbol_string(*name);
+        symbol            sym = string_pool_intern(&c->strings, name_str);
+        string_pool_entry name_entry = string_pool_get_entry(&c->strings, sym);
 
-        f->name_offset = name_entry->offset;
-        f->name_len = name_entry->len;
+        f->name_offset = name_entry.offset;
+        f->name_len = name_entry.len;
     } else {
         f->name_offset = 0;
         f->name_len = 0;
@@ -214,14 +214,14 @@ static void put_jump(Compiler *c, opcode op, Block *origin, Block *target) {
  * Stores captures as locals (in reverse order, because they are pushed onto the
  * stack in the original order)
  */
-static void put_store_captures(Compiler *c, Block *b, Scope *inner_scope) {
+static void put_store_captures(Block *b, Scope *inner_scope) {
     for (int i = inner_scope->captures.len - 1; i >= 0; i--) {
         symbol *capture = (symbol *)vector_get(&inner_scope->captures, i);
         uint8_t inner_local;
 
         if (!scope_get_local(inner_scope, *capture, &inner_local)) {
-            scope_debug_print(c, inner_scope, stderr);
-            panic("unused capture: " F_STRING, FA_STRING(string_pool_get(&c->idents, *capture)));
+            scope_debug_print(inner_scope, stderr);
+            panic("unused capture: " F_STRING, FA_STRING(symbol_string(*capture)));
         }
 
         bytecode_put_store(&b->bytecode, inner_local);
@@ -231,16 +231,14 @@ static void put_store_captures(Compiler *c, Block *b, Scope *inner_scope) {
 /*
  * Loads captures from outer locals
  */
-static void put_load_captures(Compiler *c, Block *b, Scope *inner_scope, Scope *outer_scope) {
+static void put_load_captures(Block *b, Scope *inner_scope, Scope *outer_scope) {
     for (size_t i = 0; i < inner_scope->captures.len; i++) {
         symbol *capture = (symbol *)vector_get(&inner_scope->captures, i);
         uint8_t outer_local;
 
         if (!scope_get_local(outer_scope, *capture, &outer_local)) {
-            scope_debug_print(c, outer_scope, stderr);
-            panic(
-                "unresolved capture: " F_STRING, FA_STRING(string_pool_get(&c->idents, *capture))
-            );
+            scope_debug_print(outer_scope, stderr);
+            panic("unresolved capture: " F_STRING, FA_STRING(symbol_string(*capture)));
         }
 
         bytecode_put_load(&b->bytecode, outer_local);
@@ -253,19 +251,18 @@ static void put_load_captures(Compiler *c, Block *b, Scope *inner_scope, Scope *
 static void put_load_externs(Compiler *c, Block *b, Scope *scope) {
     for (size_t i = 0; i < scope->captures.len; i++) {
         symbol *sym = (symbol *)vector_get(&scope->captures, i);
-        string  name = string_pool_get(&c->idents, *sym);
+        string  name = symbol_string(*sym);
         uint8_t local;
 
         if (!scope_get_local(scope, *sym, &local)) {
-            scope_debug_print(c, scope, stderr);
+            scope_debug_print(scope, stderr);
             panic("missing local for extern: " F_STRING, FA_STRING(name));
         }
 
-        symbol             name_sym = string_pool_intern(&c->strings, name);
-        string_pool_entry *name_entry =
-            (string_pool_entry *)vector_get(&c->strings.entries, name_sym);
+        symbol            name_sym = string_pool_intern(&c->strings, name);
+        string_pool_entry name_entry = string_pool_get_entry(&c->strings, name_sym);
 
-        bytecode_put_pushstr(&b->bytecode, name_entry->offset, name_entry->len);
+        bytecode_put_pushstr(&b->bytecode, name_entry.offset, name_entry.len);
         buffer_putc(&b->bytecode, (char)OP_LOADEXT);
         bytecode_put_store(&b->bytecode, local);
     }
@@ -280,7 +277,7 @@ static void visit_ident(Compiler *c, Block **b, Scope *s, node *n) {
 
     uint8_t id;
     if (!scope_resolve_symbol(s, sym, &id)) {
-        scope_debug_print(c, s, stderr);
+        scope_debug_print(s, stderr);
         panic("unresolved symbol: " F_STRING, FA_STRING(name));
     }
 
@@ -291,11 +288,11 @@ static void visit_string(Compiler *c, Block **b, Scope *s, node *n) {
     (void)s;
 
     compile_string(token_string(n->token), &c->string_buffer);
-    symbol             sym = string_pool_intern(&c->strings, buffer_string(&c->string_buffer));
-    string_pool_entry *e = (string_pool_entry *)vector_get(&c->strings.entries, sym);
+    symbol            sym = string_pool_intern(&c->strings, buffer_string(&c->string_buffer));
+    string_pool_entry e = string_pool_get_entry(&c->strings, sym);
 
     buffer_clear(&c->string_buffer);
-    bytecode_put_pushstr(&(*b)->bytecode, e->offset, e->len);
+    bytecode_put_pushstr(&(*b)->bytecode, e.offset, e.len);
 }
 
 static void visit_int(Compiler *c, Block **b, Scope *s, node *n) {
@@ -420,8 +417,8 @@ static void visit_match(Compiler *c, Block **b, Scope *s, node *n) {
             buffer_putc(&case_body->bytecode, OP_PUSHTRUE); // `true` means success
             buffer_putc(&case_body->bytecode, OP_RETURN);
 
-            put_store_captures(c, prelude, &inner_scope);
-            put_load_captures(c, *b, &inner_scope, s);
+            put_store_captures(prelude, &inner_scope);
+            put_load_captures(*b, &inner_scope, s);
             uint32_t fnindex = push_func(c, prelude, &inner_scope, 1, FN_CASE, NULL);
             bytecode_put_call(&(*b)->bytecode, fnindex);
 
@@ -493,8 +490,8 @@ static void visit_function(
 
     if (fail) buffer_putc(&fail->bytecode, (char)OP_HALT); // TODO: raise error
 
-    put_store_captures(c, prelude, &inner_scope);
-    put_load_captures(c, *b, &inner_scope, s);
+    put_store_captures(prelude, &inner_scope);
+    put_load_captures(*b, &inner_scope, s);
 
     uint32_t fnindex;
     if (name)
@@ -552,9 +549,9 @@ static void visit_block_body(Compiler *c, Block **b, Scope *s, node *head) {
         visit_block_body(c, &body, &inner_scope, head);
         buffer_putc(&body->bytecode, OP_RETURN);
 
-        put_store_captures(c, prelude, &inner_scope);
+        put_store_captures(prelude, &inner_scope);
         uint32_t fnindex = push_func(c, prelude, &inner_scope, 0, FN_BLOCK, NULL);
-        put_load_captures(c, *b, &inner_scope, s);
+        put_load_captures(*b, &inner_scope, s);
         bytecode_put_call(&(*b)->bytecode, fnindex);
     } else {
         switch (head->type) {
@@ -564,9 +561,9 @@ static void visit_block_body(Compiler *c, Block **b, Scope *s, node *head) {
             visit_block_body(c, &body, &inner_scope, head->next_sibling);
             buffer_putc(&body->bytecode, OP_RETURN);
 
-            put_store_captures(c, prelude, &inner_scope);
+            put_store_captures(prelude, &inner_scope);
             fnindex = push_func(c, prelude, &inner_scope, 1, FN_BLOCK, NULL);
-            put_load_captures(c, *b, &inner_scope, s);
+            put_load_captures(*b, &inner_scope, s);
             bytecode_put_makecls(&(*b)->bytecode, fnindex);
 
             visit_expr(c, b, s, rhs);
@@ -578,9 +575,9 @@ static void visit_block_body(Compiler *c, Block **b, Scope *s, node *head) {
             visit_block_body(c, &body, &inner_scope, head->next_sibling);
             buffer_putc(&body->bytecode, OP_RETURN);
 
-            put_store_captures(c, prelude, &inner_scope);
+            put_store_captures(prelude, &inner_scope);
             fnindex = push_func(c, prelude, &inner_scope, 1, FN_BLOCK, NULL);
-            put_load_captures(c, *b, &inner_scope, s);
+            put_load_captures(*b, &inner_scope, s);
             bytecode_put_makecls(&(*b)->bytecode, fnindex);
 
             visit_expr(c, b, s, head->first_child);
@@ -754,8 +751,8 @@ void compiler_visit_program(Compiler *c, node *n) {
 void compiler_write_program(Compiler *c, Buffer *b) {
     buffer_puts(b, STRING(MAGIC_HAMMER));
     buffer_put_u16be(b, BYTECODE_VERSION);
-    buffer_put_u32be(b, CHECKED_U32(c->strings.buffer.len));
-    buffer_puts(b, buffer_string(&c->strings.buffer));
+    buffer_put_u32be(b, CHECKED_U32(string_pool_size(&c->strings)));
+    buffer_puts(b, string_pool_contents(&c->strings));
     buffer_put_u32be(b, CHECKED_U32(c->funcs.len));
 
     Block *prelude_block = (Block *)arena_head(&c->blocks);
