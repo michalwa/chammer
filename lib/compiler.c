@@ -531,7 +531,12 @@ static void visit_lambda(Compiler *c, Block **b, Scope *s, node *n, symbol *name
 }
 
 static void visit_block_body(Compiler *c, Block **b, Scope *s, node *head) {
-    if (!head->next_sibling) {
+    if (!head) {
+        bytecode_put_maketuple(&(*b)->bytecode, 0);
+        return;
+    }
+
+    if (node_type_is_expr(head->type)) {
         visit_expr(c, b, s, head);
         return;
     }

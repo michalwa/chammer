@@ -31,4 +31,4 @@ let do_stuff = do {
 
 print do_stuff;
 do_stuff;
-do_stuff
+do_stuff;

@@ -8,6 +8,25 @@ const char *node_type_name(node_type value) {
     RETURN_ENUM_NAME(node_type, value, EACH_NODE_TYPE);
 }
 
+bool node_type_is_expr(node_type type) {
+    switch (type) {
+    case N_IDENT:
+    case N_STRING:
+    case N_INT:
+    case N_DEC:
+    case N_TUPLE:
+    case N_LIST:
+    case N_UNARY:
+    case N_BINARY:
+    case N_APPLY:
+    case N_IF:
+    case N_MATCH:
+    case N_LAMBDA:
+    case N_BLOCK: return true;
+    default: return false;
+    }
+}
+
 bool node_has_token(node n) {
     switch (n.type) {
     case N_IDENT:

@@ -64,6 +64,7 @@ const char *node_type_name(node_type);
 
 #define node_add_children(parent, ...) node_add_children_(parent, ARGC(__VA_ARGS__), __VA_ARGS__)
 
+bool node_type_is_expr(node_type type);
 bool node_has_token(node n);
 void node_print(node, Buffer *);
 void node_add_children_(node *parent, int n, ...);

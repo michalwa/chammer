@@ -1,0 +1,6 @@
+{}
+
+  00000000  OP_CALL 0 (<global> @ 00000005)
+<global>  0 locals, 0 captures, 0 args
+  00000005  OP_MAKETUPLE 0
+  00000008  OP_YIELD

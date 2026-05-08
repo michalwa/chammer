@@ -5,6 +5,7 @@
 #include "lib/test.h"
 
 #define EACH_EXAMPLE(_)                                                                        \
+    _("empty", "")                                                                             \
     _("int", "42")                                                                             \
     _("string", "\"foo\"")                                                                     \
     _("tuple", "(1, 2, 3)")                                                                    \
@@ -34,7 +35,9 @@
         "let_rec",                                                                           \
         "let rec map f xs = match xs case [] then [] case [x, ...rest] then [f x, ...map f " \
         "rest]; map (\\x -> x + 1) [1, 2, 3]"                                                \
-    )
+    ) \
+    _("block_empty", "{}")                                                                     \
+    _("block_no_tail_expr", "{ print 1; print 2; }")
 
 static int run_example(
     Buffer *output_, const char *name, const char *snapshot_name, const char *source,
