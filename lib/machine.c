@@ -2,6 +2,7 @@
 
 #include "builtin/each.h"
 #include "builtin/function.h"
+#include "builtin/math.h"
 #include "builtin/stdio.h"
 #include "builtin/string.h"
 #include "builtin/time.h"
@@ -237,6 +238,14 @@ static void load_extern(Machine *m, string name) {
         opstack_push(m, hnative_make_each());
     else if (string_eq(name, STRING("++")))
         opstack_push(m, hnative_make_string_concat());
+    else if (string_eq(name, STRING("+")))
+        opstack_push(m, hnative_make_add());
+    else if (string_eq(name, STRING("-")))
+        opstack_push(m, hnative_make_sub());
+    else if (string_eq(name, STRING("*")))
+        opstack_push(m, hnative_make_mul());
+    else if (string_eq(name, STRING("/")))
+        opstack_push(m, hnative_make_div());
     else
         panic("unresolved symbol: " F_STRING, FA_STRING(name));
 }

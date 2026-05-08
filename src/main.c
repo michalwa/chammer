@@ -30,6 +30,12 @@ int main(int argc, char **argv) {
     token_begin(&t, input.data);
 
     parser_init(&p);
+
+    parser_define_operator(&p, STRING("+"), 500, ASSOC_LEFT);
+    parser_define_operator(&p, STRING("-"), 500, ASSOC_LEFT);
+    parser_define_operator(&p, STRING("*"), 600, ASSOC_LEFT);
+    parser_define_operator(&p, STRING("/"), 600, ASSOC_LEFT);
+
     if ((presult = parse_program(&p, &t)) != PARSE_OK)
         panic("parse failed: %s", parse_result_name(presult));
 

@@ -71,30 +71,28 @@ void parser_reset(Parser *p) {
     p->node = NULL;
 }
 
-static opdef *parser_get_operator(Parser *p, const char *name, size_t name_len) {
+static opdef *parser_get_operator(Parser *p, string name) {
     for (size_t i = 0; i < p->operators_len; i++)
-        if (strlen(p->operators[i].name) == name_len
-            && strncmp(p->operators[i].name, name, name_len) == 0)
+        if (strlen(p->operators[i].name) == name.len
+            && strncmp(p->operators[i].name, name.data, name.len) == 0)
             return &p->operators[i];
 
     return NULL;
 }
 
-void parser_define_operator(
-    Parser *p, const char *name, size_t name_len, int precedence, assoc assoc
-) {
-    opdef *op = parser_get_operator(p, name, name_len);
+void parser_define_operator(Parser *p, string name, int precedence, assoc assoc) {
+    opdef *op = parser_get_operator(p, name);
 
     if (op) {
-        fprintf(stderr, "WARN: redefinition of operator %.*s\n", (int)name_len, name);
+        fprintf(stderr, "WARN: redefinition of operator " F_STRING "\n", FA_STRING(name));
     } else {
         if (p->operators_len >= MAX_OPERATORS) panic("`MAX_OPERATORS` limit reached");
         op = &p->operators[p->operators_len++];
     }
 
-    if (name_len > OPERATOR_MAX_LEN) panic("`OPERATOR_MAX_LEN` exceeded");
+    if (name.len > OPERATOR_MAX_LEN) panic("`OPERATOR_MAX_LEN` exceeded");
 
-    strncpy(op->name, name, name_len);
+    strncpy(op->name, name.data, name.len);
     op->prec = precedence;
     op->assoc = assoc;
 }
@@ -588,7 +586,7 @@ static parse_result parse_binary_(Parser *p, token *ts, int min_prec, node *lhs)
     NEXT_TOKEN(f, peek);
 
     while (token_is_binary_op(peek)) {
-        opdef *op1 = parser_get_operator(p, peek.str, peek.len);
+        opdef *op1 = parser_get_operator(p, token_string(peek));
         int    prec1 = op1 ? op1->prec : PREC_DEFAULT;
 
         if (prec1 < min_prec) break;
@@ -601,7 +599,7 @@ static parse_result parse_binary_(Parser *p, token *ts, int min_prec, node *lhs)
             peek = f.current_token;
             if (token_next(&peek, 0) != LEX_OK || !token_is_binary_op(peek)) break;
 
-            opdef *op2 = parser_get_operator(p, peek.str, peek.len);
+            opdef *op2 = parser_get_operator(p, token_string(peek));
             int    prec2 = op2 ? op2->prec : PREC_DEFAULT;
             assoc  assoc = op2 ? op2->assoc : ASSOC_LEFT;
 

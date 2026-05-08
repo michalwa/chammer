@@ -64,7 +64,7 @@ const char *assoc_name(assoc);
 void parser_init(Parser *);
 void parser_free(Parser *);
 void parser_reset(Parser *);
-void parser_define_operator(Parser *, const char *, size_t, int precedence, assoc);
+void parser_define_operator(Parser *, string, int precedence, assoc);
 
 parse_result parse_program(Parser *, token *);
 parse_result parse_ident(Parser *, token *);

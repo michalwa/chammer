@@ -87,10 +87,10 @@ TEST(parser_full_example) {
     _("match_nested", parse_match(p, t), "match 1 case 1 then match 2 case 2 then 3 case 3 then 4")
 
 static void define_example_operators(Parser *p) {
-    parser_define_operator(p, "=>", 2, 100, ASSOC_RIGHT);
-    parser_define_operator(p, ">>", 2, 200, ASSOC_RIGHT);
-    parser_define_operator(p, "+", 1, 300, ASSOC_LEFT);
-    parser_define_operator(p, "*", 1, 400, ASSOC_LEFT);
+    parser_define_operator(p, STRING("=>"), 100, ASSOC_RIGHT);
+    parser_define_operator(p, STRING(">>"), 200, ASSOC_RIGHT);
+    parser_define_operator(p, STRING("+"), 300, ASSOC_LEFT);
+    parser_define_operator(p, STRING("*"), 400, ASSOC_LEFT);
 }
 
 TEST(parser_examples) {
