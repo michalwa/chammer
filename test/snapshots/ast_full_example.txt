@@ -29,7 +29,7 @@ N_BLOCK
       N_PLIST 
         N_PIDENT  (T_IDENT `xs`)
         N_PLTAIL NF_NAMED (T_IDENT `rest`)
-      N_BINARY  (T_OP `+`)
+      N_BINARY  (T_OP `++`)
         N_IDENT  (T_IDENT `xs`)
         N_APPLY 
           N_IDENT  (T_IDENT `concat`)
@@ -48,8 +48,8 @@ N_BLOCK
       N_PLIST 
         N_PIDENT  (T_IDENT `x`)
         N_PLTAIL NF_NAMED (T_IDENT `rest`)
-      N_BINARY  (T_OP `+`)
-        N_BINARY  (T_OP `+`)
+      N_BINARY  (T_OP `++`)
+        N_BINARY  (T_OP `++`)
           N_IDENT  (T_IDENT `x`)
           N_IDENT  (T_IDENT `separator`)
         N_APPLY 
@@ -72,10 +72,10 @@ N_BLOCK
               N_PTUPLE 
                 N_PIDENT  (T_IDENT `k`)
                 N_PIDENT  (T_IDENT `v`)
-              N_BINARY  (T_OP `+`)
-                N_BINARY  (T_OP `+`)
-                  N_BINARY  (T_OP `+`)
-                    N_BINARY  (T_OP `+`)
+              N_BINARY  (T_OP `++`)
+                N_BINARY  (T_OP `++`)
+                  N_BINARY  (T_OP `++`)
+                    N_BINARY  (T_OP `++`)
                       N_STRING  (T_STRING `" "`)
                       N_IDENT  (T_IDENT `k`)
                     N_STRING  (T_STRING `"=\""`)
@@ -88,13 +88,13 @@ N_BLOCK
           N_IDENT  (T_IDENT `join`)
           N_STRING  (T_STRING `"\n"`)
           N_IDENT  (T_IDENT `children`)
-      N_BINARY  (T_OP `+`)
-        N_BINARY  (T_OP `+`)
-          N_BINARY  (T_OP `+`)
-            N_BINARY  (T_OP `+`)
-              N_BINARY  (T_OP `+`)
-                N_BINARY  (T_OP `+`)
-                  N_BINARY  (T_OP `+`)
+      N_BINARY  (T_OP `++`)
+        N_BINARY  (T_OP `++`)
+          N_BINARY  (T_OP `++`)
+            N_BINARY  (T_OP `++`)
+              N_BINARY  (T_OP `++`)
+                N_BINARY  (T_OP `++`)
+                  N_BINARY  (T_OP `++`)
                     N_STRING  (T_STRING `"<"`)
                     N_IDENT  (T_IDENT `name`)
                   N_IDENT  (T_IDENT `str_attrs`)
@@ -130,6 +130,7 @@ N_BLOCK
               N_LIST 
               N_LIST 
                 N_STRING  (T_STRING `"Lorem ipsum dolor sit amet"`)
-  N_APPLY 
-    N_IDENT  (T_IDENT `print`)
-    N_IDENT  (T_IDENT `document`)
+  N_VOID 
+    N_APPLY 
+      N_IDENT  (T_IDENT `print`)
+      N_IDENT  (T_IDENT `document`)

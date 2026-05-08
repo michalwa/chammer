@@ -25,7 +25,6 @@
     _(OP_MAKECLS, 0x30)  /* look up function, store N captures, and push closure onto the stack */ \
     _(OP_CALLVAL, 0x31)  /* call value (e.g. closure) with N args */                               \
     _(OP_BIND, 0x32)     /* bind a monadic value to a closure */                                   \
-    _(OP_ADD, 0x40)      /* pop two values off the stack and push their sum */                     \
     _(OP_ISTUPLE, 0x50)  /* check if top value on the stack is a N-tuple (don't pop) */            \
     _(OP_TUPLEGET, 0x51) /* push N-th element of tuple on top of the stack (don't pop) */          \
     _(OP_MAKETUPLE, 0x52) /* pop N values and make a tuple */                                      \

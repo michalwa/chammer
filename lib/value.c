@@ -43,8 +43,8 @@ static void hbinding_free(HBinding *);
 
 static void hvalue_free(HValue hv) {
     switch (hv.type) {
-#define TYPE_CASE(name, data_type, data, is_rc, free, ...) \
-    case name: free(hv.data); break;
+#define TYPE_CASE(name, data_type, data, is_rc, free_fn, ...) \
+    case name: free_fn(hv.data); break;
         EACH_HVALUE_TYPE(TYPE_CASE)
 #undef TYPE_CASE
     }

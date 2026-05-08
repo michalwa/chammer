@@ -1,5 +1,5 @@
-let do_stuff = do {
-  let suffix x = x + "!";
+let do_stuff = {
+  let suffix x = x ++ "!";
 
   {-
     -- TODO: Function as monad over result type
@@ -7,7 +7,7 @@ let do_stuff = do {
     print (composed "Hello"); -- ("Hello", "Hello!")
   -}
 
-  let mapped = do {
+  let mapped = {
     let x <- ["foo", "bar", "baz"];
     [x, suffix x]
   };
@@ -21,7 +21,7 @@ let do_stuff = do {
   print (const year 123);
   print (id month);
   print day;
-  print do { print "foo"; print "bar" };
+  print { print "foo"; print "bar" };
 
   let iter = each [hour, minute, second];
   let a <- iter;

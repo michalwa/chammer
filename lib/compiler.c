@@ -309,7 +309,7 @@ static void visit_reverse_siblings(Compiler *c, Block **b, Scope *s, node *n, si
 
     visit_reverse_siblings(c, b, s, n->next_sibling, len);
     visit_expr(c, b, s, n);
-    (*len)++;
+    if (len) (*len)++;
 }
 
 static void visit_tuple(Compiler *c, Block **b, Scope *s, node *n) {
@@ -365,15 +365,7 @@ static void visit_unary(Compiler *c, Block **b, Scope *s, node *n) {
 }
 
 static void visit_binary(Compiler *c, Block **b, Scope *s, node *n) {
-    for (node *child = n->first_child; child; child = child->next_sibling)
-        visit_expr(c, b, s, child);
-
-    // TODO: Remove special case for (+), this is for testing purposes only
-    if (string_eq(token_string(n->token), STRING("+"))) {
-        buffer_putc(&(*b)->bytecode, OP_ADD);
-        return;
-    }
-
+    visit_reverse_siblings(c, b, s, n->first_child, NULL);
     visit_ident(c, b, s, n);
     bytecode_put_callval(&(*b)->bytecode, 2);
 }

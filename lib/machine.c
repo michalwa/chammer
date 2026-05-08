@@ -3,6 +3,7 @@
 #include "builtin/each.h"
 #include "builtin/function.h"
 #include "builtin/stdio.h"
+#include "builtin/string.h"
 #include "builtin/time.h"
 #include "bytecode.h"
 #include "bytes.h"
@@ -77,15 +78,15 @@ static inline void pop_frame(Machine *m) {
     buffer_truncate(&m->fnstack, f->return_sp);
 }
 
-static inline void load_local(Machine *m, uint8_t i) {
+static inline void op_load(Machine *m, uint8_t i) {
     *(HValue *)vector_push(&m->opstack) = hvalue_ref(get_local(m, i));
 }
 
-static inline void store_local(Machine *m, uint8_t i) {
+static inline void op_store(Machine *m, uint8_t i) {
     vm_debug_assert(m, vector_pop(&m->opstack, get_local(m, i)));
 }
 
-static inline void opstack_dup(Machine *m) {
+static inline void op_dup(Machine *m) {
     const HValue *last = (HValue *)vector_last(&m->opstack);
     *(HValue *)vector_push(&m->opstack) = hvalue_ref(last);
 }
@@ -160,7 +161,7 @@ static void call_native(Machine *m, HValue native, uint8_t args) {
     }
 }
 
-static void call_value(Machine *m, uint8_t args) {
+static void op_callval(Machine *m, uint8_t args) {
     HValue value;
     vm_debug_assert(m, vector_pop(&m->opstack, &value));
 
@@ -171,7 +172,7 @@ static void call_value(Machine *m, uint8_t args) {
     }
 }
 
-static void check_tuple(Machine *m, uint16_t len) {
+static void op_istuple(Machine *m, uint16_t len) {
     HValue *tuple = (HValue *)vector_last(&m->opstack);
 
     if (tuple->type == V_TUPLE)
@@ -180,11 +181,11 @@ static void check_tuple(Machine *m, uint16_t len) {
         opstack_push(m, hvalue_make(V_FALSE));
 }
 
-static void tuple_get(Machine *m, uint16_t i) {
+static void op_tupleget(Machine *m, uint16_t i) {
     opstack_push(m, hvalue_tuple_get((HValue *)vector_last(&m->opstack), i));
 }
 
-static void make_tuple(Machine *m, uint16_t len) {
+static void op_maketuple(Machine *m, uint16_t len) {
     HTupleBuilder tb = htuple_begin(len);
 
     for (uint16_t i = 0; i < len; i++) {
@@ -196,7 +197,7 @@ static void make_tuple(Machine *m, uint16_t len) {
     opstack_push(m, htuple_end(tb));
 }
 
-static void make_list(Machine *m, uint16_t len) {
+static void op_makelist(Machine *m, uint16_t len) {
     opstack_push(m, hvalue_make(V_NIL));
 
     for (uint16_t i = 0; i < len; i++) {
@@ -208,7 +209,7 @@ static void make_list(Machine *m, uint16_t len) {
     }
 }
 
-static void uncons(Machine *m) {
+static void op_uncons(Machine *m) {
     HValue cons, head, tail;
     vm_debug_assert(m, vector_pop(&m->opstack, &cons));
 
@@ -218,7 +219,7 @@ static void uncons(Machine *m) {
     opstack_push(m, head);
 }
 
-static void check_type(Machine *m, hvalue_type type) {
+static void op_check_type(Machine *m, hvalue_type type) {
     const HValue *value = vector_last(&m->opstack);
     opstack_push(m, hvalue_make_bool(value->type == type));
 }
@@ -234,11 +235,13 @@ static void load_extern(Machine *m, string name) {
         opstack_push(m, hnative_make_const());
     else if (string_eq(name, STRING("each")))
         opstack_push(m, hnative_make_each());
+    else if (string_eq(name, STRING("++")))
+        opstack_push(m, hnative_make_string_concat());
     else
         panic("unresolved symbol: " F_STRING, FA_STRING(name));
 }
 
-static void concat(Machine *m) {
+static void op_concat(Machine *m) {
     HValue a, b;
     vm_debug_assert(m, vector_pop(&m->opstack, &a));
     vm_debug_assert(m, vector_pop(&m->opstack, &b));
@@ -246,7 +249,7 @@ static void concat(Machine *m) {
     opstack_push(m, hvalue_list_concat(a, b));
 }
 
-static void make_bind(Machine *m) {
+static void op_bind(Machine *m) {
     HValue monad, then;
     vm_debug_assert(m, vector_pop(&m->opstack, &monad));
     vm_debug_assert(m, vector_pop(&m->opstack, &then));
@@ -254,32 +257,11 @@ static void make_bind(Machine *m) {
     opstack_push(m, hvalue_bind(monad, then, m));
 }
 
-static void do_yield(Machine *m) {
+static void op_yield(Machine *m) {
     HValue effect;
     vm_debug_assert(m, vector_pop(&m->opstack, &effect));
 
     hvalue_yield(&effect, m, NULL);
-}
-
-// TODO: Make this a native/builtin, this is for debugging only
-static void add_operands(Machine *m) {
-    HValue a, b;
-    vm_debug_assert(m, vector_pop(&m->opstack, &a));
-    vm_debug_assert(m, vector_pop(&m->opstack, &b));
-
-    if (a.type == V_STRING && b.type == V_STRING) {
-        Buffer concat;
-        buffer_init(&concat);
-        buffer_puts(&concat, hvalue_string_get(&b));
-        buffer_puts(&concat, hvalue_string_get(&a));
-        opstack_push(m, hvalue_make_string(buffer_string(&concat)));
-        buffer_free(&concat);
-    } else {
-        panic(
-            "unsupported operands for (+): %s, %s", hvalue_type_name(a.type),
-            hvalue_type_name(b.type)
-        );
-    }
 }
 
 static void op_eq(Machine *m) {
@@ -321,9 +303,9 @@ bool machine_step(Machine *m) {
         return true;
     case OP_CALL: push_frame(m, read_u32be(&m->ip)); return true;
     case OP_RETURN: pop_frame(m); return true;
-    case OP_LOAD: load_local(m, *m->ip++); return true;
-    case OP_STORE: store_local(m, *m->ip++); return true;
-    case OP_DUP: opstack_dup(m); return true;
+    case OP_LOAD: op_load(m, *m->ip++); return true;
+    case OP_STORE: op_store(m, *m->ip++); return true;
+    case OP_DUP: op_dup(m); return true;
     case OP_POP:
         vm_debug_assert(m, vector_pop(&m->opstack, &value));
         hvalue_drop(value);
@@ -340,24 +322,23 @@ bool machine_step(Machine *m) {
     case OP_PUSHTRUE: opstack_push(m, hvalue_make(V_TRUE)); return true;
     case OP_PUSHFALSE: opstack_push(m, hvalue_make(V_FALSE)); return true;
     case OP_MAKECLS: opstack_push(m, make_closure(m, read_u32be(&m->ip))); return true;
-    case OP_CALLVAL: call_value(m, *m->ip++); return true;
-    case OP_BIND: make_bind(m); return true;
-    case OP_ADD: add_operands(m); return true;
-    case OP_ISTUPLE: check_tuple(m, read_u16be(&m->ip)); return true;
-    case OP_TUPLEGET: tuple_get(m, read_u16be(&m->ip)); return true;
-    case OP_MAKETUPLE: make_tuple(m, read_u16be(&m->ip)); return true;
-    case OP_MAKELIST: make_list(m, read_u16be(&m->ip)); return true;
-    case OP_ISNIL: check_type(m, V_NIL); return true;
-    case OP_ISCONS: check_type(m, V_CONS); return true;
-    case OP_UNCONS: uncons(m); return true;
-    case OP_CONCAT: concat(m); return true;
+    case OP_CALLVAL: op_callval(m, *m->ip++); return true;
+    case OP_BIND: op_bind(m); return true;
+    case OP_ISTUPLE: op_istuple(m, read_u16be(&m->ip)); return true;
+    case OP_TUPLEGET: op_tupleget(m, read_u16be(&m->ip)); return true;
+    case OP_MAKETUPLE: op_maketuple(m, read_u16be(&m->ip)); return true;
+    case OP_MAKELIST: op_makelist(m, read_u16be(&m->ip)); return true;
+    case OP_ISNIL: op_check_type(m, V_NIL); return true;
+    case OP_ISCONS: op_check_type(m, V_CONS); return true;
+    case OP_UNCONS: op_uncons(m); return true;
+    case OP_CONCAT: op_concat(m); return true;
     case OP_EQ: op_eq(m); return true;
     case OP_LOADEXT:
         vm_debug_assert(m, vector_pop(&m->opstack, &value));
         load_extern(m, hvalue_string_get(&value));
         hvalue_drop(value);
         return true;
-    case OP_YIELD: do_yield(m); return false;
+    case OP_YIELD: op_yield(m); return false;
     case OP_HALT: return false;
     default:
         panic(
@@ -378,7 +359,7 @@ HValue machine_call_(Machine *m, HValue callee, size_t argc, HValue *args) {
     size_t initial_sp = m->fnstack.len;
 
     opstack_push(m, callee);
-    call_value(m, argc);
+    op_callval(m, argc);
 
     while (m->fnstack.len > initial_sp && machine_step(m));
 
