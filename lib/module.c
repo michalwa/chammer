@@ -18,6 +18,10 @@ void module_define(Module *m, string name, HValue value) {
     string_map_put(&m->members, name, &value, NULL);
 }
 
+inline void module_define_native(Module *m, HValue value) {
+    module_define(m, string_from_cstr(hvalue_native_name(&value)), value);
+}
+
 bool module_get(Module *m, string name, const HValue **value) {
     const string_map_entry *entry = string_map_get_entry(&m->members, name);
     if (!entry) return false;

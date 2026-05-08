@@ -13,6 +13,10 @@ typedef struct Module {
 void module_init(Module *);
 void module_free(Module *);
 void module_define(Module *, string name, HValue value);
+/*
+ * Shorthand for defining a native value using the name from its metadata
+ */
+void module_define_native(Module *, HValue value);
 bool module_get(Module *, string name, const HValue **value);
 
 #endif // HAMMER_MODULE_H_
