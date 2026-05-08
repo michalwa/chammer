@@ -14,15 +14,15 @@ UBENCH_F_SETUP(parse_binary) {
     Buffer *buffer = &ubench_fixture->input;
 
     parser_init(p);
-    parser_define_operator(p, "*", 1, 600, ASSOC_LEFT);
-    parser_define_operator(p, "+", 1, 500, ASSOC_LEFT);
-    parser_define_operator(p, "-", 1, 500, ASSOC_LEFT);
-    parser_define_operator(p, "&", 1, 400, ASSOC_LEFT);
-    parser_define_operator(p, "|", 1, 400, ASSOC_LEFT);
-    parser_define_operator(p, "<", 1, 300, ASSOC_LEFT);
-    parser_define_operator(p, ">", 1, 300, ASSOC_LEFT);
-    parser_define_operator(p, "$", 1, 200, ASSOC_RIGHT);
-    parser_define_operator(p, "#", 1, 100, ASSOC_RIGHT);
+    parser_define_operator(p, STRING("*"), 600, ASSOC_LEFT);
+    parser_define_operator(p, STRING("+"), 500, ASSOC_LEFT);
+    parser_define_operator(p, STRING("-"), 500, ASSOC_LEFT);
+    parser_define_operator(p, STRING("&"), 400, ASSOC_LEFT);
+    parser_define_operator(p, STRING("|"), 400, ASSOC_LEFT);
+    parser_define_operator(p, STRING("<"), 300, ASSOC_LEFT);
+    parser_define_operator(p, STRING(">"), 300, ASSOC_LEFT);
+    parser_define_operator(p, STRING("$"), 200, ASSOC_RIGHT);
+    parser_define_operator(p, STRING("#"), 100, ASSOC_RIGHT);
 
     buffer_init(buffer);
     buffer_putc(buffer, 'a');
