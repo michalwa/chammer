@@ -7,19 +7,20 @@
 #include "machine.h"
 #include "string.h"
 
-#define EACH_HVALUE_TYPE(_)                                                  \
-    /* _(name, data_type, data, is_rc, free, clone) */                       \
-    _(V_INT, h_int, v_int, false, (void), HVALUE_COPY)                       \
-    _(V_FLOAT, h_float, v_float, false, (void), HVALUE_COPY)                 \
-    _(V_STRING, HString *, v_string, true, (void), hstring_clone)            \
-    _(V_CLOSURE, HClosure *, v_closure, true, hclosure_free, hclosure_clone) \
-    _(V_TRUE, h_unit, v_true, false, (void), HVALUE_COPY)                    \
-    _(V_FALSE, h_unit, v_false, false, (void), HVALUE_COPY)                  \
-    _(V_NIL, h_unit, v_nil, false, (void), HVALUE_COPY)                      \
-    _(V_CONS, HCons *, v_cons, true, hcons_free, hcons_clone)                \
-    _(V_TUPLE, HTuple *, v_tuple, true, htuple_free, htuple_clone)           \
-    _(V_NATIVE, HNative *, v_native, true, hnative_free, hnative_clone)      \
-    _(V_BINDING, HBinding *, v_binding, true, hbinding_free, hbinding_clone)
+#define EACH_HVALUE_TYPE(_)                                                 \
+    /* _(name, data_type, data, strategy) */                                \
+    _(V_INT, h_int, v_int, _COPY)                                           \
+    _(V_FLOAT, h_float, v_float, _COPY)                                     \
+    _(V_STRING, HString *, v_string, _RC(free, hstring_clone))              \
+    _(V_SUBSTR, HSubstr, v_substr, _RC(hsubstr_free, hsubstr_clone))        \
+    _(V_CLOSURE, HClosure *, v_closure, _RC(hclosure_free, hclosure_clone)) \
+    _(V_TRUE, h_unit, v_true, _COPY)                                        \
+    _(V_FALSE, h_unit, v_false, _COPY)                                      \
+    _(V_NIL, h_unit, v_nil, _COPY)                                          \
+    _(V_CONS, HCons *, v_cons, _RC(hcons_free, hcons_clone))                \
+    _(V_TUPLE, HTuple *, v_tuple, _RC(htuple_free, htuple_clone))           \
+    _(V_NATIVE, HNative *, v_native, _RC(hnative_free, hnative_clone))      \
+    _(V_BINDING, HBinding *, v_binding, _RC(hbinding_free, hbinding_clone))
 
 #define ENUM_MEMBER(name, ...) name,
 typedef enum { EACH_HVALUE_TYPE(ENUM_MEMBER) } hvalue_type;
@@ -32,6 +33,7 @@ typedef void           *h_unit;
 typedef int64_t         h_int;
 typedef double          h_float;
 typedef struct HString  HString;
+typedef struct HSubstr  HSubstr;
 typedef struct HClosure HClosure;
 typedef struct HBinding HBinding;
 typedef struct HCons    HCons;
@@ -43,6 +45,16 @@ typedef struct HNative  HNative;
  * of binding a `HNative` with the `HNATIVE_GENERIC_EFFECT` flag set.
  */
 typedef struct HBinding HBinding;
+
+/*
+ * Substr is itself not reference-counted, but acts as if it were just another
+ * RC reference to the full string
+ */
+struct HSubstr {
+    const HString *string; // must be the first field, because it contains `hvalue_header`!
+    size_t         offset;
+    size_t         len;
+};
 
 /*
  * A Hammer value
@@ -141,10 +153,6 @@ const char *hvalue_type_name(hvalue_type);
 hvalue_header *hvalue_header_(const HValue *);
 
 /*
- * Checks whether the value contains reference-counted allocations
- */
-bool   hvalue_is_rc(const HValue *);
-/*
  * Make a shared reference to the value by incrementing the reference count
  */
 HValue hvalue_ref(const HValue *);
@@ -197,6 +205,7 @@ HValue hvalue_make_unit(void);
 HValue hvalue_make_bool(bool);
 HValue hvalue_make_int(int64_t);
 HValue hvalue_make_string(string);
+HValue hvalue_make_substr(HValue string, size_t offset, size_t len);
 HValue hvalue_make_closure(uint32_t fnindex, uint8_t args);
 HValue hvalue_make_cons(HValue head, HValue tail);
 HValue hvalue_make_native(const hnative_meta *, void *);

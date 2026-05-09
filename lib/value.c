@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "buffer.h"
 #include "machine.h"
 #include "utils.h"
 
@@ -15,26 +16,28 @@ const char *hvalue_type_name(hvalue_type type) {
     RETURN_ENUM_NAME_V(hvalue_type, type, EACH_HVALUE_TYPE);
 }
 
-bool hvalue_is_rc(const HValue *hv) {
-    switch (hv->type) {
-#define TYPE_CASE(name, data_type, data, is_rc, ...)                      \
-    /* unit tuples are represented by a NULL pointer and don't need RC */ \
-    case name: return is_rc && hv->data;
-
-        EACH_HVALUE_TYPE(TYPE_CASE)
-#undef TYPE_CASE
-    }
-}
-
 inline hvalue_header *hvalue_header_(const HValue *hv) {
     return (hvalue_header *)hv->v_any;
 }
 
 inline HValue hvalue_ref(const HValue *hv) {
-    if (hvalue_is_rc(hv)) hvalue_header_(hv)->rc++;
-    return *hv;
+    switch (hv->type) {
+#define TYPE_CASE(name, data_type, data, strategy) \
+    case name: return strategy;
+#define _COPY *hv
+#define _RC(...)                                                     \
+    /* for some RC types like `V_TUPLE` the pointer may be `NULL` */ \
+    (hv->v_any && hvalue_header_(hv)->rc++, *hv)
+
+        EACH_HVALUE_TYPE(TYPE_CASE)
+
+#undef TYPE_CASE
+#undef _COPY
+#undef _RC
+    }
 }
 
+static void hsubstr_free(HSubstr);
 static void hclosure_free(HClosure *);
 static void hcons_free(HCons *);
 static void htuple_free(HTuple *);
@@ -43,39 +46,60 @@ static void hbinding_free(HBinding *);
 
 static void hvalue_free(HValue hv) {
     switch (hv.type) {
-#define TYPE_CASE(name, data_type, data, is_rc, free_fn, ...) \
-    case name: free_fn(hv.data); break;
-        EACH_HVALUE_TYPE(TYPE_CASE)
-#undef TYPE_CASE
-    }
+#define TYPE_CASE(name, data_type, data, strategy) \
+    case name: FORWARD(strategy, data); break;
+#define _COPY(data)         /* no-op */
+#define _RC(free_fn, ...)   _RC_, free_fn
+#define _RC_(free_fn, data) free_fn(hv.data);
 
-    free(hv.v_any);
+        EACH_HVALUE_TYPE(TYPE_CASE)
+
+#undef TYPE_CASE
+#undef _COPY
+#undef _RC
+#undef _RC_
+    }
 }
 
 void hvalue_drop(HValue hv) {
-    if (hvalue_is_rc(&hv)) {
-        if (--hvalue_header_(&hv)->rc == 0) hvalue_free(hv);
+    switch (hv.type) {
+#define TYPE_CASE(name, data_type, data, strategy) \
+    case name: strategy; break;
+#define _COPY /* no-op */
+#define _RC(...)                                                     \
+    /* for some RC types like `V_TUPLE` the pointer may be `NULL` */ \
+    if (hv.v_any && --hvalue_header_(&hv)->rc == 0) hvalue_free(hv);
+
+        EACH_HVALUE_TYPE(TYPE_CASE)
+
+#undef TYPE_CASE
+#undef _COPY
+#undef _RC
     }
 }
 
 static HValue hstring_clone(const HString *);
+static HValue hsubstr_clone(HSubstr);
 static HValue hclosure_clone(const HClosure *);
 static HValue hcons_clone(const HCons *);
 static HValue htuple_clone(const HTuple *);
 static HValue hnative_clone(const HNative *);
 static HValue hbinding_clone(const HBinding *);
 
-/*
- * `clone` function name placeholder for bit-copy types
- */
-#define HVALUE_COPY panic("copy of reference-counted value type"), *(HValue *)(intptr_t)
-
 HValue hvalue_clone(const HValue *hv) {
     switch (hv->type) {
-#define TYPE_CASE(name, data_type, data, is_rc, free, clone) \
-    case name: return is_rc ? clone(hv->data) : *hv;
+#define TYPE_CASE(name, data_type, data, strategy) \
+    case name: return FORWARD(strategy, data);
+#define _COPY(data)            *hv
+#define _RC(free_fn, clone_fn) _RC_, clone_fn
+#define _RC_(clone_fn, data)   clone_fn(hv->data)
+
         EACH_HVALUE_TYPE(TYPE_CASE)
+
 #undef TYPE_CASE
+#undef _COPY
+#undef _RC
+#undef _RC_
     }
 }
 
@@ -88,29 +112,43 @@ inline HValue hvalue_uniq(HValue hv) {
 }
 
 inline bool hvalue_is_uniq(const HValue *hv) {
-    return !hvalue_is_rc(hv) || hvalue_header_(hv)->rc <= 1;
+    switch (hv->type) {
+#define TYPE_CASE(name, data_type, data, strategy) \
+    case name: return strategy;
+#define _COPY true
+#define _RC(...)                                                     \
+    /* for some RC types like `V_TUPLE` the pointer may be `NULL` */ \
+    !hv->v_any || hvalue_header_(hv)->rc <= 1
+
+        EACH_HVALUE_TYPE(TYPE_CASE)
+
+#undef TYPE_CASE
+#undef _COPY
+#undef _RC
+    }
 }
 
-static bool hstring_eq(const HString *, const HString *);
 static bool hcons_eq(const HCons *, const HCons *);
 static bool htuple_eq(const HTuple *, const HTuple *);
-static bool hnative_eq(const HNative *, const HNative *);
+static bool hnative_eq(const HNative *, const HValue *);
 
 bool hvalue_eq(const HValue *a, const HValue *b) {
-    if (a->type != b->type) return false;
-
+    // TODO: int <-> float equality
     switch (a->type) {
-    case V_INT: return a->v_int == b->v_int;
-    case V_FLOAT: return a->v_float == b->v_float;
-    case V_STRING: return hstring_eq(a->v_string, b->v_string);
-    case V_CONS: return hcons_eq(a->v_cons, b->v_cons);
-    case V_TUPLE: return htuple_eq(a->v_tuple, b->v_tuple);
-    case V_NATIVE: return hnative_eq(a->v_native, b->v_native);
+    case V_INT: return b->type == V_INT && a->v_int == b->v_int;
+    case V_FLOAT: return b->type == V_FLOAT && a->v_float == b->v_float;
+    case V_STRING:
+    case V_SUBSTR:
+        return (b->type == V_STRING || b->type == V_SUBSTR)
+            && string_eq(hvalue_string_get(a), hvalue_string_get(b));
+    case V_CONS: return b->type == V_CONS && hcons_eq(a->v_cons, b->v_cons);
+    case V_TUPLE: return b->type == V_TUPLE && htuple_eq(a->v_tuple, b->v_tuple);
+    case V_NATIVE: return hnative_eq(a->v_native, b);
     case V_CLOSURE:
     case V_BINDING: return false;
     case V_TRUE:
     case V_FALSE:
-    case V_NIL: return true;
+    case V_NIL: return a->type == b->type;
     }
 }
 
@@ -124,7 +162,8 @@ void hvalue_print_repr(const HValue *hv, Buffer *b, const Machine *m) {
     switch (hv->type) {
     case V_INT: buffer_printf(b, "%" PRIu32, hv->v_int); break;
     case V_FLOAT: buffer_printf(b, "%lf", hv->v_float); break;
-    case V_STRING: buffer_print_string_literal(b, hvalue_string_get(hv)); break;
+    case V_STRING:
+    case V_SUBSTR: buffer_print_string_literal(b, hvalue_string_get(hv)); break;
     case V_CLOSURE: hclosure_print_repr(hv->v_closure, b, m); break;
     case V_TRUE: buffer_puts(b, STRING("true")); break;
     case V_FALSE: buffer_puts(b, STRING("false")); break;
@@ -243,15 +282,39 @@ static HValue hstring_clone(const HString *str) {
     return hvalue_make_string((string){ .data = str->data, .len = str->len });
 }
 
-static bool hstring_eq(const HString *a, const HString *b) {
-    return a->len == b->len && memcmp(a->data, b->data, a->len) == 0;
+string hvalue_string_get(const HValue *hv) {
+    switch (hv->type) {
+    case V_STRING: return (string){ .data = hv->v_string->data, .len = hv->v_string->len };
+    case V_SUBSTR:
+        return (string){
+            .data = hv->v_substr.string->data + hv->v_substr.offset,
+            .len = hv->v_substr.len,
+        };
+    default: panic("value of type %s is not a string", hvalue_type_name(hv->type));
+    }
 }
 
-string hvalue_string_get(const HValue *hv) {
-    const HString *str;
-    hvalue_expect(hvalue_get_string, hv, &str);
+HValue hvalue_make_substr(HValue hv, size_t offset, size_t len) {
+    HSubstr substr = { 0 };
 
-    return (string){ .data = str->data, .len = str->len };
+    switch (hv.type) {
+    case V_STRING: substr.string = hv.v_string; break;
+    case V_SUBSTR: substr = hv.v_substr; break;
+    default: panic("cannot make a substring of %s", hvalue_type_name(hv.type));
+    }
+
+    substr.offset = minsz(substr.offset + offset, substr.string->len);
+    substr.len = minsz(substr.string->len - substr.offset, len);
+
+    return (HValue){ .type = V_SUBSTR, .v_substr = substr };
+}
+
+static void hsubstr_free(HSubstr substr) {
+    free((void *)substr.string);
+}
+
+static HValue hsubstr_clone(HSubstr substr) {
+    return hvalue_make_substr(hstring_clone(substr.string), substr.offset, substr.len);
 }
 
 struct HClosure {
@@ -283,6 +346,7 @@ HValue hvalue_make_closure(uint32_t fnindex, uint8_t argc) {
 
 static void hclosure_free(HClosure *closure) {
     for (uint8_t i = 0; i < closure->args_len; i++) hvalue_drop(closure->args[i]);
+    free(closure);
 }
 
 static HValue hclosure_clone(const HClosure *closure) {
@@ -359,6 +423,7 @@ HValue hvalue_make_cons(HValue head, HValue tail) {
 static void hcons_free(HCons *cons) {
     hvalue_drop(cons->head);
     hvalue_drop(cons->tail);
+    free(cons);
 }
 
 static HValue hcons_clone(const HCons *cons) {
@@ -433,10 +498,15 @@ struct HTuple {
 };
 
 static void htuple_free(HTuple *tuple) {
+    if (!tuple) return;
+
     for (uint8_t i = 0; i < tuple->len; i++) hvalue_drop(tuple->data[i]);
+    free(tuple);
 }
 
 static HValue htuple_clone(const HTuple *tuple) {
+    if (!tuple) return (HValue){ .type = V_TUPLE, .v_tuple = NULL };
+
     HTupleBuilder clone = htuple_begin(tuple->len);
     for (uint16_t i = 0; i < tuple->len; i++) htuple_put(&clone, hvalue_ref(&tuple->data[i]));
     return htuple_end(clone);
@@ -520,6 +590,7 @@ HValue hvalue_make_native(const hnative_meta *meta, void *data) {
 
 static void hnative_free(HNative *native) {
     if (native->meta->free) native->meta->free(native->data);
+    free(native);
 }
 
 static HValue hnative_clone(const HNative *native) {
@@ -532,7 +603,7 @@ static HValue hnative_clone(const HNative *native) {
     return clone;
 }
 
-static bool hnative_eq(const HNative *a, const HNative *b) {
+static bool hnative_eq(const HNative *a, const HValue *b) {
     // TODO: Implementation-defined
     (void)a, (void)b;
     return false;
@@ -623,6 +694,7 @@ HValue hvalue_make_binding(HValue effect, HValue then) {
 static void hbinding_free(HBinding *binding) {
     hvalue_drop(binding->effect);
     hvalue_drop(binding->then);
+    free(binding);
 }
 
 static HValue hbinding_clone(const HBinding *binding) {

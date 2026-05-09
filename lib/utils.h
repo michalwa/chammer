@@ -1,3 +1,4 @@
+#include <stddef.h>
 #pragma clang diagnostic ignored "-Wempty-translation-unit"
 
 #ifndef HAMMER_UTILS_H_
@@ -38,6 +39,38 @@
 #define RETURN_ENUM_NAME_CASE_V_(name, ...) \
     case name: return #name;
 
+/*
+ * Used in some higher-order X-macro magic
+ *
+ * Given an X-macro which includes nested placeholder macros in its elements:
+ *
+ *     #define EACH_ITEM(_) \
+ *         _(foo, _NESTED(1, 2, 3)) \
+ *         _(bar, _NESTED(2, 3, 4))
+ *
+ * You may want to define `_NESTED` in such a way that it references some of
+ * arguments passed to `_`. This can be done using `FORWARD`:
+ *
+ *     #define CONSUME_ITEM(name, nested) FORWARD(nested, name)
+ *
+ *     // The placeholder macro should expand to the name of the implementation
+ *     // macro, followed by captured arguments
+ *     #define _NESTED(x, y, z) _NESTED_, x, y, z
+ *
+ *     // The implementation macro now receives all arguments captured in
+ *     // `_NESTED` as well as `name` passed from `CONSUME_ITEM`
+ *     #define _NESTED_(x, y, z, name) ...
+ *
+ *     EACH_ITEM(CONSUME_ITEM)
+ *
+ *     // Rememeber to #undef everything
+ *     #undef CONSUME_ITEM
+ *     #undef _NESTED
+ *     #undef _NESTED_
+ *
+ */
+#define FORWARD(macro, ...) macro(__VA_ARGS__)
+
 #define HAMMER_EXIT_PANIC 100
 
 #define panic(...) panic_(__FILE__, __LINE__, __VA_ARGS__)
@@ -55,5 +88,7 @@
 #endif
 
 _Noreturn void panic_(const char *file, int line, const char *fmt, ...);
+
+size_t minsz(size_t, size_t);
 
 #endif // HAMMER_UTILS_H_

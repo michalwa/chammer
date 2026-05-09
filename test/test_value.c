@@ -113,7 +113,50 @@ TEST(hvalue_string) {
     ASSERT_ENUM_EQ(hv.type, V_STRING, hvalue_type_name);
     ASSERT_STRING_EQ(hvalue_string_get(&hv), STRING("Hello, world!"));
 
+    HValue hv_same = hvalue_make_string(STRING("Hello, world!"));
+    HValue hv_diff = hvalue_make_string(STRING("Hello"));
+
+    ASSERT(hvalue_eq(&hv, &hv));
+    ASSERT(hvalue_eq(&hv, &hv_same));
+    ASSERT(!hvalue_eq(&hv, &hv_diff));
+
     hvalue_drop(hv);
+    hvalue_drop(hv_same);
+    hvalue_drop(hv_diff);
+
+    return TEST_OK;
+}
+
+TEST(hvalue_substr) {
+    HValue hv_string = hvalue_make_string(STRING("Hello, world!"));
+    HValue hv_hello = hvalue_make_substr(hvalue_ref(&hv_string), 0, 5);
+    HValue hv_world = hvalue_make_substr(hvalue_ref(&hv_string), 7, 5);
+
+    ASSERT_ENUM_EQ(hv_hello.type, V_SUBSTR, hvalue_type_name);
+
+    ASSERT_STRING_EQ(hvalue_string_get(&hv_hello), STRING("Hello"));
+    ASSERT_STRING_EQ(hvalue_string_get(&hv_world), STRING("world"));
+
+    HValue hv_subsub = hvalue_make_substr(hvalue_ref(&hv_hello), 3, 2);
+    ASSERT_STRING_EQ(hvalue_string_get(&hv_subsub), STRING("lo"));
+    hvalue_drop(hv_subsub);
+
+    HValue hv_full = hvalue_make_substr(hvalue_ref(&hv_string), 0, sizeof("Hello, world!") - 1);
+
+    ASSERT(hvalue_eq(&hv_hello, &hv_hello));
+    ASSERT(hvalue_eq(&hv_string, &hv_full));
+    ASSERT(!hvalue_eq(&hv_hello, &hv_world));
+
+    hvalue_drop(hv_full);
+
+    ASSERT(!hvalue_is_uniq(&hv_string));
+
+    hvalue_drop(hv_hello);
+    hvalue_drop(hv_world);
+
+    ASSERT(hvalue_is_uniq(&hv_string));
+
+    hvalue_drop(hv_string);
 
     return TEST_OK;
 }
@@ -203,7 +246,6 @@ TEST(hvalue_tuple) {
 
     ASSERT_ENUM_EQ(hv.type, V_TUPLE, hvalue_type_name);
     ASSERT_INT_EQ(hvalue_tuple_len(&hv), 3);
-    ASSERT(hvalue_is_rc(&hv));
 
     for (int i = 0; i < 3; i++) {
         const HValue item = hvalue_tuple_get(&hv, i);
@@ -228,7 +270,11 @@ TEST(hvalue_tuple) {
     hv = htuple_end(tb);
     ASSERT_ENUM_EQ(hv.type, V_TUPLE, hvalue_type_name);
     ASSERT_INT_EQ(hvalue_tuple_len(&hv), 0);
-    ASSERT(!hvalue_is_rc(&hv));
+
+    HValue ref = hvalue_ref(&hv);
+    ASSERT(hvalue_is_uniq(&hv));
+    hvalue_drop(ref);
+
     hvalue_drop(hv);
 
     return TEST_OK;

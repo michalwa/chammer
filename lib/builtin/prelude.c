@@ -26,4 +26,5 @@ void module_make_prelude(Module *m, Parser *p) {
 
     parser_define_operator(p, STRING("++"), 500, ASSOC_LEFT);
     module_define_native(m, hnative_make_string_concat());
+    module_define_native(m, hnative_make_string_substr());
 }

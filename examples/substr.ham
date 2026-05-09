@@ -1,0 +1,5 @@
+let string = "Hello, world!";
+let hello = substr string 0 5;
+let world = substr string 7 5;
+let lo = substr hello 3 2;
+print (hello, world, lo); -- ("Hello", "world", "lo")

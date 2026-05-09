@@ -15,3 +15,7 @@ void panic_(const char *file, int line, const char *fmt, ...) {
 
     va_end(args);
 }
+
+inline size_t minsz(size_t a, size_t b) {
+    return a < b ? a : b;
+}

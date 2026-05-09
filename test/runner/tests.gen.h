@@ -31,6 +31,7 @@
     _(hvalue_clone)                     \
     _(hvalue_uniq)                      \
     _(hvalue_string)                    \
+    _(hvalue_substr)                    \
     _(hvalue_closure)                   \
     _(hvalue_cons)                      \
     _(hvalue_tuple)                     \
