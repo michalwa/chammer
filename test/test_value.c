@@ -153,8 +153,12 @@ TEST(hvalue_substr) {
 
     hvalue_drop(hv_full);
 
-    HValue hv_empty = hvalue_make_substr(hvalue_ref(&hv_string), 100, 5);
-    ASSERT_STRING_EQ(hvalue_string_get(&hv_empty), STRING(""));
+    HValue hv_out_of_bounds = hvalue_make_substr(hvalue_ref(&hv_string), 100, 5);
+    ASSERT_STRING_EQ(hvalue_string_get(&hv_out_of_bounds), STRING(""));
+    hvalue_drop(hv_subsub);
+
+    hv_out_of_bounds = hvalue_make_substr(hvalue_ref(&hv_hello), 100, 5);
+    ASSERT_STRING_EQ(hvalue_string_get(&hv_out_of_bounds), STRING(""));
     hvalue_drop(hv_subsub);
 
     ASSERT(!hvalue_is_uniq(&hv_string));
