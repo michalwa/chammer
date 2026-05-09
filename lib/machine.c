@@ -246,7 +246,7 @@ static void load_extern(Machine *m, string name) {
     const HValue *value;
 
     for (EACH_IN_VECTOR(m->modules, Module, module)) {
-        if (module_get(module, name, &value)) {
+        if (value = module_get(module, name)) {
             opstack_push(m, hvalue_ref(value));
             return;
         }

@@ -23,7 +23,7 @@
     _(V_BINDING, HBinding *, v_binding, _RC(hbinding_free, hbinding_clone))
 
 #define ENUM_MEMBER(name, ...) name,
-typedef enum { EACH_HVALUE_TYPE(ENUM_MEMBER) } hvalue_type;
+typedef enum { V_EMPTY = 0, EACH_HVALUE_TYPE(ENUM_MEMBER) } hvalue_type;
 #undef ENUM_MEMBER
 
 /*

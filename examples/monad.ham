@@ -3,7 +3,7 @@ let do_stuff = {
 
   {-
     -- TODO: Function as monad over result type
-    let composed = do { let with_suffix <- suffix; \original -> (original, with_suffix) };
+    let composed = { let with_suffix <- suffix; \original -> (original, with_suffix) };
     print (composed "Hello"); -- ("Hello", "Hello!")
   -}
 

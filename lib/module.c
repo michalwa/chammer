@@ -3,28 +3,34 @@
 #include "string_map.h"
 #include "value.h"
 
+struct ModuleMember {
+    hvalue_factory factory;
+    HValue         value;
+};
+
 void module_init(Module *m) {
-    string_map_init(&m->members, HValue);
+    string_map_init(&m->members, ModuleMember);
 }
 
 void module_free(Module *m) {
-    for (string_map_iter i = string_map_iter_begin(&m->members); string_map_iter_next(&i);)
-        hvalue_drop(*(HValue *)i.entry->value);
+    for (string_map_iter i = string_map_iter_begin(&m->members); string_map_iter_next(&i);) {
+        ModuleMember *member = (ModuleMember *)i.entry->value;
+        if (member->value.type) hvalue_drop(member->value);
+    }
 
     string_map_free(&m->members);
 }
 
-void module_define(Module *m, string name, HValue value) {
-    string_map_put(&m->members, name, &value, NULL);
+void module_define(Module *m, string name, hvalue_factory factory) {
+    string_map_put(&m->members, name, &(ModuleMember){ factory, { 0 } }, NULL);
 }
 
-inline void module_define_native(Module *m, HValue value) {
-    module_define(m, string_from_cstr(hvalue_native_name(&value)), value);
-}
-
-bool module_get(Module *m, string name, const HValue **value) {
+const HValue *module_get(Module *m, string name) {
     const string_map_entry *entry = string_map_get_entry(&m->members, name);
-    if (!entry) return false;
-    *value = (const HValue *)entry->value;
-    return true;
+    if (!entry) return NULL;
+
+    ModuleMember *member = (ModuleMember *)entry->value;
+    if (!member->value.type) member->value = member->factory();
+
+    return &member->value;
 }

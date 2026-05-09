@@ -22,6 +22,7 @@ inline hvalue_header *hvalue_header_(const HValue *hv) {
 
 inline HValue hvalue_ref(const HValue *hv) {
     switch (hv->type) {
+    case V_EMPTY: panic("value is empty");
 #define TYPE_CASE(name, data_type, data, strategy) \
     case name: return strategy;
 #define _COPY *hv
@@ -46,6 +47,7 @@ static void hbinding_free(HBinding *);
 
 static void hvalue_free(HValue hv) {
     switch (hv.type) {
+    case V_EMPTY: panic("value is empty");
 #define TYPE_CASE(name, data_type, data, strategy) \
     case name: FORWARD(strategy, data); break;
 #define _COPY(data)         /* no-op */
@@ -63,6 +65,7 @@ static void hvalue_free(HValue hv) {
 
 void hvalue_drop(HValue hv) {
     switch (hv.type) {
+    case V_EMPTY: panic("value is empty");
 #define TYPE_CASE(name, data_type, data, strategy) \
     case name: strategy; break;
 #define _COPY /* no-op */
@@ -88,6 +91,7 @@ static HValue hbinding_clone(const HBinding *);
 
 HValue hvalue_clone(const HValue *hv) {
     switch (hv->type) {
+    case V_EMPTY: panic("value is empty");
 #define TYPE_CASE(name, data_type, data, strategy) \
     case name: return FORWARD(strategy, data);
 #define _COPY(data)            *hv
@@ -113,6 +117,7 @@ inline HValue hvalue_uniq(HValue hv) {
 
 inline bool hvalue_is_uniq(const HValue *hv) {
     switch (hv->type) {
+    case V_EMPTY: panic("value is empty");
 #define TYPE_CASE(name, data_type, data, strategy) \
     case name: return strategy;
 #define _COPY true
@@ -135,6 +140,7 @@ static bool hnative_eq(const HNative *, const HValue *);
 bool hvalue_eq(const HValue *a, const HValue *b) {
     // TODO: int <-> float equality
     switch (a->type) {
+    case V_EMPTY: panic("value is empty");
     case V_INT: return b->type == V_INT && a->v_int == b->v_int;
     case V_FLOAT: return b->type == V_FLOAT && a->v_float == b->v_float;
     case V_STRING:
@@ -160,6 +166,7 @@ static void hbinding_print_repr(const HBinding *, Buffer *, const Machine *);
 
 void hvalue_print_repr(const HValue *hv, Buffer *b, const Machine *m) {
     switch (hv->type) {
+    case V_EMPTY: panic("value is empty");
     case V_INT: buffer_printf(b, "%" PRIu32, hv->v_int); break;
     case V_FLOAT: buffer_printf(b, "%lf", hv->v_float); break;
     case V_STRING:
