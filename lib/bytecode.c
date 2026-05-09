@@ -53,8 +53,8 @@ void bytecode_put_callval(Buffer *b, uint8_t args) {
     buffer_putc(b, args);
 }
 
-void bytecode_put_istuple(Buffer *b, uint16_t len) {
-    buffer_putc(b, OP_ISTUPLE);
+void bytecode_put_chktuple(Buffer *b, uint16_t len) {
+    buffer_putc(b, OP_CHKTUPLE);
     buffer_put_u16be(b, len);
 }
 
@@ -189,7 +189,7 @@ void program_debug_print(const program *prog, Buffer *output) {
         case OP_LOAD:
         case OP_STORE:
         case OP_CALLVAL: buffer_printf(output, " %" PRIu8, *cursor++); break;
-        case OP_ISTUPLE:
+        case OP_CHKTUPLE:
         case OP_TUPLEGET:
         case OP_MAKETUPLE:
         case OP_MAKELIST: buffer_printf(output, " %" PRIu16, read_u16be(&cursor)); break;

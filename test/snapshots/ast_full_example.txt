@@ -27,10 +27,10 @@ N_BLOCK
       N_PLIST 
       N_STRING  (T_STRING `""`)
       N_PLIST 
-        N_PIDENT  (T_IDENT `xs`)
+        N_PIDENT  (T_IDENT `x`)
         N_PLTAIL NF_NAMED (T_IDENT `rest`)
       N_BINARY  (T_OP `++`)
-        N_IDENT  (T_IDENT `xs`)
+        N_IDENT  (T_IDENT `x`)
         N_APPLY 
           N_IDENT  (T_IDENT `concat`)
           N_IDENT  (T_IDENT `rest`)

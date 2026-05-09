@@ -4,7 +4,7 @@ let rec map f xs = match xs
 
 let rec concat strings = match strings
   case [] then ""
-  case [xs, ...rest] then xs ++ concat rest;
+  case [x, ...rest] then x ++ concat rest;
 
 let rec join separator xs = match xs
   case [] then ""

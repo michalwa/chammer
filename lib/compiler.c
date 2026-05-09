@@ -398,17 +398,18 @@ static void visit_match(Compiler *c, Block **b, Scope *s, node *n) {
     visit_expr(c, b, s, scrutinee);
 
     Block *cont_block = insert_block_after(c, *b);
+    Block *fail = NULL;
 
     for (node *child = scrutinee->next_sibling; child;) {
         node *rhs = child->next_sibling;
 
         if (rhs) {
+            // This is a `case`, `child` is lhs
             Scope inner_scope;
             scope_init(&inner_scope, s);
 
             buffer_putc(&(*b)->bytecode, OP_DUP);
 
-            Block *fail = NULL;
             Block *prelude = insert_block_after(c, cont_block);
             Block *case_body = insert_block_after(c, prelude);
 
@@ -423,22 +424,11 @@ static void visit_match(Compiler *c, Block **b, Scope *s, node *n) {
             bytecode_put_call(&(*b)->bytecode, fnindex);
 
             put_jump(c, OP_JUMPIF, *b, cont_block);
-            buffer_putc(&(*b)->bytecode, OP_POP); // pop `false`
 
             scope_free(&inner_scope);
-
-            if (fail) {
-                buffer_putc(&fail->bytecode, OP_PUSHFALSE); // `false` means error
-                buffer_putc(&fail->bytecode, OP_RETURN);
-            } else {
-                // TODO: emit warning
-                // infallible pattern, no point compiling following cases
-                break;
-            }
-
             child = rhs->next_sibling;
         } else {
-            buffer_putc(&(*b)->bytecode, OP_POP);
+            // This is the `else` case
             visit_expr(c, b, s, child);
             put_jump(c, OP_JUMP, *b, cont_block);
             break;
@@ -447,9 +437,14 @@ static void visit_match(Compiler *c, Block **b, Scope *s, node *n) {
 
     buffer_putc(&(*b)->bytecode, (char)OP_HALT); // TODO: raise error
 
+    if (fail) {
+        buffer_putc(&fail->bytecode, OP_PUSHFALSE); // `false` means error
+        buffer_putc(&fail->bytecode, OP_RETURN);
+    }
+
     *b = cont_block;
     buffer_putc(&(*b)->bytecode, OP_SWAP); // swap scrutinee and result
-    buffer_putc(&(*b)->bytecode, OP_POP);
+    buffer_putc(&(*b)->bytecode, OP_POP);  // pop scrutinee
 }
 
 /*
@@ -637,10 +632,17 @@ static void visit_papply(Compiler *c, Block **b, Block **fail, Scope *s, node *l
     (void)fail;
 
     symbol  sym = string_pool_intern(&c->idents, token_string(lhs->token));
-    uint8_t i = scope_get_or_put_local(s, sym);
+    uint8_t local;
 
-    visit_function(c, b, s, lhs->first_child, rhs, &sym, lhs->flags & NF_REC);
-    bytecode_put_store(&(*b)->bytecode, i);
+    if (lhs->flags & NF_REC) {
+        local = scope_get_or_put_local(s, sym);
+        visit_function(c, b, s, lhs->first_child, rhs, &sym, true);
+    } else {
+        visit_function(c, b, s, lhs->first_child, rhs, &sym, false);
+        local = scope_get_or_put_local(s, sym);
+    }
+
+    bytecode_put_store(&(*b)->bytecode, local);
 }
 
 static void visit_ptuple(Compiler *c, Block **b, Block **fail, Scope *s, node *lhs, node *rhs) {
@@ -651,7 +653,7 @@ static void visit_ptuple(Compiler *c, Block **b, Block **fail, Scope *s, node *l
 
     if (!*fail) *fail = insert_block_after(c, *b);
 
-    bytecode_put_istuple(&(*b)->bytecode, CHECKED_U16(len));
+    bytecode_put_chktuple(&(*b)->bytecode, CHECKED_U16(len));
     put_jump(c, OP_JUMPIFN, *b, *fail);
 
     size_t index = 0;
@@ -681,13 +683,13 @@ static void visit_plist(Compiler *c, Block **b, Block **fail, Scope *s, node *lh
             return;
         }
 
-        buffer_putc(&(*b)->bytecode, OP_ISCONS);
+        buffer_putc(&(*b)->bytecode, OP_CHKCONS);
         put_jump(c, OP_JUMPIFN, *b, *fail);
         buffer_putc(&(*b)->bytecode, OP_UNCONS);
         visit_pattern(c, b, fail, s, child, NULL);
     }
 
-    buffer_putc(&(*b)->bytecode, OP_ISNIL);
+    buffer_putc(&(*b)->bytecode, OP_CHKNIL);
     put_jump(c, OP_JUMPIFN, *b, *fail);
     buffer_putc(&(*b)->bytecode, OP_POP);
 }
@@ -712,10 +714,13 @@ static void visit_pwild(Compiler *c, Block **b, Block **fail, Scope *s, node *lh
  * For a pattern match `lhs = rhs`:
  *   `lhs` is the pattern,
  *   `rhs` is either the scrutinee/value or `NULL`, in which case the value is
- *     expected on top of the stack,
- *   `bid` is the current block and may be changed,
- *   `fail_bid` can point to a block that will be jumped to in case of failure,
- *     or `-1` in which case a new block will be pushed for this purpose.
+ *     expected to be the top operand on the stack,
+ *   `b` is the current block and may be changed,
+ *   `fail` can point to a block that will be jumped to in case of failure,
+ *     or `NULL` in which case a new block will be pushed for this purpose.
+ *
+ * Pattern visitors are responsible for cleaning up the stack if they jump to
+ * the `fail` block.
  */
 static void visit_pattern(Compiler *c, Block **b, Block **fail, Scope *s, node *lhs, node *rhs) {
     switch (lhs->type) {

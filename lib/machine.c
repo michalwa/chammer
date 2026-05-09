@@ -176,13 +176,32 @@ static void op_callval(Machine *m, uint8_t args) {
     }
 }
 
-static void op_istuple(Machine *m, uint16_t len) {
-    HValue *tuple = (HValue *)vector_last(&m->opstack);
+static void op_chktuple(Machine *m, uint16_t len) {
+    HValue *peek = (HValue *)vector_last(&m->opstack);
 
-    if (tuple->type == V_TUPLE)
-        opstack_push(m, hvalue_make_bool(hvalue_tuple_len(tuple) == len));
-    else
+    if (peek->type != V_TUPLE || hvalue_tuple_len(peek) != len) {
+        HValue tuple;
+        vector_pop(&m->opstack, &tuple);
+        hvalue_drop(tuple);
+
         opstack_push(m, hvalue_make(V_FALSE));
+    } else {
+        opstack_push(m, hvalue_make(V_TRUE));
+    }
+}
+
+static void op_check_type(Machine *m, hvalue_type type) {
+    HValue *peek = (HValue *)vector_last(&m->opstack);
+
+    if (peek->type != type) {
+        HValue value;
+        vector_pop(&m->opstack, &value);
+        hvalue_drop(value);
+
+        opstack_push(m, hvalue_make(V_FALSE));
+    } else {
+        opstack_push(m, hvalue_make(V_TRUE));
+    }
 }
 
 static void op_tupleget(Machine *m, uint16_t i) {
@@ -223,11 +242,6 @@ static void op_uncons(Machine *m) {
     opstack_push(m, head);
 }
 
-static void op_check_type(Machine *m, hvalue_type type) {
-    const HValue *value = vector_last(&m->opstack);
-    opstack_push(m, hvalue_make_bool(value->type == type));
-}
-
 static void load_extern(Machine *m, string name) {
     const HValue *value;
 
@@ -243,8 +257,8 @@ static void load_extern(Machine *m, string name) {
 
 static void op_concat(Machine *m) {
     HValue a, b;
-    vm_debug_assert(m, vector_pop(&m->opstack, &a));
     vm_debug_assert(m, vector_pop(&m->opstack, &b));
+    vm_debug_assert(m, vector_pop(&m->opstack, &a));
 
     opstack_push(m, hvalue_list_concat(a, b));
 }
@@ -324,12 +338,12 @@ bool machine_step(Machine *m) {
     case OP_MAKECLS: opstack_push(m, make_closure(m, read_u32be(&m->ip))); return true;
     case OP_CALLVAL: op_callval(m, *m->ip++); return true;
     case OP_BIND: op_bind(m); return true;
-    case OP_ISTUPLE: op_istuple(m, read_u16be(&m->ip)); return true;
+    case OP_CHKTUPLE: op_chktuple(m, read_u16be(&m->ip)); return true;
     case OP_TUPLEGET: op_tupleget(m, read_u16be(&m->ip)); return true;
     case OP_MAKETUPLE: op_maketuple(m, read_u16be(&m->ip)); return true;
     case OP_MAKELIST: op_makelist(m, read_u16be(&m->ip)); return true;
-    case OP_ISNIL: op_check_type(m, V_NIL); return true;
-    case OP_ISCONS: op_check_type(m, V_CONS); return true;
+    case OP_CHKNIL: op_check_type(m, V_NIL); return true;
+    case OP_CHKCONS: op_check_type(m, V_CONS); return true;
     case OP_UNCONS: op_uncons(m); return true;
     case OP_CONCAT: op_concat(m); return true;
     case OP_EQ: op_eq(m); return true;

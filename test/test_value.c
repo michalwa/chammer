@@ -137,8 +137,13 @@ TEST(hvalue_substr) {
     ASSERT_STRING_EQ(hvalue_string_get(&hv_hello), STRING("Hello"));
     ASSERT_STRING_EQ(hvalue_string_get(&hv_world), STRING("world"));
 
-    HValue hv_subsub = hvalue_make_substr(hvalue_ref(&hv_hello), 3, 2);
-    ASSERT_STRING_EQ(hvalue_string_get(&hv_subsub), STRING("lo"));
+    HValue hv_subsub = hvalue_make_substr(hvalue_ref(&hv_hello), 1, 100);
+    ASSERT_STRING_EQ(hvalue_string_get(&hv_subsub), STRING("ello"));
+
+    HValue hv_subsubsub = hvalue_make_substr(hvalue_ref(&hv_subsub), 1, 100);
+    ASSERT_STRING_EQ(hvalue_string_get(&hv_subsubsub), STRING("llo"));
+
+    hvalue_drop(hv_subsubsub);
     hvalue_drop(hv_subsub);
 
     hv_subsub = hvalue_make_substr(hvalue_ref(&hv_hello), 3, 100);

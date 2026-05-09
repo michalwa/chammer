@@ -8,7 +8,7 @@
     "adapter": "CodeLLDB",
     "request": "launch",
     "program": "bin/hammer-debug",
-    "args": ["examples/monad.ham"],
+    "args": ["examples/rec.ham"],
     "build": {
       "command": "make",
       "args": ["bin/hammer-debug"],
