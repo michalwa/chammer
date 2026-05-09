@@ -298,13 +298,16 @@ HValue hvalue_make_substr(HValue hv, size_t offset, size_t len) {
     HSubstr substr = { 0 };
 
     switch (hv.type) {
-    case V_STRING: substr.string = hv.v_string; break;
+    case V_STRING:
+        substr.string = hv.v_string;
+        substr.len = hv.v_string->len;
+        break;
     case V_SUBSTR: substr = hv.v_substr; break;
     default: panic("cannot make a substring of %s", hvalue_type_name(hv.type));
     }
 
     substr.offset = minsz(substr.offset + offset, substr.string->len);
-    substr.len = minsz(substr.string->len - substr.offset, len);
+    substr.len = minsz(substr.len - substr.offset, len);
 
     return (HValue){ .type = V_SUBSTR, .v_substr = substr };
 }

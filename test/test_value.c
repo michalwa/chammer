@@ -141,13 +141,21 @@ TEST(hvalue_substr) {
     ASSERT_STRING_EQ(hvalue_string_get(&hv_subsub), STRING("lo"));
     hvalue_drop(hv_subsub);
 
-    HValue hv_full = hvalue_make_substr(hvalue_ref(&hv_string), 0, sizeof("Hello, world!") - 1);
+    hv_subsub = hvalue_make_substr(hvalue_ref(&hv_hello), 3, 100);
+    ASSERT_STRING_EQ(hvalue_string_get(&hv_subsub), STRING("lo"));
+    hvalue_drop(hv_subsub);
+
+    HValue hv_full = hvalue_make_substr(hvalue_ref(&hv_string), 0, 100);
 
     ASSERT(hvalue_eq(&hv_hello, &hv_hello));
     ASSERT(hvalue_eq(&hv_string, &hv_full));
     ASSERT(!hvalue_eq(&hv_hello, &hv_world));
 
     hvalue_drop(hv_full);
+
+    HValue hv_empty = hvalue_make_substr(hvalue_ref(&hv_string), 100, 5);
+    ASSERT_STRING_EQ(hvalue_string_get(&hv_empty), STRING(""));
+    hvalue_drop(hv_subsub);
 
     ASSERT(!hvalue_is_uniq(&hv_string));
 
