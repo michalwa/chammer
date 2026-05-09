@@ -8,10 +8,10 @@
 #include "../lib/utils.h"
 
 int main(int argc, char **argv) {
-    token        t;
-    Parser       p;
+    token        token;
+    Parser       parser;
     parse_result presult;
-    Compiler     c;
+    Compiler     compiler;
     Buffer       input;
     Buffer       comp_buffer;
     program      prog;
@@ -31,32 +31,30 @@ int main(int argc, char **argv) {
     buffer_read_file(&input, example);
     fclose(example);
 
-    token_begin(&t, input.data);
+    token_begin(&token, input.data);
 
-    parser_init(&p);
+    parser_init(&parser);
 
-    // TODO: Move to module
-    parser_define_operator(&p, STRING("+"), 500, ASSOC_LEFT);
-    parser_define_operator(&p, STRING("-"), 500, ASSOC_LEFT);
-    parser_define_operator(&p, STRING("*"), 600, ASSOC_LEFT);
-    parser_define_operator(&p, STRING("/"), 600, ASSOC_LEFT);
+    Module prelude;
+    module_init(&prelude);
+    module_make_prelude(&prelude, &parser);
 
-    if ((presult = parse_program(&p, &t)) != PARSE_OK)
+    if ((presult = parse_program(&parser, &token)) != PARSE_OK)
         panic("parse failed: %s", parse_result_name(presult));
 
 #ifdef HAMMER_DEBUG
     buffer_init(&out);
-    node_print(*p.node, &out);
+    node_print(*parser.node, &out);
     printf(F_BUFFER "\n\n", FA_BUFFER(out));
     buffer_clear(&out);
 #endif
 
     buffer_init(&comp_buffer);
-    compiler_init(&c);
-    compiler_visit_program(&c, p.node);
-    compiler_write_program(&c, &comp_buffer);
-    compiler_free(&c);
-    parser_free(&p);
+    compiler_init(&compiler);
+    compiler_visit_program(&compiler, parser.node);
+    compiler_write_program(&compiler, &comp_buffer);
+    compiler_free(&compiler);
+    parser_free(&parser);
 
     if (!program_read(&prog, (uint8_t *)comp_buffer.data, comp_buffer.len))
         panic("could not read compiled program");
@@ -71,10 +69,6 @@ int main(int argc, char **argv) {
 
     size_t steps = 0;
 #endif
-
-    Module prelude;
-    module_init(&prelude);
-    module_make_prelude(&prelude);
 
     machine_init(&machine, &prog);
     machine_add_module(&machine, prelude);
