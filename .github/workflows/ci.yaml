@@ -24,10 +24,11 @@ jobs:
           CFLAGS: -Werror
           LLVM_COVERAGE: 1
       - run: make selftest
-      - uses: getsentry/codecov-action@0.3.7
+      - uses: zgosalvez/github-actions-report-lcov@v7.0.10
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          directory: coverage
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          coverage-files: coverage/*.lcov
+          update-comment: true
 
   format-check:
     runs-on: ubuntu-latest
