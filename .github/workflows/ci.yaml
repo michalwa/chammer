@@ -1,6 +1,10 @@
 name: CI
 
-on: push
+on:
+  push:
+    branches:
+      - main
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,8 +16,6 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      TEST_ASAN: 1
     steps:
       - uses: actions/checkout@v4
       - uses: KyleMayes/install-llvm-action@v2
@@ -21,8 +23,14 @@ jobs:
           version: ${{ env.CLANG_VERSION }}
       - run: make test
         env:
+          TEST_ASAN: 1
           CFLAGS: -Werror
+          LLVM_COVERAGE: 1
       - run: make selftest
+      - uses: actions/upload-artifact@v7
+        with:
+          name: lcov
+          path: coverage/*.lcov
 
   format-check:
     runs-on: ubuntu-latest
@@ -32,3 +40,22 @@ jobs:
         with:
           version: ${{ env.CLANG_VERSION }}
       - run: make format-check
+
+  coverage-report:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v8
+        with:
+          name: lcov
+          path: coverage
+      - name: Setup LCOV
+        uses: hrishikesh-kadam/setup-lcov@v1
+      - uses: zgosalvez/github-actions-report-lcov@v7.0.10
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          coverage-files: coverage/*.lcov
+          update-comment: true
