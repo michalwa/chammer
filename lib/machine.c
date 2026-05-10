@@ -1,5 +1,6 @@
 #include "machine.h"
 
+#include "buffer.h"
 #include "bytecode.h"
 #include "bytes.h"
 #include "module.h"
@@ -35,6 +36,7 @@ void machine_init(Machine *m, const program *prog) {
     buffer_init(&m->fnstack);
     vector_init(&m->opstack, HValue);
     vector_init(&m->modules, Module);
+    buffer_init(&m->shared_buffer);
     m->ip = prog->bytecode;
 }
 
@@ -47,6 +49,7 @@ void machine_free(Machine *m) {
     buffer_free(&m->fnstack);
     vector_free(&m->opstack);
     vector_free(&m->modules);
+    buffer_free(&m->shared_buffer);
 }
 
 void machine_add_module(Machine *m, Module module) {
@@ -148,7 +151,7 @@ static void call_closure(Machine *m, HValue closure, uint8_t args) {
     }
 }
 
-static void call_native(Machine *m, HValue native, uint8_t args) {
+static bool call_native(Machine *m, HValue native, uint8_t args, HValue *error) {
     native = hvalue_uniq(native);
 
     for (uint8_t i = 0; i < args; i++) {
@@ -160,18 +163,26 @@ static void call_native(Machine *m, HValue native, uint8_t args) {
     if (hvalue_native_args_left(&native)) {
         opstack_push(m, native);
     } else {
-        opstack_push(m, hvalue_native_call(&native, m));
+        HValue result = hvalue_native_call(&native, m);
+        if (result.type == V_ERROR) {
+            *error = result;
+            return false;
+        }
+
+        opstack_push(m, result);
         hvalue_drop(native);
     }
+
+    return true;
 }
 
-static void op_callval(Machine *m, uint8_t args) {
+static bool op_callval(Machine *m, uint8_t args, HValue *error) {
     HValue value;
     vm_debug_assert(m, vector_pop(&m->opstack, &value));
 
     switch (value.type) {
-    case V_CLOSURE: call_closure(m, value, args); break;
-    case V_NATIVE: call_native(m, value, args); break;
+    case V_CLOSURE: call_closure(m, value, args); return true;
+    case V_NATIVE: return call_native(m, value, args, error);
     default: panic("value of type %s is not callable", hvalue_type_name(value.type));
     }
 }
@@ -271,11 +282,12 @@ static void op_bind(Machine *m) {
     opstack_push(m, hvalue_bind(monad, then, m));
 }
 
-static void op_yield(Machine *m) {
+static void op_yield(Machine *m, HValue *error) {
     HValue effect;
     vm_debug_assert(m, vector_pop(&m->opstack, &effect));
 
-    hvalue_yield(&effect, m, NULL);
+    HValue result;
+    if (hvalue_yield(&effect, m, &result) && result.type == V_ERROR) *error = result;
 }
 
 static void op_eq(Machine *m) {
@@ -289,7 +301,7 @@ static void op_eq(Machine *m) {
     hvalue_drop(b);
 }
 
-bool machine_step(Machine *m) {
+bool machine_step(Machine *m, HValue *error) {
     HValue  value;
     int16_t jump;
 
@@ -336,7 +348,7 @@ bool machine_step(Machine *m) {
     case OP_PUSHTRUE: opstack_push(m, hvalue_make(V_TRUE)); return true;
     case OP_PUSHFALSE: opstack_push(m, hvalue_make(V_FALSE)); return true;
     case OP_MAKECLS: opstack_push(m, make_closure(m, read_u32be(&m->ip))); return true;
-    case OP_CALLVAL: op_callval(m, *m->ip++); return true;
+    case OP_CALLVAL: return op_callval(m, *m->ip++, error);
     case OP_BIND: op_bind(m); return true;
     case OP_CHKTUPLE: op_chktuple(m, read_u16be(&m->ip)); return true;
     case OP_TUPLEGET: op_tupleget(m, read_u16be(&m->ip)); return true;
@@ -352,7 +364,7 @@ bool machine_step(Machine *m) {
         load_extern(m, hvalue_string_get(&value));
         hvalue_drop(value);
         return true;
-    case OP_YIELD: op_yield(m); return false;
+    case OP_YIELD: op_yield(m, error); return false;
     case OP_HALT: return false;
     default:
         panic(
@@ -371,11 +383,16 @@ HValue machine_call_(Machine *m, HValue callee, size_t argc, HValue *args) {
     for (size_t i = 0; i < argc; i++) opstack_push(m, args[argc - 1 - i]);
 
     size_t initial_sp = m->fnstack.len;
+    HValue error = { 0 };
 
     opstack_push(m, callee);
-    op_callval(m, argc);
+    op_callval(m, argc, &error);
 
-    while (m->fnstack.len > initial_sp && machine_step(m));
+    if (error.type) return error;
+
+    while (m->fnstack.len > initial_sp && machine_step(m, &error));
+
+    if (error.type) return error;
 
     HValue result;
     vm_debug_assert(m, vector_pop(&m->opstack, &result));

@@ -44,6 +44,7 @@ static void hcons_free(HCons *);
 static void htuple_free(HTuple *);
 static void hnative_free(HNative *);
 static void hbinding_free(HBinding *);
+static void herror_free(HError);
 
 static void hvalue_free(HValue hv) {
     switch (hv.type) {
@@ -65,7 +66,7 @@ static void hvalue_free(HValue hv) {
 
 void hvalue_drop(HValue hv) {
     switch (hv.type) {
-    case V_EMPTY: panic("value is empty");
+    case V_EMPTY: break;
 #define TYPE_CASE(name, data_type, data, strategy) \
     case name: strategy; break;
 #define _COPY /* no-op */
@@ -88,6 +89,7 @@ static HValue hcons_clone(const HCons *);
 static HValue htuple_clone(const HTuple *);
 static HValue hnative_clone(const HNative *);
 static HValue hbinding_clone(const HBinding *);
+static HValue herror_clone(HError);
 
 HValue hvalue_clone(const HValue *hv) {
     switch (hv->type) {
@@ -151,7 +153,8 @@ bool hvalue_eq(const HValue *a, const HValue *b) {
     case V_TUPLE: return b->type == V_TUPLE && htuple_eq(a->v_tuple, b->v_tuple);
     case V_NATIVE: return hnative_eq(a->v_native, b);
     case V_CLOSURE:
-    case V_BINDING: return false;
+    case V_BINDING:
+    case V_ERROR: return false;
     case V_TRUE:
     case V_FALSE:
     case V_NIL: return a->type == b->type;
@@ -163,6 +166,7 @@ static void hcons_print_repr(const HCons *, Buffer *, const Machine *);
 static void htuple_print_repr(const HTuple *, Buffer *, const Machine *);
 static void hnative_print_repr(const HNative *, Buffer *, const Machine *);
 static void hbinding_print_repr(const HBinding *, Buffer *, const Machine *);
+static void herror_print_repr(HError, Buffer *, const Machine *);
 
 void hvalue_print_repr(const HValue *hv, Buffer *b, const Machine *m) {
     switch (hv->type) {
@@ -179,6 +183,7 @@ void hvalue_print_repr(const HValue *hv, Buffer *b, const Machine *m) {
     case V_TUPLE: htuple_print_repr(hv->v_tuple, b, m); break;
     case V_NATIVE: hnative_print_repr(hv->v_native, b, m); break;
     case V_BINDING: hbinding_print_repr(hv->v_binding, b, m); break;
+    case V_ERROR: herror_print_repr(hv->v_error, b, m); break;
     }
 }
 
@@ -289,14 +294,19 @@ static HValue hstring_clone(const HString *str) {
     return hvalue_make_string((string){ .data = str->data, .len = str->len });
 }
 
+static string hstring_get(const HString *str) {
+    return (string){ .data = str->data, .len = str->len };
+}
+
 string hvalue_string_get(const HValue *hv) {
     switch (hv->type) {
-    case V_STRING: return (string){ .data = hv->v_string->data, .len = hv->v_string->len };
+    case V_STRING: return hstring_get(hv->v_string);
     case V_SUBSTR:
         return (string){
             .data = hv->v_substr.string->data + hv->v_substr.offset,
             .len = hv->v_substr.len,
         };
+    case V_ERROR: return hstring_get(hv->v_error.msg);
     default: panic("value of type %s is not a string", hvalue_type_name(hv->type));
     }
 }
@@ -524,6 +534,8 @@ static HValue htuple_clone(const HTuple *tuple) {
 }
 
 static bool htuple_eq(const HTuple *a, const HTuple *b) {
+    if (!a) return !b;
+    if (!b) return !a;
     if (a->len != b->len) return false;
 
     for (uint16_t i = 0; i < a->len; i++)
@@ -730,4 +742,24 @@ static HValue hbinding_yield(const HBinding *binding, const HValue *then, Machin
 static HValue hvalue_binding_bind(HValue hv, HValue then, Machine *m) {
     (void)m;
     return hvalue_make_binding(hv, then);
+}
+
+HValue hvalue_make_error(string msg) {
+    return (HValue){ .type = V_ERROR, .v_error = { hvalue_make_string(msg).v_string } };
+}
+
+static void herror_free(HError err) {
+    free((HString *)err.msg);
+}
+
+static HValue herror_clone(HError err) {
+    return hvalue_make_error(hstring_get(err.msg));
+}
+
+static void herror_print_repr(HError err, Buffer *b, const Machine *m) {
+    (void)m;
+
+    buffer_puts(b, STRING("<error "));
+    buffer_print_string_literal(b, hstring_get(err.msg));
+    buffer_putc(b, '>');
 }

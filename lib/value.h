@@ -20,7 +20,8 @@
     _(V_CONS, HCons *, v_cons, _RC(hcons_free, hcons_clone))                \
     _(V_TUPLE, HTuple *, v_tuple, _RC(htuple_free, htuple_clone))           \
     _(V_NATIVE, HNative *, v_native, _RC(hnative_free, hnative_clone))      \
-    _(V_BINDING, HBinding *, v_binding, _RC(hbinding_free, hbinding_clone))
+    _(V_BINDING, HBinding *, v_binding, _RC(hbinding_free, hbinding_clone)) \
+    _(V_ERROR, HError, v_error, _RC(herror_free, herror_clone))
 
 #define ENUM_MEMBER(name, ...) name,
 typedef enum { V_EMPTY = 0, EACH_HVALUE_TYPE(ENUM_MEMBER) } hvalue_type;
@@ -45,15 +46,19 @@ typedef struct HNative  HNative;
  * of binding a `HNative` with the `HNATIVE_GENERIC_EFFECT` flag set.
  */
 typedef struct HBinding HBinding;
+typedef struct HError   HError;
 
-/*
- * Substr is itself not reference-counted, but acts as if it were just another
- * RC reference to the full string
- */
+// HSubstr and HError are themselves not reference-counted, but act as if they
+// were just another RC reference to the full string
+
 struct HSubstr {
     const HString *string; // must be the first field, because it contains `hvalue_header`!
     size_t         offset;
     size_t         len;
+};
+
+struct HError {
+    const HString *msg; // must be the first field, because it contains `hvalue_header`!
 };
 
 /*
@@ -210,6 +215,7 @@ HValue hvalue_make_closure(uint32_t fnindex, uint8_t args);
 HValue hvalue_make_cons(HValue head, HValue tail);
 HValue hvalue_make_native(const hnative_meta *, void *);
 HValue hvalue_make_binding(HValue effect, HValue then);
+HValue hvalue_make_error(string);
 
 bool hvalue_get_string(const HValue *, const HString **);
 bool hvalue_get_closure(const HValue *, const HClosure **);

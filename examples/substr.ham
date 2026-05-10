@@ -1,13 +1,22 @@
+let assert_eq a b = if a == b
+  then return ()
+  else error ("assertion failed: " ++ (repr a) ++ " == " ++ (repr b));
+
+--
+
 let string = "Hello, world!";
 let hello = substr string 0 5;
 let world = substr string 7 5;
 let lo = substr hello 3 2;
-print (hello, world, lo); -- ("Hello", "world", "lo")
 
-print (substr (substr hello 1 100) 1 100); -- "llo"
+assert_eq (hello, world, lo) ("Hello", "world", "lo");
+
+assert_eq (substr (substr hello 1 100) 1 100) "llo";
 
 let rec chars str = match str
   case "" then []
   else [substr str 0 1, ...chars (substr str 1 99999)]; -- TODO: allow passing `-1` or something?
 
-print (chars hello);
+assert_eq (chars hello) ["H", "e", "l", "l", "o"];
+
+print "passed";

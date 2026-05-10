@@ -27,12 +27,9 @@ static HValue print_call(const void *self, const HValue *args, Machine *m) {
 static HValue stdio_print_yield(const void *self, const HValue *then, Machine *m) {
     PrintEffect *effect = (PrintEffect *)self;
 
-    // TODO: Don't allocate this on each invocation
-    Buffer output;
-    buffer_init(&output);
-    hvalue_print_repr(&effect->arg, &output, m);
-    printf(F_BUFFER "\n", FA_BUFFER(output));
-    buffer_free(&output);
+    buffer_clear(&m->shared_buffer);
+    hvalue_print_repr(&effect->arg, &m->shared_buffer, m);
+    printf(F_BUFFER "\n", FA_BUFFER(m->shared_buffer));
 
     return then ? machine_call(m, hvalue_ref(then), hvalue_make_unit()) : hvalue_make_unit();
 }

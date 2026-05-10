@@ -1,25 +1,31 @@
+let assert_eq a b = if a == b
+  then return ()
+  else error ("assertion failed: " ++ (repr a) ++ " == " ++ (repr b));
+
+--
+
 let do_stuff = {
   let suffix x = x ++ "!";
 
   {-
     -- TODO: Function as monad over result type
     let composed = { let with_suffix <- suffix; \original -> (original, with_suffix) };
-    print (composed "Hello"); -- ("Hello", "Hello!")
+    assert_eq (composed "Hello") ("Hello", "Hello!");
   -}
 
   let mapped = {
     let x <- ["foo", "bar", "baz"];
     [x, suffix x]
   };
-  print mapped; -- ["foo", "foo!", "bar", "bar!", "baz", "baz!"]
+  assert_eq mapped ["foo", "foo!", "bar", "bar!", "baz", "baz!"];
 
   let time <- get_time;
   let (year, month, day, hour, minute, second) = time;
   print time;
 
   -- some bullshit just to test things
-  print (const year 123);
-  print (id month);
+  assert_eq (const year 123) year;
+  assert_eq (id month) month;
   print day;
   print { print "foo"; print "bar" };
 

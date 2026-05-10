@@ -1,3 +1,9 @@
+let assert_eq a b = if a == b
+  then return ()
+  else error ("assertion failed: " ++ (repr a) ++ " == " ++ (repr b));
+
+--
+
 let a = 1;
 let (b,) = (2,);
 let (c, d) = (3, 4);
@@ -6,4 +12,6 @@ let g = match ("foo", 7, 8)
   case ("bar", _, y) then y
   case ("foo", x, _) then x;
 
-print (a, b, c, d, e, f, g);
+assert_eq (a, b, c, d, e, f, g) (1, 2, 3, 4, 5, 6, 7);
+
+print "passed";

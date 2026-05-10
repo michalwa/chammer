@@ -1,21 +1,43 @@
+let assert_eq a b = if a == b
+  then return ()
+  else error ("assertion failed: " ++ (repr a) ++ " == " ++ (repr b));
+
+--
+
 let rec map f xs = match xs
   case [] then []
   case [x, ...rest] then [f x, ...map f rest];
 
-let rec concat strings = match strings
-  case [] then ""
-  case [x, ...rest] then x ++ concat rest;
+let test_map = map (\x -> x + 1);
+assert_eq (test_map []) [];
+assert_eq (test_map [1]) [2];
+assert_eq (test_map [1, 2]) [2, 3];
+
+--
 
 let rec join separator xs = match xs
   case [] then ""
   case [x] then x
   case [x, ...rest] then x ++ separator ++ join separator rest;
 
+let test_join = join ", ";
+assert_eq (test_join []) "";
+assert_eq (test_join ["foo"]) "foo";
+assert_eq (test_join ["foo", "bar"]) "foo, bar";
+
+--
+
 let h name attrs children = {
-  let str_attrs = concat (map (\(k, v) -> " " ++ k ++ "=\"" ++ v ++ "\"") attrs);
+  let str_attrs = join "" (map (\(k, v) -> " " ++ k ++ "=\"" ++ v ++ "\"") attrs);
   let str_children = join "\n" children;
   "<" ++ name ++ str_attrs ++ ">" ++ str_children ++ "</" ++ name ++ ">"
 };
+
+assert_eq
+    (h "span" [("class", "test-span"), ("id", "my-span")] ["content"])
+    "<span class=\"test-span\" id=\"my-span\">content</span>";
+
+--
 
 let document =
   h "body" [] [
@@ -25,4 +47,7 @@ let document =
     ],
   ];
 
-print document;
+assert_eq document
+    "<body><div class=\"container\"><h1>Hello, Hammer!</h1>\n<p>Lorem ipsum dolor sit amet</p></div></body>";
+
+print "passed";

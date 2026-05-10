@@ -22,6 +22,7 @@ jobs:
       - run: make test
         env:
           CFLAGS: -Werror
+      - run: make selftest
 
   format-check:
     runs-on: ubuntu-latest

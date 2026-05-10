@@ -24,12 +24,16 @@ typedef struct {
     Vector         opstack;
     const uint8_t *ip;
     Vector         modules;
+    /*
+     * Multipurpose buffer that is free to use by native value implementations
+     */
+    Buffer         shared_buffer;
 } Machine;
 
 void machine_init(Machine *, const program *);
 void machine_free(Machine *);
 void machine_add_module(Machine *, Module);
-bool machine_step(Machine *);
+bool machine_step(Machine *, HValue *error);
 
 string machine_func_name(const Machine *, uint32_t);
 /*

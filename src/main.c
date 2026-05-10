@@ -6,6 +6,7 @@
 #include "../lib/machine.h"
 #include "../lib/parser.h"
 #include "../lib/utils.h"
+#include "../lib/value.h"
 
 int main(int argc, char **argv) {
     token        token;
@@ -73,10 +74,17 @@ int main(int argc, char **argv) {
     machine_init(&machine, &prog);
     machine_add_module(&machine, prelude);
 
-    while (machine_step(&machine)) {
+    HValue error = { 0 };
+
+    while (machine_step(&machine, &error)) {
 #ifdef HAMMER_DEBUG
         steps++;
 #endif
+    }
+
+    if (error.type == V_ERROR) {
+        string msg = hvalue_string_get(&error);
+        fprintf(stderr, "hammer error: " F_STRING "\n", FA_STRING(msg));
     }
 
 #ifdef HAMMER_DEBUG
@@ -91,5 +99,5 @@ int main(int argc, char **argv) {
     buffer_free(&out);
 #endif
 
-    return 0;
+    return (error.type == V_ERROR) ? 1 : 0;
 }

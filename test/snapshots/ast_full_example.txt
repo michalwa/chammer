@@ -1,5 +1,29 @@
 N_BLOCK 
   N_ASSIGN 
+    N_PAPPLY  (T_IDENT `assert_eq`)
+      N_PIDENT  (T_IDENT `a`)
+      N_PIDENT  (T_IDENT `b`)
+    N_IF 
+      N_BINARY  (T_OP `==`)
+        N_IDENT  (T_IDENT `a`)
+        N_IDENT  (T_IDENT `b`)
+      N_APPLY 
+        N_IDENT  (T_IDENT `return`)
+        N_TUPLE 
+      N_APPLY 
+        N_IDENT  (T_IDENT `error`)
+        N_BINARY  (T_OP `++`)
+          N_BINARY  (T_OP `++`)
+            N_BINARY  (T_OP `++`)
+              N_STRING  (T_STRING `"assertion failed: "`)
+              N_APPLY 
+                N_IDENT  (T_IDENT `repr`)
+                N_IDENT  (T_IDENT `a`)
+            N_STRING  (T_STRING `" == "`)
+          N_APPLY 
+            N_IDENT  (T_IDENT `repr`)
+            N_IDENT  (T_IDENT `b`)
+  N_ASSIGN 
     N_PAPPLY NF_REC (T_IDENT `map`)
       N_PIDENT  (T_IDENT `f`)
       N_PIDENT  (T_IDENT `xs`)
@@ -20,20 +44,41 @@ N_BLOCK
             N_IDENT  (T_IDENT `f`)
             N_IDENT  (T_IDENT `rest`)
   N_ASSIGN 
-    N_PAPPLY NF_REC (T_IDENT `concat`)
-      N_PIDENT  (T_IDENT `strings`)
-    N_MATCH 
-      N_IDENT  (T_IDENT `strings`)
-      N_PLIST 
-      N_STRING  (T_STRING `""`)
-      N_PLIST 
+    N_PIDENT  (T_IDENT `test_map`)
+    N_APPLY 
+      N_IDENT  (T_IDENT `map`)
+      N_LAMBDA 
         N_PIDENT  (T_IDENT `x`)
-        N_PLTAIL NF_NAMED (T_IDENT `rest`)
-      N_BINARY  (T_OP `++`)
-        N_IDENT  (T_IDENT `x`)
-        N_APPLY 
-          N_IDENT  (T_IDENT `concat`)
-          N_IDENT  (T_IDENT `rest`)
+        N_BINARY  (T_OP `+`)
+          N_IDENT  (T_IDENT `x`)
+          N_INT  (T_INT `1`)
+  N_VOID 
+    N_APPLY 
+      N_IDENT  (T_IDENT `assert_eq`)
+      N_APPLY 
+        N_IDENT  (T_IDENT `test_map`)
+        N_LIST 
+      N_LIST 
+  N_VOID 
+    N_APPLY 
+      N_IDENT  (T_IDENT `assert_eq`)
+      N_APPLY 
+        N_IDENT  (T_IDENT `test_map`)
+        N_LIST 
+          N_INT  (T_INT `1`)
+      N_LIST 
+        N_INT  (T_INT `2`)
+  N_VOID 
+    N_APPLY 
+      N_IDENT  (T_IDENT `assert_eq`)
+      N_APPLY 
+        N_IDENT  (T_IDENT `test_map`)
+        N_LIST 
+          N_INT  (T_INT `1`)
+          N_INT  (T_INT `2`)
+      N_LIST 
+        N_INT  (T_INT `2`)
+        N_INT  (T_INT `3`)
   N_ASSIGN 
     N_PAPPLY NF_REC (T_IDENT `join`)
       N_PIDENT  (T_IDENT `separator`)
@@ -57,6 +102,35 @@ N_BLOCK
           N_IDENT  (T_IDENT `separator`)
           N_IDENT  (T_IDENT `rest`)
   N_ASSIGN 
+    N_PIDENT  (T_IDENT `test_join`)
+    N_APPLY 
+      N_IDENT  (T_IDENT `join`)
+      N_STRING  (T_STRING `", "`)
+  N_VOID 
+    N_APPLY 
+      N_IDENT  (T_IDENT `assert_eq`)
+      N_APPLY 
+        N_IDENT  (T_IDENT `test_join`)
+        N_LIST 
+      N_STRING  (T_STRING `""`)
+  N_VOID 
+    N_APPLY 
+      N_IDENT  (T_IDENT `assert_eq`)
+      N_APPLY 
+        N_IDENT  (T_IDENT `test_join`)
+        N_LIST 
+          N_STRING  (T_STRING `"foo"`)
+      N_STRING  (T_STRING `"foo"`)
+  N_VOID 
+    N_APPLY 
+      N_IDENT  (T_IDENT `assert_eq`)
+      N_APPLY 
+        N_IDENT  (T_IDENT `test_join`)
+        N_LIST 
+          N_STRING  (T_STRING `"foo"`)
+          N_STRING  (T_STRING `"bar"`)
+      N_STRING  (T_STRING `"foo, bar"`)
+  N_ASSIGN 
     N_PAPPLY  (T_IDENT `h`)
       N_PIDENT  (T_IDENT `name`)
       N_PIDENT  (T_IDENT `attrs`)
@@ -65,7 +139,8 @@ N_BLOCK
       N_ASSIGN 
         N_PIDENT  (T_IDENT `str_attrs`)
         N_APPLY 
-          N_IDENT  (T_IDENT `concat`)
+          N_IDENT  (T_IDENT `join`)
+          N_STRING  (T_STRING `""`)
           N_APPLY 
             N_IDENT  (T_IDENT `map`)
             N_LAMBDA 
@@ -103,6 +178,22 @@ N_BLOCK
             N_STRING  (T_STRING `"</"`)
           N_IDENT  (T_IDENT `name`)
         N_STRING  (T_STRING `">"`)
+  N_VOID 
+    N_APPLY 
+      N_IDENT  (T_IDENT `assert_eq`)
+      N_APPLY 
+        N_IDENT  (T_IDENT `h`)
+        N_STRING  (T_STRING `"span"`)
+        N_LIST 
+          N_TUPLE 
+            N_STRING  (T_STRING `"class"`)
+            N_STRING  (T_STRING `"test-span"`)
+          N_TUPLE 
+            N_STRING  (T_STRING `"id"`)
+            N_STRING  (T_STRING `"my-span"`)
+        N_LIST 
+          N_STRING  (T_STRING `"content"`)
+      N_STRING  (T_STRING `"<span class=\"test-span\" id=\"my-span\">content</span>"`)
   N_ASSIGN 
     N_PIDENT  (T_IDENT `document`)
     N_APPLY 
@@ -132,5 +223,10 @@ N_BLOCK
                 N_STRING  (T_STRING `"Lorem ipsum dolor sit amet"`)
   N_VOID 
     N_APPLY 
-      N_IDENT  (T_IDENT `print`)
+      N_IDENT  (T_IDENT `assert_eq`)
       N_IDENT  (T_IDENT `document`)
+      N_STRING  (T_STRING `"<body><div class=\"container\"><h1>Hello, Hammer!</h1>\n<p>Lorem ipsum dolor sit amet</p></div></body>"`)
+  N_VOID 
+    N_APPLY 
+      N_IDENT  (T_IDENT `print`)
+      N_STRING  (T_STRING `"passed"`)
