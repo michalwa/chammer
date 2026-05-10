@@ -14,8 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
-    env:
-      TEST_ASAN: 1
     steps:
       - uses: actions/checkout@v4
       - uses: KyleMayes/install-llvm-action@v2
@@ -23,6 +21,7 @@ jobs:
           version: ${{ env.CLANG_VERSION }}
       - run: make test
         env:
+          TEST_ASAN: 1
           CFLAGS: -Werror
           LLVM_COVERAGE: 1
       - run: make selftest
