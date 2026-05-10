@@ -17,11 +17,10 @@ CFLAGS_TEST    += -g -O0 -DHAMMER_DEBUG
 ifdef LLVM_COVERAGE
 	CFLAGS_TEST += -fprofile-instr-generate -fcoverage-mapping
 endif
-CFLAGS_CLANGD  += -DHAMMER_DEBUG -D_CRT_SECURE_NO_WARNINGS
-
-ifeq ($(TEST_ASAN), 1)
+ifdef TEST_ASAN
 	CFLAGS_TEST += -fsanitize=address -fsanitize=undefined
 endif
+CFLAGS_CLANGD  += -DHAMMER_DEBUG -D_CRT_SECURE_NO_WARNINGS
 
 SRC_LIB   = lib/*.c lib/*.h lib/**/*.c lib/**/*.h
 SRC_BIN   = src/*.c
