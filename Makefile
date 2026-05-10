@@ -62,7 +62,7 @@ selftest: bin/hammer
 	@for example in examples/*.ham; do                        \
 		printf "%-40s" $$example;                             \
 		error=$$(bin/hammer $$example 2>&1 >/dev/null);       \
-		if [[ -n "$$error" ]]; then                           \
+		if [ -n "$$error" ]; then                             \
 			printf "\033[0;31mfailed\033[0m\n%s\n" "$$error"; \
 		else                                                  \
 			printf "\033[0;32mok\033[0m\n";                   \
