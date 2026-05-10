@@ -24,7 +24,7 @@ jobs:
           CFLAGS: -Werror
           LLVM_COVERAGE: 1
       - run: make selftest
-      - uses: getsentry/codecov-action@v1
+      - uses: getsentry/codecov-action@0.3.7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           directory: coverage
