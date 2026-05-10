@@ -22,7 +22,12 @@ jobs:
       - run: make test
         env:
           CFLAGS: -Werror
+          LLVM_COVERAGE: 1
       - run: make selftest
+      - uses: getsentry/codecov-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          directory: coverage
 
   format-check:
     runs-on: ubuntu-latest

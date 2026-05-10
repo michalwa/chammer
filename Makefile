@@ -14,6 +14,9 @@ CFLAGS += -std=c11 \
 CFLAGS_RELEASE += -O3
 CFLAGS_DEBUG   += -g -O0 -DHAMMER_DEBUG -fsanitize=address -fsanitize=undefined
 CFLAGS_TEST    += -g -O0 -DHAMMER_DEBUG
+ifdef LLVM_COVERAGE
+	CFLAGS_TEST += -fprofile-instr-generate -fcoverage-mapping
+endif
 CFLAGS_CLANGD  += -DHAMMER_DEBUG -D_CRT_SECURE_NO_WARNINGS
 
 ifeq ($(TEST_ASAN), 1)
@@ -26,6 +29,10 @@ SRC_TEST  = test/*.c test/**/*.c test/**/*.h
 SRC_BENCH = bench/*.c bench/**/*.c
 SRC       = $(SRC_LIB) $(SRC_BIN) $(SRC_TEST) $(SRC_BENCH)
 
+COV_TEST_PROFRAW  = coverage/test.profraw
+COV_TEST_PROFDATA = coverage/test.profdata
+COV_TEST_LCOV     = coverage/test.lcov
+
 .PHONY: .release
 release: bin/hammer
 
@@ -34,7 +41,11 @@ debug: bin/hammer-debug
 
 .PHONY: test
 test: bin/test
-	bin/test $(TEST)
+	LLVM_PROFILE_FILE=$(COV_TEST_PROFRAW) bin/test $(TEST)
+ifdef LLVM_COVERAGE
+	llvm-profdata merge $(COV_TEST_PROFRAW) -output=$(COV_TEST_PROFDATA)
+	llvm-cov export bin/test* -instr-profile=$(COV_TEST_PROFDATA) -format=lcov > $(COV_TEST_LCOV)
+endif
 
 .PHONY: bench
 bench: bin/bench
@@ -97,3 +108,4 @@ format-check:
 .PHONY: clean
 clean:
 	rm -rf bin
+	rm -rf coverage
